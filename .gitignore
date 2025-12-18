@@ -1,1 +1,3 @@
 src/assets/
+venv/
+__pycache__/
