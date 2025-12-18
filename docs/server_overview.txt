@@ -1,0 +1,17 @@
+Starting 
+
+Server require 1 master passwords.
+Then it will use 2 salts to generate 2 keys.
+One use to verify indetity by compare with stored hash key.
+One use as master key, this key not allow to stored.
+This master key than use to derived a service key.
+Then the service key will use to combine key differnt key Ex: database...
+
+
+Database:
+Server require database key to use it with server service key to decrypte credential in env
+
+
+Main purpose of server is handles clients request including credentials, jwts, tokens (access token, refresh token).
+Server also handle clients media, data including(trip data, coordinates)
+Server will pass onto service like postgresQL, AWS s3, to store.
