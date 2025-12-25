@@ -25,6 +25,7 @@ class Config:
         self._encrypt_salt_path = self.config.get('paths','encrypt_salt', fallback=None)
         self._database_salt_path = self.config.get('paths','database_salt', fallback=None)
         self._env_path = self.config.get('paths','env_path', fallback=None)
+        self._aws_s3_bucket_name = self.config.get('aws','aws_s3_bucket',fallback= None)
         # read keys
         with open(self._private_key_path,'r') as f:
             self._PRIVATE_KEY = f.read()
@@ -57,7 +58,9 @@ class Config:
     def encrypt_salt_path(self):
         return self._encrypt_salt_path
 
- 
+    @property
+    def aws_bucket(self):
+        return self._aws_s3_bucket_name
 
     def get_config_parser(self,**kwargs):
         if kwargs.get("path") is not None:

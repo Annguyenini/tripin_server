@@ -4,6 +4,8 @@ from src.database.database import Database
 from src.server_config.config import Config
 from src.token.tokenservice import TokenService
 from src.mail.mail_service import MailService
+from src.database.s3.s3_service import S3Sevice
+from src.database.s3.s3_buckets import AVATAR_BUCKET    
 #userdata user_id|email|user_name|displayname|password
 #token keyid| userid| username|token|issue name | exp name | revok
 class Auth:
@@ -18,6 +20,7 @@ class Auth:
             self.db = Database()
             self.tokenService = TokenService()
             self.mail_service = MailService()
+            self.s3Service = S3Sevice
             self.user_queue = {}
             self._initialize = True
     #login function
@@ -39,7 +42,10 @@ class Auth:
         display_name=userdata_row["display_name"] 
         username=userdata_row["user_name"] 
         role = userdata_row["role"]
+        avatar = userdata_row['avatar']
         
+        if avatar:
+            avatar_uri =self.s3Service.generate_image_uri(AVATAR_BUCKET,avatar)
         assert userid is not None ,"UserID Null"
         assert display_name is not None ,"Display_name Null"
         assert username is not None ,"Username is Null"
@@ -65,7 +71,7 @@ class Auth:
             expired_at = datetime.utcnow() + timedelta(days=30),
             )
         #return data
-        data = {'user_id':userid,'display_name':display_name,'user_name':username,'refresh_token':refresh_token,'access_token':access_token,'role':role}
+        data = {'user_id':userid,'display_name':display_name,'user_name':username,'refresh_token':refresh_token,'access_token':access_token,'role':role,'avatar_uri':avatar_uri}
         return True,"Sucessfully",data
     #signup function
     def signup(self,email:str,display_name:str,username:str,password:str): 

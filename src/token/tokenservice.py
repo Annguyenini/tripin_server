@@ -23,14 +23,31 @@ class TokenService:
         assert token != None ,"Token Undefine!"
         return token
     def decode_jwt(self,token): 
+        """decode to get data
+
+        Args:
+            token (string): access token
+
+        Returns:
+            object:data 
+        """
         PUBLIC_KEY = self.config.public_key
         assert token is not None, "Some how token is none" 
         payload = jwt.decode(token, PUBLIC_KEY ,algorithms =["RS256"])
         data ={'user_id':payload["user_id"],'user_name':payload["user_name"],'display_name':payload["display_name"]}
         return data
-    def jwt_verify(self,token):
-        print("jwt verify get called!")
-        print(token)
+    def jwt_verify(self,token:str):
+        """verify token
+
+        Args:
+            token (string): access_token
+
+        Returns:
+            boolean: status
+            message: Message
+            code: verify code status
+        """
+
         PUBLIC_KEY = self.config.public_key
         try:
             payload = jwt.decode(
@@ -43,12 +60,20 @@ class TokenService:
             print("exp time: ",payload['exp'])
             print("cur time: ",int(datetime.utcnow().timestamp()))
             if(int(datetime.utcnow().timestamp()))>payload['exp']: ##just doesnt believe in the jwt anymore =))
-                return False, "Token Expired!"
+                return False, "Token Expired!","token_expired"
             # user_data= {"user_id":payload["user_id"],"user_name":payload["user_name"]}  
         except jwt.InvalidTokenError:
-            return False,"Token Invalid!"
-        return True,"Successfully!"
+            return False,"Token Invalid!","token_invalid"
+        return True,"Successfully!","successfully"
     def refresh_token_verify(self,row):
+        """verify refresh token
+
+        Args:
+            row (_type_): _description_
+
+        Returns:
+            _type_: _description_
+        """
         revoked_status = row[6]
         assert type(revoked_status) == bool ,"Revoked_status must be type bool"
         assert revoked_status != None ,"Revoked_status Null"
@@ -61,11 +86,12 @@ class TokenService:
         
 
     def revoked_refresh_token(self,**kwargs):
+        
         userid = kwargs.get("userid")
         status = self.db.update_db(table ="tripin_auth.tokens", item ="user_id", value =userid, item_to_update = "revoked", value_to_update = True)
         assert status == True ,"Error trying to update database revoked_token"
  
-    def request_new_access_token(self,refresh_token):
+    def request_new_access_token(self,refresh_token:str):
         row = self.db.find_item_in_sql(table="tripin_auth.tokens",item="token",value=refresh_token)
         new_token=None
         if row is None:

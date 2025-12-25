@@ -5,7 +5,7 @@ def test_login_with_token():
     headers ={
         "Authorization":f"Bearer {token}"
     }
-    response = requests.post("http://127.0.0.1:8000/auth/login-via-token",headers=headers)
+    response = requests.post("https://127.0.0.1:8000/auth/login-via-token",headers=headers)
     data  = response.json()
     print(data)
     assert response.status_code ==200, "Unsuccessfully"

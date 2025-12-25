@@ -72,11 +72,11 @@ class AuthServer:
         """      
         data = request.headers.get("Authorization")
         token = data.replace("Bearer ", "")
-        status, message = self.token_service.jwt_verify(token)
+        status, message,code = self.token_service.jwt_verify(token)
         if not status:
-            return jsonify({"message": message}), 401
+            return jsonify({"message": message,"code":code}), 401
         userdatas = self.token_service.decode_jwt(token)
-        return jsonify({"message": message, "userdatas": userdatas}), 200
+        return jsonify({"message": message, "userdatas": userdatas,"code":code}), 200
 
     def login(self):
         data = request.json

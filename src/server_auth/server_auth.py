@@ -64,12 +64,18 @@ class ServerAuth:
         """
         if not os.path.exists(self.access_key_path):
             password = input("INIT Master Password:")
+            # generate kdf for access key
             kdf,status = self.encryption_Service.generate_kdf(self.access_salt)
+            # generate access key
             key,keysatus = self.encryption_Service.generate_key(kdf,password)  
+            # write key to file (access) as hex
             with open (self.access_key_path,'w') as w:
                 w.write(key.hex())
+                
+                #read key 
         try:
             with open (self.access_key_path,'r') as r:
+                # read key as binary
                 self.access_key = bytes.fromhex(r.read())
         except (FileNotFoundError, PermissionError, IOError,):
             print(f"ERROR: Failed to open int_key file:")
@@ -77,8 +83,11 @@ class ServerAuth:
         return True
     
     def __init__master_key(self,password):
+        # if doesnt have salt return
         if self.encrypt_salt is None : return None
+        # generate kdf for master key
         kdf,status = self.encryption_Service.generate_kdf(self.encrypt_salt)
+        # generate key (master)
         self.master_key,keysatus = self.encryption_Service.generate_key(kdf,password)
     
 

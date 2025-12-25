@@ -134,13 +134,14 @@ class Database:
             table (str): table_name 
             item (str): column_name
         """
-        db_allow_table=['tripin_auth.userdata','tripin_auth.tokens','tripin_trips.trip_points','tripin_trips.trip_table']
-        db_allow_items_auth=['email','user_name','password','display_name','token','user_id','issued_at','exprires_at','revoked']
-        db_allow_items_trip=['']
+        db_allow_table=['tripin_auth.userdata','tripin_auth.tokens','tripin_trips.trip_coordinates','tripin_trips.trips_table']
+        db_allow_items_auth=['email','user_name','password','display_name','token','user_id','issued_at','exprires_at','revoked','id']
+        db_allow_items_trip=['trip_name','id','created_time','ended_time','active','image']
+        db_allow_items_user =['avatar']
         if table and table not in db_allow_table:
             raise "Table not allowed"
         
-        if item and item not in  db_allow_items_auth:
+        if item and item not in db_allow_items_auth and item not in db_allow_items_trip and item not in db_allow_items_user:
             raise "Item not allowed"
                 
                 
@@ -174,17 +175,17 @@ class Database:
             item = cur.fetchone()
         return item
     
-    def update_db(self,table:str, item:str, value:str, item_to_update:str, value_to_update:str):
+    def update_db(self,table:str, item:str, value:str, item_to_update:str, value_to_update:str ):
         
         """update a specific value where  condition exist 
         Args:
             table: table name
-            item: column name
+            item: column name of codition
             value: some condition
             item_to_update: column that want to update
             value_to_update: value that want to update
         Returns:
-            _type_: _description_
+            bool: status
         """
         con,cur = self.connect_db()
         self.check_allowance(table,item)
@@ -197,7 +198,7 @@ class Database:
             return False
         return True
 
-    def insert_to_database_trip(self,user_id:int,trip_name:str):
+    def insert_to_database_trip(self,user_id:int,trip_name:str,hasImage:bool):
         """insert new row in to database trip table / return 2 value
 
         Args:
@@ -208,12 +209,13 @@ class Database:
             _bool, int_: _status, trip_id_
         """
         con,cur = self.connect_db()
-        start_time = datetime.now()
-        cur.execute(f'INSERT INTO tripin_trips.trip_table (user_id,trip_name,start_time,active) VALUES (%s,%s,%s,%s) RETURNING id',(user_id,trip_name,start_time,True))
-        trip_id = cur.fetchone()[0]
+        created_time = datetime.now()
+        cur.execute(f'INSERT INTO tripin_trips.trips_table (user_id,trip_name,created_time, active,image) VALUES (%s,%s,%s,%s,%s) RETURNING id',(user_id,trip_name,created_time,True,hasImage))
+        trip_id = cur.fetchone()['id']
         con.commit()
         con.close()
         if cur.rowcount >=1:
+            print("insert successfully")
             return True, trip_id
         return False,0 
         
