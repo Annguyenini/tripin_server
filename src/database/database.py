@@ -145,7 +145,7 @@ class Database:
             raise "Item not allowed"
                 
                 
-    def find_item_in_sql(self, table:str, item:str, value:str, second_condition:bool | None=None, second_item:str |None = None, second_value: str| None=None, return_option:str |None="fetchonce",):
+    def find_item_in_sql(self, table:str, item:str, value:str, second_condition:bool | None=None, second_item:str |None = None, second_value: str| None=None, return_option:str |None="fetchone",):
         """return value base on table and item in postgress
 
         Args:
@@ -155,7 +155,7 @@ class Database:
             second_condition (bool | None, optional): _True/ False_ find base on 2 columns and 2 values. Defaults to None.
             second_item (str | None, optional): _second column name_. Defaults to None.
             second_value (str | None, optional): _second value name_. Defaults to None.
-            return_option (str | None, optional): _fetchonce/fetchall_. Defaults to None.
+            return_option (str | None, optional): _fetchone/fetchall_. Defaults to None.
 
         Returns:
             _list_: list of tuple or tuple
@@ -198,7 +198,7 @@ class Database:
             return False
         return True
 
-    def insert_to_database_trip(self,user_id:int,trip_name:str,hasImage:bool):
+    def insert_to_database_trip(self,user_id:int,trip_name:str,imageUri:str):
         """insert new row in to database trip table / return 2 value
 
         Args:
@@ -210,7 +210,7 @@ class Database:
         """
         con,cur = self.connect_db()
         created_time = datetime.now()
-        cur.execute(f'INSERT INTO tripin_trips.trips_table (user_id,trip_name,created_time, active,image) VALUES (%s,%s,%s,%s,%s) RETURNING id',(user_id,trip_name,created_time,True,hasImage))
+        cur.execute(f'INSERT INTO tripin_trips.trips_table (user_id,trip_name,created_time, active,image) VALUES (%s,%s,%s,%s,%s) RETURNING id',(user_id,trip_name,created_time,True,imageUri))
         trip_id = cur.fetchone()['id']
         con.commit()
         con.close()

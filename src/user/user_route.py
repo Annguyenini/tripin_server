@@ -2,7 +2,7 @@ from flask import Blueprint,request,jsonify
 from src.database.s3.s3_service import S3Sevice
 from src.token.tokenservice import TokenService
 from src.database.database import Database
-from src.database.s3.s3_buckets import AVATAR_BUCKET
+from src.database.s3.s3_dirs import AVATAR_DIR
 class UserRoute :
     _instance = None
     def __new__(cls):
@@ -54,7 +54,8 @@ class UserRoute :
             return jsonify({"message":"No Image Found",'code':'failed'}),401
 
         # upload to s3 and return 401 if error occurr
-        s3_status = self.S3Service.upload_media(image_path=AVATAR_BUCKET+'/'+path,image=image)
+        s3key =AVATAR_DIR+path
+        s3_status = self.S3Service.upload_media(image_path=s3key,image=image)
         if not s3_status:
             return jsonify({"message":"Error Upload To Cloud",'code':'failed'}),500
         

@@ -70,22 +70,33 @@ class AuthServer:
         
         :param self: get token from header verify token 
         """      
-        data = request.headers.get("Authorization")
-        token = data.replace("Bearer ", "")
-        status, message,code = self.token_service.jwt_verify(token)
+        ptoken = request.headers.get("Authorization")
+        token = ptoken.replace("Bearer ", "")
+        data = self.auth.login_via_token(token=token)
+        status = data['status']
+        message = data['message']
+        code = data['code']
+        user_data = data['user_data']
+        trip_data = data.get('trip_data')
+        all_trip_data =data['all_trip_data']
         if not status:
-            return jsonify({"message": message,"code":code}), 401
-        userdatas = self.token_service.decode_jwt(token)
-        return jsonify({"message": message, "userdatas": userdatas,"code":code}), 200
+            return jsonify({"message": message,"user_data": None,"code":code,'trip_data':None,'all_trip_data':None}), 401
+        return jsonify({"message": message, "user_data": user_data,'trip_data':trip_data,"code":code,'all_trip_data':all_trip_data}), 200
 
     def login(self):
         data = request.json
         username = data.get("username")
         password = data.get("password")
-        status, message, userdatas = self.auth.login(username=username, password=password)
+        login_process= self.auth.login(username=username, password=password)
+        status = login_process['status']
+        message = login_process['message']
+        user_data = login_process['user_data']
+        trip_data = login_process['trip_data']
+        tokens = login_process['tokens']
+        all_trip_data = login_process.get('all_trip_data')
         if not status:
             return jsonify({"message": message}), 401
-        return jsonify({"message": message, "userdatas": userdatas}), 200
+        return jsonify({"message": message,'tokens':tokens, "user_data": user_data,'all_trip_data':all_trip_data,"trip_data":trip_data if trip_data else None }), 200
 
     def signup(self):
         data = request.json

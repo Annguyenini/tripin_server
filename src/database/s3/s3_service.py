@@ -1,4 +1,4 @@
-from src.database.s3.s3_client import s3, ClientError
+from src.database.s3.s3_client import s3Resource,s3Client, ClientError
 
 from src.server_config.config import Config
 class S3Sevice:
@@ -14,11 +14,13 @@ class S3Sevice:
         self.config = Config()   
         
      
-    def generate_image_uri (bucket:str,key:str,expiration:int | None = 3600):
+    def generate_image_uri (self,key:str,expiration:int = 3600):
+        print(s3Client)
         try:
-            respond = s3.generate_presigned_url('get_object',
-            Params={'Bucket': bucket, 'Key': key},
+            respond = s3Client.generate_presigned_url('get_object',
+            Params={'Bucket': self.config.aws_bucket, 'Key': key},
             ExpiresIn=expiration,)
+            print(respond)
         except ClientError as e:
             print(e)
             return None
@@ -34,10 +36,8 @@ class S3Sevice:
             status(boolean)
         """
         try:
-            respond_obj =s3.Bucket(self.config.aws_bucket).put_object(Key=image_path,Body =image)
+            respond_obj =s3Resource.Bucket(self.config.aws_bucket).put_object(Key=image_path,Body =image)
             response = respond_obj.get()           # returns a dict
-
-
             if(response['ResponseMetadata']['HTTPStatusCode']==200):
                 return True
         except ClientError as e:

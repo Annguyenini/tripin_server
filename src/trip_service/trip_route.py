@@ -3,6 +3,7 @@ from flask import Blueprint, request, jsonify
 from src.token.tokenservice import TokenService
 from src.trip_service.trip_service import TripService
 from src.database.s3.s3_service import S3Sevice
+from src.database.s3.s3_dirs import TRIP_DIR
 class TripRoute:
     _instance = None
     def __new__(cls,*args,**kwargs):
@@ -48,8 +49,8 @@ class TripRoute:
         
         #get image, and image_path
         image = request.files.get('image')
-        
-        status, message,trip_id = self.trip_service.process_new_trip(user_id,trip_name,True if image else False)
+        image_path =None
+        status, message,trip_id = self.trip_service.process_new_trip(user_id,trip_name,image_path)
 
         
         if image:   
