@@ -16,6 +16,7 @@ class TripService:
         if not self._init: 
             self.token_service = TokenService()
             self.database_service = Database()
+            self.s3_service = S3Sevice()
             self._init =True
     
     def process_new_trip(self,user_id,trip_name,imageUri:str = None):
@@ -34,6 +35,7 @@ class TripService:
 
         if exist_trip_name is not None:
             return False, f"Trip name: {trip_name} already exist!",None
+        
         
         ##process to create new trip
         create_trip,trip_id = self.database_service.insert_to_database_trip(user_id = user_id, trip_name = trip_name,imageUri=imageUri)
@@ -96,7 +98,7 @@ class TripService:
         
         trip_image = None
         if trip_image_default:
-            trip_image = S3Sevice.generate_image_uri(TRIP_DIR+trip_image_default)
+            trip_image = self.s3_service.generate_image_uri(trip_image_default)
             
         trip_data = None 
         if trip_data_row:
@@ -110,9 +112,19 @@ class TripService:
             default_time =row['created_time']
             row['created_time'] = int(default_time.timestamp()*1000)
             default_time_end =row['ended_time']
-            row['ended_time'] = int(default_time_end.timestamp()*1000)
+            if default_time_end:
+                row['ended_time'] = int(default_time_end.timestamp()*1000)
+            
+            default_image_path = row['image']
+            if default_image_path:
+                row['image']= self.s3_service.generate_image_uri(default_image_path)
             
             trip_data_list.append(dict(row))
-     
-        print(trip_data_list)
+
+        # print(trip_data_list)
         return trip_data_list if len(trip_data_list)>=1 else None
+
+
+    def upload_trip_image(self,trip_id:int ,image_path:str):
+        status = self.database_service.update_db('tripin_trips.trips_table','id',trip_id,'image',image_path)
+        return status

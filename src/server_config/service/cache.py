@@ -1,7 +1,7 @@
 from flask import Flask
 from redis import Redis 
 
-class RateLimiterRedis:
+class Cache:
     _instance =None
     def __new__(cls):
         if cls._instance is None:
@@ -20,7 +20,8 @@ class RateLimiterRedis:
         
     def get (self,key):
         return self.redis_client.get(key)
-    
+    def set(self,key,time,data):
+        self.redis_client.setex(key,time,data)
     def close(self):
         self.redis_client.close()
 

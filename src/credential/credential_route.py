@@ -9,7 +9,7 @@ from src.credential.credential import Auth
 from src.token.tokenservice import TokenService
 from src.server_config.encryption.encryption import Encryption
 from src.server_auth.server_auth import ServerAuth
-from src.server_config.service.rate_limiter import RateLimiterRedis
+from src.server_config.service.cache import Cache
 class AuthServer:
     _instance = None 
     def __new__(cls,*args,**kwargs):
@@ -21,7 +21,7 @@ class AuthServer:
         self.auth = Auth()
         self.token_service = TokenService()
         self.encryption_service = Encryption()
-        self.rate_limiter_service = RateLimiterRedis()
+        self.rate_limiter_service = Cache()
         self._register_routes()
 
     def _register_routes(self):
@@ -35,7 +35,6 @@ class AuthServer:
         def rate_limit():
             user_ip = request.remote_addr
             count = self.rate_limiter_service.incr(user_ip)
-            print(count)
             if count ==1:
                 self.rate_limiter_service.exp(user_ip,60)
             elif count>5:

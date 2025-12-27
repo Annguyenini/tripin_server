@@ -2,11 +2,15 @@ from src.database.database import Database
 
 class UserService:
     _instace = None
+    _init = False
     def __new__(cls):
         if cls._instace:return cls._instace
         cls._instace = super().__new__(cls)
         
     def __init__(self):
+        if self._init:
+            return 
+        
         self.databaseService = Database()
     
     def get_user_data_from_database(self,username):
