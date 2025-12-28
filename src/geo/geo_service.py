@@ -3,6 +3,7 @@ import requests
 import json
 from shapely.geometry import Point
 import dotenv 
+import numpy as np
 from src.server_config.config import Config
 import os
 from src.server_config.service.cache import Cache
@@ -24,9 +25,10 @@ class GeoService:
     
     def _init_spatial_inx(self):
         try:
+            print('Loading geopandas....... (Do not close)')
             self.cities = geopandas.read_file('src/assets/geo/geoBoundariesCGAZ_ADM1.geojson')
             self.sindex = self.cities.sindex
-
+            print('Don')
         except Exception as e:
             raise e
     
@@ -102,13 +104,21 @@ class GeoService:
     def fetch_geo_data(self,longitude:float,latitude:float):
         """ fetch geo data
             Args:
-                longitude (float): _description_
+     def clean(obj):
+    if isinstance(obj, np.integer):
+        return int(obj)
+    if isinstance(obj, tuple):
+        return list(obj)
+    return obj
+           longitude (float): _description_
                 latitude (float): _description_
 
             Returns:
                 _type_: _description_
         """
-        city = self.get_city_from_point(longitude=longitude,latitude=latitude)
+        print('fetching geo data')
+
+        city,indexes= self.get_city_from_point(longitude=longitude,latitude=latitude)
         tempature = self.get_tempature(longitude=longitude,latitude=latitude)
         aqi = self.get_aqi(longitude=longitude,latitude=latitude)
         data ={'city':city,'aqi':aqi,'tempature':tempature}
@@ -127,19 +137,37 @@ class GeoService:
         """
         data = self.get_data_from_cache(longitude=longitude,latitude=latitude)
         if data is None:
+            print('No data from cache')
             data = self.fetch_geo_data(longitude=longitude,latitude=latitude)
             self.add_data_to_cache(data=data,longitude=longitude,latitude=latitude)
         return data 
     
     def get_city(self,user_id,longitude:float,latitude:float):
+        """get city from posible list on cache if not fetch
+
+        Args:
+            user_id (_type_): _description_
+            longitude (float): _description_
+            latitude (float): _description_
+
+        Returns:
+            _type_: _description_
+        """
         indexes = self.get_possible_cities_indexes_from_cache(user_id=user_id)
         if indexes:
-            city,indexes = self.get_city_from_point(longitude=longitude,latitude=latitude,cache=True,posible_indx=indexes)
+            print('get city from cache')
+
+            city,indexes = self.get_city_from_point(longitude=longitude,latitude=latitude,posible_indx=indexes)
             if city:
                 return city
         city,indexes = self.get_city_from_point(longitude=longitude,latitude=latitude)
+        print('fetching city')
+
         if indexes:
-            self.add_data_to_cache(indexes,longitude=longitude,latitude=latitude)
+            data = []
+            for num in indexes:
+                data.append(int(num))            
+            self.add_possible_cities_indexes_to_cache(user_id=user_id,indexes=data)
         return city
     
    
@@ -153,6 +181,7 @@ class GeoService:
             longitude (float): _description_
             latitude (float): _description_
         """
+        print('data',data)
         longitude = round(longitude,2)
         latitude = round (latitude,2)
         key = f'{longitude}:{latitude}'

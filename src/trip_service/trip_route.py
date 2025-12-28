@@ -93,7 +93,6 @@ class TripRoute:
         user_data_from_jwt = self.token_service.decode_jwt(token)
 
         trip_id = user_data.get("trip_id")        
-        print(trip_id,type(trip_id))
         status,message = self.trip_service.end_a_trip(trip_id=trip_id)
         if not status:
             return jsonify({"code":"failed","message":message}),500
@@ -126,10 +125,9 @@ class TripRoute:
         
         longitude = data.get('longitude')
         latitude =data.get('latitude')
-        print('long',longitude,'lat',latitude)
+        # print('long',longitude,'lat',latitude)
         # insert coordinates into server db
         insert = self.trip_service.insert_coordinates_to_db(trip_id=trip_id,coordinates=coordinates)
-        print('geo',self.geo_service)
         
         geo_data = None
         city = None

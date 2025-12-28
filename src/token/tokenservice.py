@@ -73,9 +73,9 @@ class TokenService:
             algorithms=["RS256"],
             options={"exp": True}  # make sure expiration is enforced
         )
-            print("issue time: ",payload['issue'])
-            print("exp time: ",payload['exp'])
-            print("cur time: ",int(datetime.utcnow().timestamp()))
+            # print("issue time: ",payload['issue'])
+            # print("exp time: ",payload['exp'])
+            # print("cur time: ",int(datetime.utcnow().timestamp()))
             if(int(datetime.utcnow().timestamp()))>payload['exp']: ##just doesnt believe in the jwt anymore =))
                 return False, "Token Expired!","token_expired"
             # user_data= {"user_id":payload["user_id"],"user_name":payload["user_name"]}  

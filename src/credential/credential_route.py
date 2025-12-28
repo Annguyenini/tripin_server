@@ -31,14 +31,14 @@ class AuthServer:
         """
         # pass the bound method
         ##rate limiter
-        @self.bp.before_request
-        def rate_limit():
-            user_ip = request.remote_addr
-            count = self.rate_limiter_service.incr(user_ip)
-            if count ==1:
-                self.rate_limiter_service.exp(user_ip,60)
-            elif count>5:
-                return jsonify({"message":"Too many request!"}),429
+        # @self.bp.before_request
+        # def rate_limit():
+        #     user_ip = request.remote_addr
+        #     count = self.rate_limiter_service.incr(user_ip)
+        #     if count ==1:
+        #         self.rate_limiter_service.exp(user_ip,60)
+        #     elif count>5:
+        #         return jsonify({"message":"Too many request!"}),429
             
             
         self.bp.route("/login-via-token", methods=["POST"])(self.login_via_token)
