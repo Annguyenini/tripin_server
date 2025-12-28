@@ -76,11 +76,10 @@ class AuthServer:
         message = data['message']
         code = data['code']
         user_data = data['user_data']
-        trip_data = data.get('trip_data')
-        all_trip_data =data['all_trip_data']
+    
         if not status:
-            return jsonify({"message": message,"user_data": None,"code":code,'trip_data':None,'all_trip_data':None}), 401
-        return jsonify({"message": message, "user_data": user_data,'trip_data':trip_data,"code":code,'all_trip_data':all_trip_data}), 200
+            return jsonify({"message": message,"user_data": None,"code":code}), 401
+        return jsonify({"message": message, "user_data": user_data}), 200
 
     def login(self):
         data = request.json
@@ -90,12 +89,10 @@ class AuthServer:
         status = login_process['status']
         message = login_process['message']
         user_data = login_process['user_data']
-        trip_data = login_process['trip_data']
         tokens = login_process['tokens']
-        all_trip_data = login_process.get('all_trip_data')
         if not status:
             return jsonify({"message": message}), 401
-        return jsonify({"message": message,'tokens':tokens, "user_data": user_data,'all_trip_data':all_trip_data,"trip_data":trip_data if trip_data else None }), 200
+        return jsonify({"message": message,'tokens':tokens, "user_data": user_data }), 200
 
     def signup(self):
         data = request.json

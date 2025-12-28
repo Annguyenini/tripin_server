@@ -63,11 +63,6 @@ class Auth:
             
         # user data 
         user_data = {'user_id':userid,'display_name':display_name,'user_name':username,'role':role,'avatar_uri':avatar_uri if avatar_uri else None}
-
-        # if user have active trip 
-        trip_data = self.tripService.get_trip_data(user_id=userid)
-        
-        all_trip_data = self.tripService.get_all_trip_data(user_id=userid)
         
         
         # checker
@@ -93,7 +88,7 @@ class Auth:
             )
         #return data
         
-        return ({'status':True, 'message':"Successfully",'user_data':user_data,'all_trip_data':all_trip_data if all_trip_data else None , 'trip_data':trip_data if trip_data else None,'tokens':token_data})
+        return ({'status':True, 'message':"Successfully",'user_data':user_data,'tokens':token_data})
     #signup function
     def signup(self,email:str,display_name:str,username:str,password:str): 
         ##hash password, prepare to insert to database 
@@ -141,10 +136,9 @@ class Auth:
         avatar_uri =self.s3Service.generate_image_uri(s3key)
         
         user_data = {'user_id':userid,'display_name':display_name,'user_name':username,'role':role,'avatar_uri':avatar_uri if avatar_uri else None}
-        trip_data = self.tripService.get_trip_data(user_id=userid)
-        all_trip_data = self.tripService.get_all_trip_data(user_id=userid)
 
-        return ({'status':True,"message": message, "user_data": user_data,'trip_data':trip_data,'all_trip_data':all_trip_data if all_trip_data else None,"code":code})
+
+        return ({'status':True,"message": message, "user_data": user_data,"code":code})
     
     def process_new_user(self,email:str):
         assert(type(email) is not str,"Email should be string")

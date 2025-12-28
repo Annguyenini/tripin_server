@@ -10,27 +10,29 @@ class GeoService:
     _instance = None
     _init = False
     def __new__(cls):
-        if cls._instance:
-            return cls._instance
-        cls._instance  = super().__new__(cls)
-        
+        if cls._instance is None:
+            cls._instance  = super().__new__(cls)
+        return cls._instance
     def __init__(self):
         if self._init :
             return
         self.cities = None
         self.cache = Cache()
         self.config = Config()
+        self._init_spatial_inx()
         dotenv.load_dotenv(self.config.env_path)
     
     def _init_spatial_inx(self):
         try:
             self.cities = geopandas.read_file('src/assets/geo/geoBoundariesCGAZ_ADM1.geojson')
+            self.sindex = self.cities.sindex
+
         except Exception as e:
             raise e
     
 
         
-    def get_city_from_point(self,longitude:float,latitude:float, cache:bool = False, posible_indx:list = None):
+    def get_city_from_point(self,longitude:float,latitude:float, posible_indx:list = None):
         """get city
         if cache is true and indexes, loop throught the possible cities base on indexes
         but if not found in cache, recursive with out cache and list of indexes 
@@ -47,18 +49,20 @@ class GeoService:
         """
         point = Point(longitude,latitude)
         if posible_indx is None:
-            posible_indx = list(self.cities.intersection(point.bounds))
+            posible_indx = list(self.sindex.intersection(point.bounds))
         posible_cities = self.cities.iloc[posible_indx]
         
         for _,city in posible_cities.iterrows():
             if city.geometry.contains(point):
-                return city['shapeName']
-        if cache :
-            return self.get_city_from_point(longitude=longitude,latitude=latitude)
-        return None            
+                return city['shapeName'], posible_indx
+       
+        return None, None            
     
-    def get_weather(self,longitude:float,latitude:float):
-        """return weather
+             
+    
+    
+    def get_tempature(self,longitude:float,latitude:float):
+        """return tempature
 
         Args:
             longitude (float): _description_
@@ -67,13 +71,13 @@ class GeoService:
         Returns:
             _type_: _description_
         """
-        url =f'https://api.open-meteo.com/v1/forecast?latitude={latitude}&longitude={longitude}&hourly=temperature_2m,pm2_5,pm10,carbon_monoxide,nitrogen_dioxide,ozone,sulphur_dioxide&timezone=auto'
+        url =f'https://api.open-meteo.com/v1/forecast?latitude={latitude}&longitude={longitude}&current=temperature_2m'
         respond = requests.get(url=url)
         if respond.status_code !=200:
             return None
         
         data= respond.json() 
-        
+        print('data',data)
         return data['current']['temperature_2m']
     def get_aqi(self,longitude:float,latitude:float):
         """
@@ -105,9 +109,9 @@ class GeoService:
                 _type_: _description_
         """
         city = self.get_city_from_point(longitude=longitude,latitude=latitude)
-        weather = self.get_weather(longitude=longitude,latitude=latitude)
+        tempature = self.get_tempature(longitude=longitude,latitude=latitude)
         aqi = self.get_aqi(longitude=longitude,latitude=latitude)
-        data ={'city':city,'aqi':aqi,'weather':weather}
+        data ={'city':city,'aqi':aqi,'tempature':tempature}
         return data 
     
     
@@ -124,13 +128,21 @@ class GeoService:
         data = self.get_data_from_cache(longitude=longitude,latitude=latitude)
         if data is None:
             data = self.fetch_geo_data(longitude=longitude,latitude=latitude)
+            self.add_data_to_cache(data=data,longitude=longitude,latitude=latitude)
         return data 
     
     def get_city(self,user_id,longitude:float,latitude:float):
-        city = self.get_possible_cities_indexes_from_cache(user_id=user_id)
-        if city is None:
-            city = self.get_city_from_point(longitude=longitude,latitude=latitude)
+        indexes = self.get_possible_cities_indexes_from_cache(user_id=user_id)
+        if indexes:
+            city,indexes = self.get_city_from_point(longitude=longitude,latitude=latitude,cache=True,posible_indx=indexes)
+            if city:
+                return city
+        city,indexes = self.get_city_from_point(longitude=longitude,latitude=latitude)
+        if indexes:
+            self.add_data_to_cache(indexes,longitude=longitude,latitude=latitude)
         return city
+    
+   
     
     
     def add_data_to_cache(self,data:object,longitude:float,latitude:float):
