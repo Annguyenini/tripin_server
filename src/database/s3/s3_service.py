@@ -26,7 +26,7 @@ class S3Sevice:
             return None
         return respond
     
-    def upload_media(self,image_path:str,image):
+    def upload_media(self,path:str,data):
         """upload to s3
 
         Args:
@@ -36,7 +36,7 @@ class S3Sevice:
             status(boolean)
         """
         try:
-            respond_obj =s3Resource.Bucket(self.config.aws_bucket).put_object(Key=image_path,Body =image)
+            respond_obj =s3Resource.Bucket(self.config.aws_bucket).put_object(Key=path,Body =data)
             response = respond_obj.get()           # returns a dict
             if(response['ResponseMetadata']['HTTPStatusCode']==200):
                 return True

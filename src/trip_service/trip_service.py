@@ -128,3 +128,14 @@ class TripService:
     def upload_trip_image(self,trip_id:int ,image_path:str):
         status = self.database_service.update_db('tripin_trips.trips_table','id',trip_id,'image',image_path)
         return status
+    
+    def upload_media(self,type:str,path:str,media,longitude:float,latitude:float,trip_id:int,time):
+        insert_into_db = self.database_service.insert_media_into_db(type=type,key=path,longitude=longitude,latitude=latitude,trip_id=trip_id,time=time)
+        if not insert_into_db:
+            return False
+        
+        insert_into_s3 = self.s3_service.upload_media(f'trips/{trip_id}/{path}',media)
+        if not insert_into_s3:
+            self.database_service.delete_from_table('tripin_trips.trip_medias','trip_id',trip_id,True,'key',path)
+            return False
+        return True

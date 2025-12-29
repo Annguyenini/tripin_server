@@ -134,15 +134,19 @@ class Database:
             table (str): table_name 
             item (str): column_name
         """
-        db_allow_table=['tripin_auth.userdata','tripin_auth.tokens','tripin_trips.trip_coordinates','tripin_trips.trips_table']
-        db_allow_items_auth=['email','user_name','password','display_name','token','user_id','issued_at','exprires_at','revoked','id']
-        db_allow_items_trip=['trip_name','id','created_time','ended_time','active','image']
-        db_allow_items_user =['avatar']
-        if table and table not in db_allow_table:
-            raise "Table not allowed"
-        
-        if item and item not in db_allow_items_auth and item not in db_allow_items_trip and item not in db_allow_items_user:
-            raise "Item not allowed"
+        db_allow={
+            'tripin_auth.userdata':['email','user_name','password','display_name','id','avatar'],
+            'tripin_auth.tokens':['token','user_id','user_name','issued_at','exprires_at','revoked'],
+            'tripin_trips.trip_coordinates':['trip_id','altitude','longitude','latitude','heading','speed','time_stamp'],
+            'tripin_trips.trips_table':['trip_name','id','created_time','ended_time','active','image','user_id'],
+            'tripis_trips.trip_medias':['trip_id','media_type','key','longitude','latitude','time_stamp'],
+            
+        }
+        if not table or db_allow[table] is None:
+            raise "Table is invalid"
+         
+        if not item or item not in db_allow[table]:
+            raise "Item is invalid"
                 
                 
     def find_item_in_sql(self, table:str, item:str, value:str, second_condition:bool | None=None, second_item:str |None = None, second_value: str| None=None, return_option:str |None="fetchone",):
@@ -189,7 +193,7 @@ class Database:
         """
         con,cur = self.connect_db()
         self.check_allowance(table,item)
-        self.check_allowance(item = item_to_update)
+        self.check_allowance(table=table,item = item_to_update)
 
         cur.execute(f'UPDATE {table} SET {item_to_update} =%s WHERE {item} = %s',(value_to_update,value,))
         con.commit()
@@ -198,6 +202,19 @@ class Database:
             return False
         return True
 
+    def delete_from_table(self,table:str, item:str,value:str, second_condition:bool | None=None, second_item:str | None=None , second_value:str | None=None):
+        con,cur = self.connect_db()
+        self.check_allowance(table=table,item=item)
+        self.check_allowance(table=table,item= second_item)
+        if second_condition:
+            cur.execute(f'DELETE FROM {table} WHERE {item} = %s AND {second_item} = %s',(value,second_value))
+        else:
+            cur.execute(f'DELETE FROM {table} WHERE {item} = %s',(value))            
+        con.commit()
+        if cur.rowcount <= 0:
+            return False
+        else :return True
+        
     def insert_to_database_trip(self,user_id:int,trip_name:str,imageUri:str):
         """insert new row in to database trip table / return 2 value
 
@@ -261,3 +278,12 @@ class Database:
         if(cur.rowcount>=1):
             return True
         return False
+    
+    
+    def insert_media_into_db(self, type:str,key:str,longitude:float,latitude:float,trip_id:int,time):
+        con,cur = self.connect_db()
+        cur.execute(f'INSERT INTO tripin_trips.trip_medias (media_type,key,longitude,latitude,trip_id,time_stamp) VALUES (%s,%s,%s,%s,%s,%s)',(type,key,longitude,latitude,trip_id,time))
+        con.commit()
+        if cur.rowcount >=1:
+            return True
+        else: return False

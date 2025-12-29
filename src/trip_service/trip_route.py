@@ -5,6 +5,7 @@ from src.trip_service.trip_service import TripService
 from src.database.s3.s3_service import S3Sevice
 from src.database.s3.s3_dirs import TRIP_DIR
 from src.geo.geo_service import GeoService
+import json
 class TripRoute:
     _instance = None
     def __new__(cls,*args,**kwargs):
@@ -24,6 +25,7 @@ class TripRoute:
         self.bp.route("/request-new-trip", methods=["POST"])(self.request_new_trip)
         self.bp.route("/<trip_id>/coordinates",methods =["POST"])(self.add_coordinates)
         self.bp.route('/trips',methods =['GET'])(self.request_trips_data)
+        self.bp.route ('/<trip_id>/upload',methods=['POST'])(self.media_upload)
         self.bp.route("/end-trip",methods=["POST"])(self.end_trip)
     ## request new trip
     def request_new_trip(self):
@@ -59,7 +61,7 @@ class TripRoute:
         if image:   
             image_path = f"trips/{trip_id}/cover.jpg"
             # upload to s3
-            upload = self.trip_s3.upload_media(image_path=image_path,image=image)
+            upload = self.trip_s3.upload_media(path=image_path,data=image)
             upload_image = self.trip_service.upload_trip_image(trip_id,image_path=image_path)
         
         all_trip_data = self.trip_service.get_all_trip_data(user_id=user_id)
@@ -68,6 +70,9 @@ class TripRoute:
                 message +='Failed to upload into cloud'
             if(not upload_image):
                 message +='Failed to upload into db'
+                
+            print(message)
+
             return jsonify({"message":message,"code":"failed"}),500
         else:
             return jsonify({"message":message,"trip_id":trip_id,'all_trip_data':all_trip_data,"code":"successfully"}),200
@@ -155,3 +160,29 @@ class TripRoute:
         all_trips_data = self.trip_service.get_all_trip_data(user_id=user_id)
         return jsonify({'message':'Successfully!','current_trip_data':current_trip_data if current_trip_data else None,'all_trip_data':all_trips_data if all_trips_data else None})
     
+    
+    def media_upload(self,trip_id):
+        Ptoken = request.headers.get("Authorization")
+        token=Ptoken.replace("Bearer ","")
+        valid_token, Tmessage,code= self.token_service.jwt_verify(token)
+        # return if jwt in valid or expried
+
+        if not valid_token:
+            return jsonify({"message":Tmessage, "code":code}),401
+        data = json.loads(request.form.get('data'))
+        print(data)
+        longitude = data.get('longitude')
+        latitude = data.get('latitude')
+        time = data.get('time_stamp')  
+        image = request.files.get('image')
+        if image:
+            path = image.filename
+            upload_status = self.trip_service.upload_media('image',path=path,media=image,longitude=longitude,latitude=latitude,trip_id=trip_id,time=time)
+        else:
+            video = request.files.get('video')
+            path = video.filename
+            upload_status = self.trip_service.upload_media('video',path=path,media=video,longitude=longitude,latitude=latitude,trip_id=trip_id,time=time)
+        
+        if not upload_status:
+            return jsonify({'message':'Failed!'}),500
+        return jsonify({'message':'Successfully'})

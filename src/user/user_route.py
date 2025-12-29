@@ -55,7 +55,7 @@ class UserRoute :
 
         # upload to s3 and return 401 if error occurr
         s3key =AVATAR_DIR+path
-        s3_status = self.S3Service.upload_media(image_path=s3key,image=image)
+        s3_status = self.S3Service.upload_media(path=s3key,data=image)
         if not s3_status:
             return jsonify({"message":"Error Upload To Cloud",'code':'failed'}),500
         
