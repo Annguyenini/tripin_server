@@ -27,6 +27,7 @@ class TripRoute:
         self.bp.route('/trips',methods =['GET'])(self.request_trips_data)
         self.bp.route ('/<trip_id>/upload',methods=['POST'])(self.media_upload)
         self.bp.route("/end-trip",methods=["POST"])(self.end_trip)
+        self.bp.route('/location-conditions',methods=['GET'])(self.request_current_location_condition)
     ## request new trip
     def request_new_trip(self):
         
@@ -127,24 +128,14 @@ class TripRoute:
         coordinates = data.get("coordinates")
         data_from_jwt = self.token_service.decode_jwt(token=token)
         user_id = data_from_jwt['user_id']
-        
-        longitude = data.get('longitude')
-        latitude =data.get('latitude')
-        # print('long',longitude,'lat',latitude)
-        # insert coordinates into server db
+
         insert = self.trip_service.insert_coordinates_to_db(trip_id=trip_id,coordinates=coordinates)
         
-        geo_data = None
-        city = None
-        if longitude and latitude:
-            geo_data = self.geo_service.get_geo_data(longitude=longitude,latitude=latitude)
-            
-            city = self.geo_service.get_city(user_id=user_id,longitude=longitude,latitude=latitude)
-            
+       
         if not insert:
             return jsonify({"code": "failed", "message":"Failed to save to database"}),500
         
-        return jsonify({"code": "successfully",'geo_data':geo_data, 'city':city, "message":"Successfully store into database"}),200
+        return jsonify({"code": "successfully", "message":"Successfully store into database"}),200
     
     def request_trips_data(self):
         Ptoken = request.headers.get("Authorization")
@@ -186,3 +177,53 @@ class TripRoute:
         if not upload_status:
             return jsonify({'message':'Failed!'}),500
         return jsonify({'message':'Successfully'})
+    
+    def request_current_location_condition(self):
+        Ptoken = request.headers.get("Authorization")
+        token=Ptoken.replace("Bearer ","")
+        valid_token, Tmessage,code= self.token_service.jwt_verify(token)
+        # return if jwt in valid or expried
+
+        if not valid_token:
+            return jsonify({"message":Tmessage, "code":code}),401
+        data_from_jwt  = self.token_service.decode_jwt(token=token)
+        user_id = data_from_jwt['user_id']
+        longitude = request.args.get('longitude',type=float)
+        latitude = request.args.get('latitude',type = float)
+        geo_data = None
+        city = None
+        if longitude and latitude:
+            geo_data = self.geo_service.get_geo_data(longitude=longitude,latitude=latitude)
+            
+            city = self.geo_service.get_city(user_id=user_id,longitude=longitude,latitude=latitude)
+        return jsonify({'message':'Successfully!','geo_data':geo_data,'city':city}),200    
+    
+    def get_trip_coors (self,trip_id):
+        Ptoken = request.headers.get("Authorization")
+        token=Ptoken.replace("Bearer ","")
+        valid_token, Tmessage,code= self.token_service.jwt_verify(token)
+        # return if jwt in valid or expried
+
+        if not valid_token:
+            return jsonify({"message":Tmessage, "code":code}),401
+        
+        coors = self.trip_service.get_trip_coors(trip_id=trip_id)
+        
+        
+        return jsonify({'message':"Successfully",'coordinates':coors}),200
+    
+    
+    def get_trip_medias (self,trip_id):
+        Ptoken = request.headers.get("Authorization")
+        token=Ptoken.replace("Bearer ","")
+        valid_token, Tmessage,code= self.token_service.jwt_verify(token)
+        # return if jwt in valid or expried
+
+        if not valid_token:
+            return jsonify({"message":Tmessage, "code":code}),401
+        
+        medias = self.trip_service.get_trip_media(trip_id=trip_id)
+        
+        
+        return jsonify({'message':"Successfully",'medias':medias}),200
+    

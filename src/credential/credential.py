@@ -59,7 +59,7 @@ class Auth:
         avatar_uri =None
         if avatar:
             s3key = AVATAR_DIR+avatar
-            avatar_uri =self.s3Service.generate_image_uri(s3key)
+            avatar_uri =self.s3Service.generate_temp_uri(s3key)
             
         # user data 
         user_data = {'user_id':userid,'display_name':display_name,'user_name':username,'role':role,'avatar_uri':avatar_uri if avatar_uri else None}
@@ -133,7 +133,7 @@ class Auth:
         sub = userdata_from_jwt['sub']
                 
         s3key = AVATAR_DIR+sub+'_avatar.jpg'
-        avatar_uri =self.s3Service.generate_image_uri(s3key)
+        avatar_uri =self.s3Service.generate_temp_uri(s3key)
         
         user_data = {'user_id':userid,'display_name':display_name,'user_name':username,'role':role,'avatar_uri':avatar_uri if avatar_uri else None}
 

@@ -14,7 +14,7 @@ class S3Sevice:
         self.config = Config()   
         
      
-    def generate_image_uri (self,key:str,expiration:int = 3600):
+    def generate_temp_uri (self,key:str,expiration:int = 3600):
         print(s3Client)
         try:
             respond = s3Client.generate_presigned_url('get_object',

@@ -98,7 +98,7 @@ class TripService:
         
         trip_image = None
         if trip_image_default:
-            trip_image = self.s3_service.generate_image_uri(trip_image_default)
+            trip_image = self.s3_service.generate_temp_uri(trip_image_default)
             
         trip_data = None 
         if trip_data_row:
@@ -117,7 +117,7 @@ class TripService:
             
             default_image_path = row['image']
             if default_image_path:
-                row['image']= self.s3_service.generate_image_uri(default_image_path)
+                row['image']= self.s3_service.generate_temp_uri(default_image_path)
             
             trip_data_list.append(dict(row))
 
@@ -139,3 +139,17 @@ class TripService:
             self.database_service.delete_from_table('tripin_trips.trip_medias','trip_id',trip_id,True,'key',path)
             return False
         return True
+    
+    
+    def get_trip_coors(self,trip_id:int):
+        # return a list of rowdict 
+        coors = self.database_service.find_item_in_sql('tripin_trips.trip_coordinates','trip_id',trip_id,return_option='fetchall')
+        return [dict(r) for r in coors]
+    
+    def get_trip_media(self,trip_id:int):
+        medias = self.database_service.find_item_in_sql('tripin_trips.trip_medias','trip_id',trip_id,return_option='fetchall')
+        for i in range( len(medias)):
+            default_key = medias[i]['key']
+            medias[i]['key'] = self.s3_service.generate_temp_uri(default_key)
+            medias[i]=dict(medias[i])
+        return medias

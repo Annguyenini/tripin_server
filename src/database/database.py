@@ -15,7 +15,7 @@ from src.server_config.encryption.encryption import Encryption
 from src.server_config.database_config import DatabaseConfig
 import inspect
 from datetime import datetime
-from psycopg2.extras import DictCursor
+from psycopg2.extras import DictCursor,RealDictCursor
 
 
 class Database:
@@ -106,7 +106,7 @@ class Database:
         ''')
         con.commit() 
         con.close() 
-    def connect_db(self):
+    def connect_db(self,cur_options:str = 'rowDict'):
         """connect to postgres
 
         Returns:
@@ -123,7 +123,11 @@ class Database:
         )
 
         # con = sqlite3.connect(path,check_same_thread=False,isolation_level=None)
-        cur= conn.cursor(cursor_factory=DictCursor)
+        if cur_options =='realDict':
+            cur= conn.cursor(cursor_factory=RealDictCursor)
+        else:
+            cur= conn.cursor(cursor_factory=DictCursor)
+
         return conn, cur
 
 
