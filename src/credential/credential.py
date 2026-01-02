@@ -9,7 +9,7 @@ from src.trip_service.trip_service import TripService
 from src.user.user_service import UserService
 from src.database.s3.s3_dirs import AVATAR_DIR, TRIP_DIR    
 from src.server_config.service.cache import Cache
-from server_config.service.Etag import EtagService
+from server_config.service.Etag.Etag import EtagService
 #userdata user_id|email|user_name|displayname|password
 #token keyid| userid| username|token|issue name | exp name | revok
 class Auth:

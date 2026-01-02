@@ -71,6 +71,7 @@ class AuthServer:
         """      
         ptoken = request.headers.get("Authorization")
         token = ptoken.replace("Bearer ", "")
+        
         data = self.auth.login_via_token(token=token)
         status = data['status']
         message = data['message']

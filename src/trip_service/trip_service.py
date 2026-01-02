@@ -25,7 +25,7 @@ class TripService:
             self.cache_service = Cache()
             self._init =True
     
-    def process_new_trip(self,user_id,trip_name,imageUri:str = None):
+    def process_new_trip(self,user_id,trip_name,imageUri:str = None,image =None):
         # trip_db layout 
         # trip_id | trip_name | user_id | start_time | end_time | active
 
@@ -45,6 +45,12 @@ class TripService:
         
         ##process to create new trip
         create_trip,trip_id = self.trip_database_service.insert_to_database_trip(user_id = user_id, trip_name = trip_name,imageUri=imageUri)
+        
+        if image:   
+            image_path = f"trips/{trip_id}/cover.jpg"
+            # upload to s3
+            upload = self.s3_service.upload_media(path=image_path,data=image)            
+            
         if create_trip:
             return True, f"Created trip {trip_name} successfully", trip_id
         else: 
