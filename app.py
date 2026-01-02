@@ -5,6 +5,7 @@ from src.credential.credential_route import AuthServer
 from src.server_auth.server_auth import ServerAuth
 from src.mail.mail_config import MailConfig
 from src.trip_service.trip_route import TripRoute
+from src.trip_service.trip_contents.trip_contents_route import TripContentsRoute
 from src.user.user_route import UserRoute
 import getpass
 import json
@@ -21,12 +22,14 @@ class Server:
         mail.init_app(self.app)
         
     def _register_blueprints(self):
-        auth_server = AuthServer()
-        trip_server = TripRoute()
-        user_server = UserRoute()
-        self.app.register_blueprint(auth_server.bp,url_prefix="/auth")
-        self.app.register_blueprint(trip_server.bp,url_prefix="/trip")
-        self.app.register_blueprint(user_server.bp,url_prefix="/user")
+        auth_route = AuthServer()
+        trip_route = TripRoute()
+        trip_contents_route = TripContentsRoute()
+        user_route = UserRoute()
+        self.app.register_blueprint(auth_route.bp,url_prefix="/auth")
+        self.app.register_blueprint(trip_route.bp,url_prefix="/trip")
+        self.app.register_blueprint(trip_contents_route.bp,url_prefix ='/trip-contents')
+        self.app.register_blueprint(user_route.bp,url_prefix="/user")
         
         
 

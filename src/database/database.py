@@ -143,7 +143,7 @@ class Database:
             'tripin_auth.tokens':['token','user_id','user_name','issued_at','exprires_at','revoked'],
             'tripin_trips.trip_coordinates':['trip_id','altitude','longitude','latitude','heading','speed','time_stamp'],
             'tripin_trips.trips_table':['trip_name','id','created_time','ended_time','active','image','user_id'],
-            'tripis_trips.trip_medias':['trip_id','media_type','key','longitude','latitude','time_stamp'],
+            'tripin_trips.trip_medias':['trip_id','media_type','key','longitude','latitude','time_stamp'],
             
         }
         if not table or db_allow[table] is None:
@@ -153,7 +153,7 @@ class Database:
             raise "Item is invalid"
                 
                 
-    def find_item_in_sql(self, table:str, item:str, value:str, second_condition:bool | None=None, second_item:str |None = None, second_value: str| None=None, return_option:str |None="fetchone",):
+    def find_item_in_sql(self, table:str, item:str, value, second_condition:bool | None=None, second_item:str |None = None, second_value: str| None=None, return_option:str |None="fetchone",):
         """return value base on table and item in postgress
 
         Args:
@@ -183,7 +183,8 @@ class Database:
             item = cur.fetchone()
         return item
     
-    def update_db(self,table:str, item:str, value:str, item_to_update:str, value_to_update:str ):
+    def 
+    update_db(self,table:str, item:str, value:str, item_to_update:str, value_to_update:str ):
         
         """update a specific value where  condition exist 
         Args:
@@ -219,26 +220,7 @@ class Database:
             return False
         else :return True
         
-    def insert_to_database_trip(self,user_id:int,trip_name:str,imageUri:str):
-        """insert new row in to database trip table / return 2 value
-
-        Args:
-            user_id (int): _userid_
-            trip_name (str): _tripname_
-
-        Returns:
-            _bool, int_: _status, trip_id_
-        """
-        con,cur = self.connect_db()
-        created_time = datetime.now()
-        cur.execute(f'INSERT INTO tripin_trips.trips_table (user_id,trip_name,created_time, active,image) VALUES (%s,%s,%s,%s,%s) RETURNING id',(user_id,trip_name,created_time,True,imageUri))
-        trip_id = cur.fetchone()['id']
-        con.commit()
-        con.close()
-        if cur.rowcount >=1:
-            print("insert successfully")
-            return True, trip_id
-        return False,0 
+   
         
     def insert_to_database_singup(self, email:str, display_name:str, username:str, password:str):
         """insert to database, credential table
@@ -283,11 +265,3 @@ class Database:
             return True
         return False
     
-    
-    def insert_media_into_db(self, type:str,key:str,longitude:float,latitude:float,trip_id:int,time):
-        con,cur = self.connect_db()
-        cur.execute(f'INSERT INTO tripin_trips.trip_medias (media_type,key,longitude,latitude,trip_id,time_stamp) VALUES (%s,%s,%s,%s,%s,%s)',(type,key,longitude,latitude,trip_id,time))
-        con.commit()
-        if cur.rowcount >=1:
-            return True
-        else: return False
