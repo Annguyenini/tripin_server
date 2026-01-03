@@ -9,7 +9,7 @@ from src.trip_service.trip_service import TripService
 from src.user.user_service import UserService
 from src.database.s3.s3_dirs import AVATAR_DIR, TRIP_DIR    
 from src.server_config.service.cache import Cache
-from server_config.service.Etag.Etag import EtagService
+from src.server_config.service.Etag.Etag import EtagService
 #userdata user_id|email|user_name|displayname|password
 #token keyid| userid| username|token|issue name | exp name | revok
 class Auth:
@@ -67,10 +67,7 @@ class Auth:
             
         # user data 
         user_data = {'user_id':userid,'display_name':display_name,'user_name':username,'role':role,'avatar_uri':avatar_uri if avatar_uri else None}
-        
-        
-        Etag = self.etagService.get_userdata_etag_handler(user_id=userid,user_data=user_data)
-        
+                
         # checker
         assert userid is not None ,"UserID Null"
         assert display_name is not None ,"Display_name Null"
@@ -94,7 +91,7 @@ class Auth:
             )
         #return data
         
-        return ({'status':True, 'message':"Successfully",'user_data':user_data,'tokens':token_data,'etag':Etag})
+        return ({'status':True, 'message':"Successfully",'user_data':user_data,'tokens':token_data})
     #signup function
     def signup(self,email:str,display_name:str,username:str,password:str): 
         ##hash password, prepare to insert to database 

@@ -20,8 +20,13 @@ class Cache:
         
     def get (self,key):
         return self.redis_client.get(key)
+    
     def set(self,key,time,data):
         self.redis_client.setex(key,time,data)
+    
+    def delete(self,key):
+        self.redis_client.delete(key)
+    
     def close(self):
         self.redis_client.close()
 

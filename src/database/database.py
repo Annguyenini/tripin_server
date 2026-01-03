@@ -16,7 +16,7 @@ from src.server_config.database_config import DatabaseConfig
 import inspect
 from datetime import datetime
 from psycopg2.extras import DictCursor,RealDictCursor
-
+from src.database.database_keys import DATABASEKEYS
 
 class Database:
     _instance = None
@@ -131,27 +131,7 @@ class Database:
         return conn, cur
 
 
-    def check_allowance(self,table:str|None =None, item:str|None = None):
-        """check for allowance base on table and value
-
-        Args:
-            table (str): table_name 
-            item (str): column_name
-        """
-        db_allow={
-            'tripin_auth.userdata':['email','user_name','password','display_name','id','avatar'],
-            'tripin_auth.tokens':['token','user_id','user_name','issued_at','exprires_at','revoked'],
-            'tripin_trips.trip_coordinates':['trip_id','altitude','longitude','latitude','heading','speed','time_stamp'],
-            'tripin_trips.trips_table':['trip_name','id','created_time','ended_time','active','image','user_id'],
-            'tripin_trips.trip_medias':['trip_id','media_type','key','longitude','latitude','time_stamp'],
-            
-        }
-        if not table or db_allow[table] is None:
-            raise "Table is invalid"
-         
-        if not item or item not in db_allow[table]:
-            raise "Item is invalid"
-                
+    
                 
     def find_item_in_sql(self, table:str, item:str, value, second_condition:bool | None=None, second_item:str |None = None, second_value: str| None=None, return_option:str |None="fetchone",):
         """return value base on table and item in postgress
@@ -170,7 +150,6 @@ class Database:
         """
         con,cur = self.connect_db()
         
-        self.check_allowance(table,item)
         
         if not second_condition:
             cur.execute (f'SELECT * FROM {table} WHERE {item}=%s',(value,))
@@ -183,8 +162,7 @@ class Database:
             item = cur.fetchone()
         return item
     
-    def 
-    update_db(self,table:str, item:str, value:str, item_to_update:str, value_to_update:str ):
+    def update_db(self,table:str, item:str, value:str, item_to_update:str, value_to_update:str ):
         
         """update a specific value where  condition exist 
         Args:
@@ -197,8 +175,7 @@ class Database:
             bool: status
         """
         con,cur = self.connect_db()
-        self.check_allowance(table,item)
-        self.check_allowance(table=table,item = item_to_update)
+
 
         cur.execute(f'UPDATE {table} SET {item_to_update} =%s WHERE {item} = %s',(value_to_update,value,))
         con.commit()
@@ -209,8 +186,7 @@ class Database:
 
     def delete_from_table(self,table:str, item:str,value:str, second_condition:bool | None=None, second_item:str | None=None , second_value:str | None=None):
         con,cur = self.connect_db()
-        self.check_allowance(table=table,item=item)
-        self.check_allowance(table=table,item= second_item)
+
         if second_condition:
             cur.execute(f'DELETE FROM {table} WHERE {item} = %s AND {second_item} = %s',(value,second_value))
         else:
@@ -236,7 +212,7 @@ class Database:
         """
         con,cur= self.connect_db()
         current_time = datetime.now()
-        cur.execute(f'INSERT INTO tripin_auth.userdata (email,display_name,user_name,password,created_time) VALUES(%s,%s,%s,%s,%s)',(email,display_name,username,password,current_time))
+        cur.execute(f'INSERT INTO {DATABASEKEYS.TABLES.USERDATA} (email,display_name,user_name,password,created_time) VALUES(%s,%s,%s,%s,%s)',(email,display_name,username,password,current_time))
         con.commit()
         con.close()
         if cur.rowcount >=1:
@@ -259,7 +235,7 @@ class Database:
         """
 
         con,cur = self.connect_db()
-        cur.execute(f'INSERT INTO tripin_auth.tokens (user_id,user_name,token,issued_at,expired_at) VALUES (%s, %s, %s, %s, %s)',(user_id,username,token,issued_at,expired_at,))
+        cur.execute(f'INSERT INTO {DATABASEKEYS.TABLES>} (user_id,user_name,token,issued_at,expired_at) VALUES (%s, %s, %s, %s, %s)',(user_id,username,token,issued_at,expired_at,))
         con.commit()
         if(cur.rowcount>=1):
             return True

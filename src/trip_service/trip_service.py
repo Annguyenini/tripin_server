@@ -5,6 +5,7 @@ from src.database.s3.s3_dirs import TRIP_DIR
 from src.database.trip_db_service import TripDatabaseService
 from src.server_config.service.cache import Cache
 from src.server_config.service.Etag.Etag import EtagService
+from src.database.database_keys import DATABASEKEYS
 import psycopg2
 from datetime import datetime
 import json
@@ -46,16 +47,31 @@ class TripService:
         ##process to create new trip
         create_trip,trip_id = self.trip_database_service.insert_to_database_trip(user_id = user_id, trip_name = trip_name,imageUri=imageUri)
         
-        if image:   
-            image_path = f"trips/{trip_id}/cover.jpg"
-            # upload to s3
-            upload = self.s3_service.upload_media(path=image_path,data=image)            
-            
-        if create_trip:
-            return True, f"Created trip {trip_name} successfully", trip_id
-        else: 
+
+        if not create_trip: 
             return False, "Error occur while creating trip.",None
            
+        etag_key = self.etag_service.get_all_trip_etag_key(user_id=user_id)
+        # delete old etag from cache
+        self.cache_service.delete(etag_key)
+        
+        # update the version 
+        self.trip_database_service.update_all_trips_version(user_id=user_id)
+        
+        # new new etag
+        new_version = self.trip_database_service.get_user_trips_data(user_id=user_id,data_type=DATABASEKEYS.USERDATA.TRIPDATA_VERSION)
+        new_etag_data = self.etag_service.get_all_trip_etag_data_string(user_id=user_id,version=new_version)
+        new_etag = self.etag_service.generate_etag(key=new_etag_data)
+        
+        # push new etag into db
+        self.trip_database_service.update_db(table=DATABASEKEYS.TABLES.USERDATA,item=DATABASEKEYS.USERDATA.USER_ID,value=user_id,
+                                                item_to_update=DATABASEKEYS.USERDATA.TRIPS_DATA_ETAG,value_to_update=new_etag)
+        
+        # push new etag into cache 
+        self.cache_service.set(key=etag_key,time=3600,data=new_etag)
+        
+        
+        return True, f"Created trip {trip_name} successfully", trip_id   
            
   
     def end_a_trip(self, trip_id:int):
@@ -66,9 +82,20 @@ class TripService:
         update_trip_ended_time = self.database_service.update_db(table = "tripin_trips.trips_table", item="id", value= trip_id ,item_to_update="ended_time",value_to_update=datetime.now())
         if not update_trip_ended_time:
             return False, f"Error while trying to end trip {trip_id}"
+        
+        
+        
         return True,f"Successfully end trip {trip_id}" 
     
-    def get_trip_data(self,user_id,client_etag):
+    def get_current_trip_id(self,user_id):
+        trip_data_row = self.database_service.find_item_in_sql('tripin_trips.trips_table','user_id',user_id,True,'active',True)
+        trip_id = None
+        if trip_data_row:
+            trip_id = trip_data_row['id']
+        return trip_id
+
+    
+    def get_trip_data(self,user_id,trip_id,client_etag):
         """_summary_
 
         Args:
@@ -76,20 +103,24 @@ class TripService:
             etag (_type_): _description_
         """
         
-        etag_key =f'user{user_id}_curr_trip_etag'
+        etag_key =self.etag_service.get_trip_etag_key(user_id=user_id,trip_id=trip_id)
         # fetch the etag from cache if match return        
         etag_from_cache = self.cache_service.get(etag_key)
-        if client_etag == etag_from_cache:
+        if client_etag == etag_from_cache and client_etag and etag_from_cache:
             return None, client_etag
         
+        # if key doesnt exist, clean up just in case
+        self.cache_service.delete(etag_key)
+        
         # fetch user current trip 
-        trip_data_row = self.database_service.find_item_in_sql('tripin_trips.trips_table','user_id',user_id,True,'active',True)
+        print(user_id,trip_id)
+        trip_data_row = self.database_service.find_item_in_sql(DATABASEKEYS.TABLES.TRIPS,'user_id',user_id,True,'id',trip_id)
         # if doesnt exist return
         if trip_data_row is None :
             return None,None
         # get etag from bd
         db_etag = trip_data_row['etag']
-        if client_etag == db_etag:
+        if client_etag == db_etag and client_etag and db_etag:
             self.cache_service.set(etag_key,3600,client_etag)
             return None, client_etag
         
@@ -99,39 +130,42 @@ class TripService:
         created_timestamp = trip_data_row['created_time']
         created_time = int(created_timestamp.timestamp() * 1000)
         trip_image_default = trip_data_row['image']
-        
+        trip_information_version = trip_data_row[DATABASEKEYS.TRIPS.TRIP_INFO_VERSION]
         trip_image = None
         if trip_image_default:
             trip_image = self.s3_service.generate_temp_uri(trip_image_default)
         
         
         
-        trip_data = {'etag_status':'failed','trip_id':trip_id,'trip_name':trip_name,'created_time':created_time,'trip_image':trip_image if trip_image else None}
+        trip_data = {'trip_id':trip_id,'trip_name':trip_name,'created_time':created_time,'trip_image':trip_image if trip_image else None}
         
         # generate new etag
-        new_etag = self.etag_service.generate_Etag_from_object(data=trip_data)
+        new_etag_data= self.etag_service.get_trip_etag_data_string(user_id=user_id,trip_id=trip_id,version=trip_information_version)
+        new_etag = self.etag_service.generate_etag(new_etag_data)
         # add to cache
         self.cache_service.set(key=etag_key,time=3600,data=new_etag)
+        # update etag to db
+        status_update = self.database_service.update_db(DATABASEKEYS.TABLES.TRIPS,DATABASEKEYS.TRIPS.TRIP_ID,trip_id,DATABASEKEYS.TRIPS.TRIP_INFO_VERSION,new_etag)
         return trip_data, new_etag
     
-    def get_all_trip_data(self,user_id,client_etag,client_version):
+    
+    
+    
+    
+    
+    def get_all_trip_data(self,user_id,client_etag) -> object | str:
         # check etag from cache
-        etag_key = f'user{user_id}_trips_version{client_version}'
+        etag_key = self.etag_service.get_all_trip_etag_key(user_id=user_id)
         cache_etag = self.cache_service.get(etag_key)
-        if client_etag == cache_etag:
+        if client_etag == cache_etag and client_etag and cache_etag:
+            print('called',cache_etag)
             return None, client_etag
         
-       
-        db_version = self.trip_database_service.get_trips_version(user_id=user_id)
-        # if in the same version but doesnt have etag
-        if client_version == db_version:
-            new_etag = self.etag_service.generate_etag(key=etag_key)
-            return None, new_etag
-        
-        
-        new_etag_key =f'user{user_id}_trips_version{db_version}'
-        new_etag = self.etag_service.generate_etag(key=new_etag_key)
-        self.cache_service.set(new_etag_key,new_etag)
+        # if have etag but exprire on cache
+        db_etag = self.trip_database_service.get_user_trips_data(user_id=user_id,data_type= DATABASEKEYS.USERDATA.TRIPS_DATA_ETAG)
+        if client_etag == cache_etag and client_etag and client_etag:
+            self.cache_service.set(key=etag_key,time=3600,data=db_etag)
+            return None, db_etag
         
         trip_data_row = self.database_service.find_item_in_sql('tripin_trips.trips_table','user_id',user_id,return_option='fetchall')
         trip_data_list= []
@@ -148,6 +182,16 @@ class TripService:
             
             trip_data_list.append(dict(row))
 
+        # get current version 
+        db_version = self.trip_database_service.get_user_trips_data(user_id=user_id,data_type=DATABASEKEYS.USERDATA.TRIPS_DATA_VERSION)
+        # generate new etag and set to cache
+        new_etag_data =self.etag_service.get_all_trip_etag_data_string(user_id=user_id,version=db_version)
+        new_etag = self.etag_service.generate_etag(key=new_etag_data)
+        # push to cache
+        self.cache_service.set(key=etag_key,time=3600,data=new_etag)
+
+        status_update = self.database_service.update_db(DATABASEKEYS.TABLES.USERDATA,DATABASEKEYS.USERDATA.USER_ID,user_id,DATABASEKEYS.USERDATA.TRIPS_DATA_ETAG,new_etag)
+
         # print(trip_data_list)
-        return ({'version':db_version,'trip_data_list':trip_data_list if len(trip_data_list)>=1 else None},new_etag)
+        return ({'trip_data_list':trip_data_list if len(trip_data_list)>=1 else None},new_etag)
 

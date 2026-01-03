@@ -7,26 +7,24 @@ class EtagService:
     _init = False
     def __new__(cls):
         if cls._instance is None:
-            cls._instance = super().__new__(cls=cls)
+            cls._instance = super().__new__(cls)
         return cls._instance
     
     def __init__(self):
-        if self._init:return
+        if EtagService._init:return
         self.cacheService = Cache()
         self.databaseService = Database()
-        self._init = True
+        EtagService._init = True
         
         
-    def generate_Etag_from_object(self,data):
-        encoded_data =json.dumps(data,sort_keys=True).encode('utf-8')
-        etag = generate_etag(encoded_data, weak=False)
-        return etag
+    # def generate_Etag_from_object(self,data):
+    #     encoded_data =json.dumps(data,sort_keys=True).encode('utf-8')
+    #     etag = generate_etag(encoded_data, weak=False)
+    #     return etag
 
     def generate_etag(self,key):
-        etag = generate_etag(key.encode('utf-8'), weak=False)
-        return etag
+        etag = generate_etag(key.encode('utf-8'))
+        strong_etag = etag.strip('W/')
+        return strong_etag
 
-        
-
-        
-        
+  

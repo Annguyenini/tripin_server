@@ -1,5 +1,6 @@
 from src.database.database import Database
 from datetime import datetime
+from src.database.database_keys import DATABASEKEYS
 class TripDatabaseService (Database):
     _instance = None
     _init = False
@@ -11,7 +12,7 @@ class TripDatabaseService (Database):
     def __init__(self):
         if self._init:
             return  
-        super()
+        super().__init__()
         self._init = True
 
     def insert_to_database_trip(self,user_id:int,trip_name:str,imageUri:str):
@@ -26,7 +27,7 @@ class TripDatabaseService (Database):
         """
         con,cur = self.connect_db()
         created_time = datetime.now()
-        cur.execute(f'INSERT INTO tripin_trips.trips_table (user_id,trip_name,created_time, active,image) VALUES (%s,%s,%s,%s,%s) RETURNING id',(user_id,trip_name,created_time,True,imageUri))
+        cur.execute(f'INSERT INTO {DATABASEKEYS.TABLES.TRIPS} (user_id,trip_name,created_time, active,image) VALUES (%s,%s,%s,%s,%s) RETURNING id',(user_id,trip_name,created_time,True,imageUri))
         trip_id = cur.fetchone()['id']
         con.commit()
         con.close()
@@ -37,23 +38,31 @@ class TripDatabaseService (Database):
     
     def insert_media_into_db(self, type:str,key:str,longitude:float,latitude:float,trip_id:int,time):
         con,cur = self.connect_db()
-        cur.execute(f'INSERT INTO tripin_trips.trip_medias (media_type,key,longitude,latitude,trip_id,time_stamp) VALUES (%s,%s,%s,%s,%s,%s)',(type,key,longitude,latitude,trip_id,time))
+        cur.execute(f'INSERT INTO {DATABASEKEYS.TABLES.TRIP_MEDIAS} (media_type,key,longitude,latitude,trip_id,time_stamp) VALUES (%s,%s,%s,%s,%s,%s)',(type,key,longitude,latitude,trip_id,time))
         con.commit()
         if cur.rowcount >=1:
             return True
         else: return False
         
-    def update_trips_version(self,user_id):
+    def update_all_trips_version(self,user_id):
         con,cur =self.connect_db()
-        cur.execute(f'UPDATE tripin_auth.userdata SET trip_version = trip_version+1 WHERE id = %s',(user_id))
+        cur.execute(f'UPDATE {DATABASEKEYS.TABLES.USERDATA} SET trips_data_version = trips_data_version+1 WHERE id = %s',(user_id))
         con.commit()
         con.close()
-        if cur.rowcount <=0:
-            return False
-        return True
+        return True if cur.rowcount()>=1 else False
     
-    def get_trips_version(self,user_id):
+    def update_trip_version (self,type_of_version:str,trip_id:int):
+        allow_type = ['']
+        con,cur = self.connect_db()
+        cur.execute(f'UPDATE {DATABASEKEYS.TABLES.TRIPS} SET {type_of_version} = {type_of_version}+1 WHERE id = %s',(trip_id))
+        con.commit()
+        return True if cur.rowcount()>=1 else False
+        
+    
+    def get_user_trips_data(self,user_id:int,data_type:str) -> any:
         con,cur =self.connect_db()
-        cur.execute(f'SELECT trip_version FROM tripin_auth.userdata WHERE id = %s',(user_id))
+        cur.execute(f'SELECT {data_type} FROM {DATABASEKEYS.TABLES.USERDATA} WHERE id = %s',(user_id,))
+        con.commit()
         version = cur.fetchone()
-        return version
+        return version[0] if version else None
+    
