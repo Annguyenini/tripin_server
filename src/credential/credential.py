@@ -8,6 +8,8 @@ from src.database.s3.s3_service import S3Sevice
 from src.trip_service.trip_service import TripService
 from src.user.user_service import UserService
 from src.database.s3.s3_dirs import AVATAR_DIR, TRIP_DIR    
+from src.server_config.service.cache import Cache
+from src.server_config.service.Etag.Etag import EtagService
 #userdata user_id|email|user_name|displayname|password
 #token keyid| userid| username|token|issue name | exp name | revok
 class Auth:
@@ -25,6 +27,8 @@ class Auth:
             self.s3Service = S3Sevice()
             self.tripService = TripService()
             self.userService = UserService()
+            self.cacheService = Cache()
+            self.etagService = EtagService()
             self.user_queue = {}
             self._initialize = True
     #login function
@@ -63,8 +67,7 @@ class Auth:
             
         # user data 
         user_data = {'user_id':userid,'display_name':display_name,'user_name':username,'role':role,'avatar_uri':avatar_uri if avatar_uri else None}
-        
-        
+                
         # checker
         assert userid is not None ,"UserID Null"
         assert display_name is not None ,"Display_name Null"
@@ -119,18 +122,23 @@ class Auth:
         else :
             return False,"Error at signup"
     
-    def login_via_token (self,token):
+    def login_via_token (self,token,etag):
         status, message,code = self.tokenService.jwt_verify(token)
-        print(status,message,code)
+        # print(status,message,code
         if not status:
             return ({'status':False,"message": message,"code":code,"user_data": None,'trip_data':None,'all_trip_data':None})
+        
         userdata_from_jwt = self.tokenService.decode_jwt(token)
         
         userid=userdata_from_jwt["user_id"] 
+
+        etag_status = self.etagService.veify_userdata_etag(user_id=userid,etag=etag)
+
         display_name=userdata_from_jwt["display_name"] 
         username=userdata_from_jwt["user_name"] 
         role = userdata_from_jwt["role"]
         sub = userdata_from_jwt['sub']
+
                 
         s3key = AVATAR_DIR+sub+'_avatar.jpg'
         avatar_uri =self.s3Service.generate_temp_uri(s3key)
@@ -159,5 +167,4 @@ class Auth:
         if not process_new_user:
             return False
         return True
-    
     
