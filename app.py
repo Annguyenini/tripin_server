@@ -35,13 +35,14 @@ class Server:
 
 
 server_auth_service = ServerAuth()
-if not server_auth_service.verify_indentity():
-    print("Wrong password!❌")
-    sys.exit(1)
-print("Successfully authenticated!✅")
+server_auth_service.skip_indentity()
+# if not server_auth_service.verify_indentity():
+#     print("Wrong password!❌")
+#     sys.exit(1)
+# print("Successfully authenticated!✅")
 server = Server()
 app = server.app
-# app.debug = True
+app.debug = True
 if __name__ =="__main__":
     print("initialize s3")
     print(app.url_map)

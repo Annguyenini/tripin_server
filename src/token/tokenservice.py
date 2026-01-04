@@ -54,7 +54,7 @@ class TokenService:
         data ={'user_id':payload["user_id"],'user_name':payload["user_name"],'display_name':payload["display_name"],'role':payload['role'],'sub':payload['sub']}
         return data
     def jwt_verify(self,token:str):
-        """verify token
+        """verify tokenQ
 
         Args:
             token (string): access_token
@@ -108,6 +108,8 @@ class TokenService:
         userid = kwargs.get("userid")
         status = self.db.update_db(table ="tripin_auth.tokens", item ="user_id", value =userid, item_to_update = "revoked", value_to_update = True)
         assert status == True ,"Error trying to update database revoked_token"
+        
+
  
     def request_new_access_token(self,refresh_token:str):
         if not self.refresh_token_verify(refresh_token):

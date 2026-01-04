@@ -31,7 +31,7 @@ class TripEtagService(EtagService):
         return f'user{user_id}:trip:{trip_id}:version:{version}'
     
     
-    def refresh_user_trips_etag(self,user_id):
+    def regenerate_user_trips_etag_handler(self,user_id:int) ->str:
         etag_key = self.get_all_trip_etag_key(user_id=user_id)
         # delete old etag from cache
         self.cacheService.delete(etag_key)
@@ -40,10 +40,10 @@ class TripEtagService(EtagService):
         self.trip_database_service.update_all_trips_version(user_id=user_id)
         
         # new new etag
-        new_version = self.trip_database_service.get_user_trips_data(user_id=user_id,data_type=DATABASEKEYS.USERDATA.TRIPDATA_VERSION)
+        new_version = self.trip_database_service.get_user_trips_data(user_id=user_id,data_type=DATABASEKEYS.USERDATA.TRIPS_DATA_VERSION)
         new_etag_data = self.get_all_trip_etag_data_string(user_id=user_id,version=new_version)
         new_etag = self.generate_etag(key=new_etag_data)
-        
+
         # push new etag into db
         self.trip_database_service.update_db(table=DATABASEKEYS.TABLES.USERDATA,item=DATABASEKEYS.USERDATA.USER_ID,value=user_id,
                                                 item_to_update=DATABASEKEYS.USERDATA.TRIPS_DATA_ETAG,value_to_update=new_etag)

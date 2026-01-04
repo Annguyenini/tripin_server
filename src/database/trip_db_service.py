@@ -46,17 +46,17 @@ class TripDatabaseService (Database):
         
     def update_all_trips_version(self,user_id):
         con,cur =self.connect_db()
-        cur.execute(f'UPDATE {DATABASEKEYS.TABLES.USERDATA} SET trips_data_version = trips_data_version+1 WHERE id = %s',(user_id))
+        cur.execute(f'UPDATE {DATABASEKEYS.TABLES.USERDATA} SET trips_data_version = trips_data_version+1 WHERE id = %s',(user_id,))
         con.commit()
         con.close()
-        return True if cur.rowcount()>=1 else False
+        return True if cur.rowcount>=1 else False
     
     def update_trip_version (self,type_of_version:str,trip_id:int):
         allow_type = ['']
         con,cur = self.connect_db()
         cur.execute(f'UPDATE {DATABASEKEYS.TABLES.TRIPS} SET {type_of_version} = {type_of_version}+1 WHERE id = %s',(trip_id))
         con.commit()
-        return True if cur.rowcount()>=1 else False
+        return True if cur.rowcount>=1 else False
         
     
     def get_user_trips_data(self,user_id:int,data_type:str) -> any:

@@ -11,10 +11,8 @@ class EtagService:
         return cls._instance
     
     def __init__(self):
-        if EtagService._init:return
         self.cacheService = Cache()
         self.databaseService = Database()
-        EtagService._init = True
         
         
     # def generate_Etag_from_object(self,data):

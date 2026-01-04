@@ -99,11 +99,10 @@ class TripRoute:
         user_data_from_jwt = self.token_service.decode_jwt(token)
         user_id = user_data_from_jwt['user_id']
         trip_id = user_data.get("trip_id")        
-        status,message = self.trip_service.end_a_trip(trip_id=trip_id)
+        status,message = self.trip_service.end_a_trip(trip_id=trip_id,user_id=user_id)
         if not status:
             return jsonify({"code":"failed","message":message}),500
         
-        self.trip_database_service.update_all_trips_version(user_id=user_id)
         return jsonify({"code":"successfully","message":message}),200
    
     
