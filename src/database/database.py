@@ -2,7 +2,7 @@
 ## contain functions to modify database directly
 ## helpo avoid other class, function to touch database directly
 ## act as a layer between server to database
-## all functions that contain querry must use parameter (EX: UPDATE table SET user =%s, (value))
+## all functions that contain query must use parameter (EX: UPDATE table SET user =%s, (value))
 
 
 
@@ -133,7 +133,13 @@ class Database:
 
     
                 
-    def find_item_in_sql(self, table:str, item:str, value, second_condition:bool | None=None, second_item:str |None = None, second_value: str| None=None, return_option:str |None="fetchone",):
+    def find_item_in_sql(self, table:str, 
+                         item:str, value, 
+                         second_condition:bool | None=None, 
+                         second_item:str |None = None, second_value: str| None=None, 
+                         order_by:str | None=None, 
+                         order_type:str |None = None,
+                         return_option:str |None="fetchone",):
         """return value base on table and item in postgress
 
         Args:
@@ -149,12 +155,23 @@ class Database:
             _list_: list of tuple or tuple
         """
         con,cur = self.connect_db()
-        
-        
+
+    
         if not second_condition:
-            cur.execute (f'SELECT * FROM {table} WHERE {item}=%s',(value,))
+            query = f'SELECT * FROM {table} WHERE {item}=%s'
+            if order_by :                  
+                if not order_type:
+                    raise('need to specify the order_type')
+                query =f'SELECT * FROM {table} WHERE {item}=%s ORDER_BY {order_by} {order_type}'
+            cur.execute (query=query,vars=(value,))
         else :
-            cur.execute(f'SELECT * FROM {table} WHERE {item}=%s AND {second_item} =%s',(value,second_value,))
+            query =f'SELECT * FROM {table} WHERE {item}=%s AND {second_item} =%s'
+            if order_by :                  
+                if not order_type:
+                    raise('need to specify the order_type')
+                query =f'SELECT * FROM {table} WHERE {item}=%s AND {second_item} =%s ORDER_BY {order_by} {order_type}'
+            cur.execute(query,(value,second_value,))
+        
         
         if return_option =="fetchall":
             item = cur.fetchall()
