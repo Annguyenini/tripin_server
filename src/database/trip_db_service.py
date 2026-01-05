@@ -54,7 +54,7 @@ class TripDatabaseService (Database):
     def update_trip_version (self,type_of_version:str,trip_id:int):
         allow_type = ['']
         con,cur = self.connect_db()
-        cur.execute(f'UPDATE {DATABASEKEYS.TABLES.TRIPS} SET {type_of_version} = {type_of_version}+1 WHERE id = %s',(trip_id))
+        cur.execute(f'UPDATE {DATABASEKEYS.TABLES.TRIPS} SET {type_of_version} = {type_of_version}+1 WHERE id = %s',(trip_id,))
         con.commit()
         return True if cur.rowcount>=1 else False
         
@@ -66,3 +66,18 @@ class TripDatabaseService (Database):
         version = cur.fetchone()
         return version[0] if version else None
     
+    def get_trip_contents_version(self,trip_id:int,version_type:str) ->int:
+        con,cur = self.connect_db()
+        cur.execute(f'SELECT {version_type} FROM {DATABASEKEYS.TABLES.TRIPS} WHERE {DATABASEKEYS.TRIPS.TRIP_ID} = %s',(trip_id,))
+        con.commit()
+        version = cur.fetchone()
+        return version[0] if version else None
+    
+    def get_trip_coordinates (self,trip_id:int,client_version:int):
+        con,cur = self.connect_db()
+        cur.execute(f'''SELECT * FROM {DATABASEKEYS.TABLES.TRIP_COORDINATES} 
+                    WHERE {DATABASEKEYS.TRIP_COORDINATES.TRIP_ID} = %s 
+                    AND {DATABASEKEYS.TRIP_COORDINATES.BATCH_VERSION} > %s 
+                    ORDER BY {DATABASEKEYS.TRIP_COORDINATES.COORDINATES_ID} ASC''',(trip_id,client_version,))
+        coors = cur.fetchall()
+        return coors if coors else None

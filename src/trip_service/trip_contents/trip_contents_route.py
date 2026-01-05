@@ -19,7 +19,8 @@ class TripContentsRoute:
         self.token_service = TokenService()     
         self.trip_contents_service = TripContentService() 
         self.geo_service = GeoService()
-        
+        self._register_route()
+
         self._init =True
     def _register_route(self):
         self.bp.route ('/<trip_id>/upload',methods=['POST'])(self.media_upload)
@@ -50,15 +51,21 @@ class TripContentsRoute:
         # get the request data
         data =request.json
         coordinates = data.get("coordinates")
+        client_version = data.get('version')
         # data_from_jwt = self.token_service.decode_jwt(token=token)
         # user_id = data_from_jwt['user_id']
 
-        insert = self.trip_contents_service.insert_coordinates_to_db(trip_id=trip_id,coordinates=coordinates)
+        insert, db_version = self.trip_contents_service.insert_coordinates_to_db(trip_id=trip_id,client_version=client_version,coordinates=coordinates)
         
        
+       
         if not insert:
+            if db_version:
+                return jsonify({"code":"invalid_version","message":f"Current version: {db_version} make sure to have the version that higher than this!"}),500
             return jsonify({"code": "failed", "message":"Failed to save to database"}),500
-        
+
+            
+
         return jsonify({"code": "successfully", "message":"Successfully store into database"}),200
        
     def media_upload(self,trip_id):
@@ -110,22 +117,24 @@ class TripContentsRoute:
             city = self.geo_service.get_city(user_id=user_id,longitude=longitude,latitude=latitude)
         return jsonify({'message':'Successfully!','geo_data':geo_data,'city':city}),200    
     
-    def get_trip_coors (self,trip_id):
+    def get_trip_coors (self,trip_id:int):
         Ptoken = request.headers.get("Authorization")
         token=Ptoken.replace("Bearer ","")
         valid_token, Tmessage,code= self.token_service.jwt_verify(token)
+        data =request.json
+        client_version = data.get('version')
         # return if jwt in valid or expried
 
         if not valid_token:
             return jsonify({"message":Tmessage, "code":code}),401
         
-        coors = self.trip_contents_service.get_trip_coors(trip_id=trip_id)
+        coors = self.trip_contents_service.get_trip_coors(client_version=client_version,trip_id=trip_id)
         
         
         return jsonify({'message':"Successfully",'coordinates':coors}),200
     
     
-    def get_trip_medias (self,trip_id):
+    def get_trip_medias (self,trip_id:int):
         Ptoken = request.headers.get("Authorization")
         token=Ptoken.replace("Bearer ","")
         valid_token, Tmessage,code= self.token_service.jwt_verify(token)

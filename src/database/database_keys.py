@@ -54,6 +54,7 @@ DATABASEKEYS= SimpleNamespace(
     TRIP_COORDINATES =SimpleNamespace(
         COORDINATES_ID = 'id',
         TRIP_ID ='trip_id',
+        BATCH_VERSION ='batch_version',
         LONGITUDE = 'longitude',
         LATITUDE ='latitude',
         ALTITUDE='altitude',

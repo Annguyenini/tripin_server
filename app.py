@@ -28,7 +28,7 @@ class Server:
         user_route = UserRoute()
         self.app.register_blueprint(auth_route.bp,url_prefix="/auth")
         self.app.register_blueprint(trip_route.bp,url_prefix="/trip")
-        self.app.register_blueprint(trip_contents_route.bp,url_prefix ='/trip-contents')
+        self.app.register_blueprint(trip_contents_route.bp,url_prefix ="/trip-contents")
         self.app.register_blueprint(user_route.bp,url_prefix="/user")
         
         
