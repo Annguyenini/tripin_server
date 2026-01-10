@@ -3,6 +3,7 @@ from src.database.s3.s3_service import S3Sevice
 from src.token.tokenservice import TokenService
 from src.database.database import Database
 from src.database.s3.s3_dirs import AVATAR_DIR
+from src.user.user_service import UserService
 class UserRoute :
     _instance = None
     def __new__(cls):
@@ -15,11 +16,40 @@ class UserRoute :
         self.S3Service = S3Sevice()
         self.TokenService = TokenService()
         self.DatabaseService = Database()
+        self.UserService = UserService()
         self._register_route()
     
     
     def _register_route(self):
         self.bp.route('/update-avatar',methods=["POST"])(self.update_profile_image)
+        self.bp.route('/get-user-data',methods=['GET'])(self.get_user_data)
+    
+    def get_user_data(self):
+        ptoken = request.headers.get('Authorization')
+        
+        token = ptoken.replace('Bearer ','')
+        
+        Ptoken = request.headers.get("Authorization")
+        token=Ptoken.replace("Bearer ","")
+        token_status, message, code = self.TokenService.jwt_verify(token=token)
+        
+        # return 401 if token is invalid or expired
+        if not token_status:
+            return jsonify({"message":message,'code':code}),401
+        
+        data_from_jwt = self.TokenService.decode_jwt(token)
+        user_id_from_jwt = data_from_jwt.get('user_id')
+        
+        client_etag = request.headers.get('If-None-Match')
+        
+        user_data,etag = self.UserService.get_user_data_from_database(user_id=user_id_from_jwt,client_etag=client_etag)
+        
+        if user_data is None and etag:
+            return jsonify({'etag':etag,'message':'Successfully'}),304
+        
+        return jsonify({'user_data':user_data,'message':'Successfully','etag':etag}),200
+        
+    
     
     def update_profile_image(self):
         """update user avatar

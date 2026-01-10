@@ -35,6 +35,9 @@ class TripContentService:
         # get current version 
         current_batch_version = self.trip_database_service.get_trip_contents_version(trip_id=trip_id,version_type=DATABASEKEYS.TRIPS.TRIP_COORDINATES_VERSION)
         # if new data version != to next batch version return false with the request batch version
+        if not client_version:
+            client_version = current_batch_version
+             
         if client_version < current_batch_version +1:
                 return False, current_batch_version  
         batch =[]
