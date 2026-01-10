@@ -15,10 +15,10 @@ class EtagService:
         self.databaseService = Database()
         
         
-    # def generate_Etag_from_object(self,data):
-    #     encoded_data =json.dumps(data,sort_keys=True).encode('utf-8')
-    #     etag = generate_etag(encoded_data, weak=False)
-    #     return etag
+    def generate_Etag_from_object(self,data):
+        encoded_data =json.dumps(data,sort_keys=True).encode('utf-8')
+        etag = generate_etag(encoded_data, weak=False)
+        return etag
 
     def generate_etag(self,key):
         etag = generate_etag(key.encode('utf-8'))

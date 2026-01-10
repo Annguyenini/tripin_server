@@ -9,7 +9,7 @@ class TokenService:
 
 
 
-    def generate_jwt(self, user_id:int,user_name:str,display_name:str,sub:str,role:str ='user',exp_time ={'days':30}): #days:00 // hours:00 // minutes:00
+    def generate_jwt(self, user_id:int,role:str ='user',exp_time ={'days':30}): #days:00 // hours:00 // minutes:00
         """generate jwt
 
         Args:
@@ -27,10 +27,7 @@ class TokenService:
         SECRET_KEY =self.config.private_key 
         token = jwt.encode({
             "user_id":user_id,
-            "user_name":user_name,
-            "display_name": display_name,
             "role": role,
-            "sub":sub,
             "issue":int((datetime.utcnow().timestamp())),
             "exp":int((datetime.utcnow() + timedelta(**exp_time)).timestamp()) 
         },
@@ -51,10 +48,10 @@ class TokenService:
         PUBLIC_KEY = self.config.public_key
         assert token is not None, "Some how token is none" 
         payload = jwt.decode(token, PUBLIC_KEY ,algorithms =["RS256"])
-        data ={'user_id':payload["user_id"],'user_name':payload["user_name"],'display_name':payload["display_name"],'role':payload['role'],'sub':payload['sub']}
+        data ={'user_id':payload["user_id"],'role':payload['role']}
         return data
     def jwt_verify(self,token:str):
-        """verify tokenQ
+        """verify token
 
         Args:
             token (string): access_token
@@ -117,10 +114,8 @@ class TokenService:
         
         data_from_jwt = self.decode_jwt(refresh_token)
         user_id=data_from_jwt['user_id']
-        user_name = data_from_jwt['user_name']
-        display_name = data_from_jwt['display_name']
+
         role = data_from_jwt['role']
-        sub =data_from_jwt['sub']
        
-        new_token = self.generate_jwt(user_id=user_id,user_name=user_name,display_name=display_name,sub=sub,role=role,exp_time={'minutes':1})
+        new_token = self.generate_jwt(user_id=user_id,role=role,exp_time={'minutes':1})
         return True,new_token

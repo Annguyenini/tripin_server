@@ -33,9 +33,9 @@ class TripRoute:
     def _register_route(self):
         self.bp.route("/request-new-trip", methods=["POST"])(self.request_new_trip)
         self.bp.route('/trips',methods =['GET'])(self.request_all_trips_data)
-        self.bp.route('/current-trip', methods=['GET'])(self.request_current_trip_id)
+        self.bp.route('/current-trip-id', methods=['GET'])(self.request_current_trip_id)
         self.bp.route("/end-trip",methods=["POST"])(self.end_trip)
-        self.bp.route('/trip/<trip_id>',methods=['GET'])(self.request_trip_data)
+        self.bp.route('/trip',methods=['POST'])(self.request_trip_data)
 
     ## request new trip
     def request_new_trip(self):
@@ -119,7 +119,7 @@ class TripRoute:
         current_trip_id = self.trip_service.get_current_trip_id(user_id=user_id)
         return jsonify({'current_trip_id':current_trip_id}),200
     
-    def request_trip_data(self,trip_id):
+    def request_trip_data(self):
         Ptoken = request.headers.get("Authorization")
         token=Ptoken.replace("Bearer ","")
         valid_token, Tmessage,code= self.token_service.jwt_verify(token)
@@ -132,15 +132,15 @@ class TripRoute:
         
         user_id  = data_from_jwt.get('user_id')
         client_etag = request.headers.get('If-Not-Match')
-        
-        current_trip_data,etag = self.trip_service.get_trip_data(user_id=user_id,trip_id=trip_id,client_etag=client_etag)
-        if current_trip_data is None and etag is not None:
+        trip_id = request.json.get('trip_id')
+        trip_data,etag = self.trip_service.get_trip_data(user_id=user_id,trip_id=trip_id,client_etag=client_etag)
+        if trip_data is None and etag is not None:
             return jsonify({'etag':etag}),304
         
-        if not current_trip_data and not etag:
+        if not trip_data and not etag:
             return jsonify({'message':'failed'}),404
         
-        return jsonify({'message':'Successfully!','etag':etag,'current_trip_data':current_trip_data if current_trip_data else None}),200
+        return jsonify({'message':'Successfully!','etag':etag,'trip_data':trip_data if trip_data else None}),200
 
     def request_all_trips_data(self):
         Ptoken = request.headers.get("Authorization")
