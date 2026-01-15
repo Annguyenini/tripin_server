@@ -35,11 +35,9 @@ class TripContentService:
         # get current version 
         current_batch_version = self.trip_database_service.get_trip_contents_version(trip_id=trip_id,version_type=DATABASEKEYS.TRIPS.TRIP_COORDINATES_VERSION)
         # if new data version != to next batch version return false with the request batch version
-        if not client_version:
-            client_version = current_batch_version
-             
-        if client_version < current_batch_version +1:
-                return False, current_batch_version  
+        if client_version != current_batch_version +1:
+            print(current_batch_version,type(current_batch_version))
+            return False, current_batch_version  
         batch =[]
         con,cur = self.database_service.connect_db()
         # insert into db
@@ -52,12 +50,13 @@ class TripContentService:
                 time_s = cor['time_stamp']/1000
                 dt = datetime.fromtimestamp(time_s)
                 formatted = dt.strftime("%Y-%m-%d %H:%M:%S")
-                batch.append([trip_id,current_batch_version+1,formatted,cor["coordinates"]["altitude"],cor["coordinates"]["latitude"],cor["coordinates"]['longitude'], cor["coordinates"]['heading'], cor["coordinates"]['speed']])
+                batch.append([trip_id,client_version,formatted,cor["coordinates"]["altitude"],cor["coordinates"]["latitude"],cor["coordinates"]['longitude'], cor["coordinates"]['heading'], cor["coordinates"]['speed']])
             cur.executemany(query,batch)            
             batch.clear()
         except psycopg2.Error as e:
             print("fail to insert into database",e)
             return False
+        
         
         self.trip_database_service.update_trip_version(type_of_version=DATABASEKEYS.TRIPS.TRIP_COORDINATES_VERSION,trip_id=trip_id)
         con.commit()

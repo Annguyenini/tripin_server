@@ -52,6 +52,7 @@ class TripContentsRoute:
         data =request.json
         coordinates = data.get("coordinates")
         client_version = data.get('version')
+        print(client_version,coordinates)
         # data_from_jwt = self.token_service.decode_jwt(token=token)
         # user_id = data_from_jwt['user_id']
 
@@ -61,7 +62,7 @@ class TripContentsRoute:
        
         if not insert:
             if db_version:
-                return jsonify({"code":"invalid_version","message":f"Current version: {db_version} make sure to have the version that higher than this!"}),500
+                return jsonify({"code":"missing_versions","message":f"Current version: {db_version} make sure to have the version that higher than this!",'missing_versions':db_version}),409
             return jsonify({"code": "failed", "message":"Failed to save to database"}),500
 
             

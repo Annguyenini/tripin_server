@@ -51,7 +51,7 @@ class TripDatabaseService (Database):
         con.close()
         return True if cur.rowcount>=1 else False
     
-    def update_trip_version (self,type_of_version:str,trip_id:int):
+    def update_trip_version (self,type_of_version:str,trip_id:int,version:int = None):
         allow_type = ['']
         con,cur = self.connect_db()
         cur.execute(f'UPDATE {DATABASEKEYS.TABLES.TRIPS} SET {type_of_version} = {type_of_version}+1 WHERE id = %s',(trip_id,))

@@ -50,7 +50,7 @@ class UserService:
         avatar = userdata_row['avatar']
         userdata_version = userdata_row['userdata_version']
         if avatar:
-            avatar = self.s3Service.generate_temp_uri(key=avatar)
+            avatar = self.s3Service.generate_temp_uri(key=f'avatar/'+avatar)
             
             
         etag_key = self.authEtagService.generate_key(user_id=user_id)

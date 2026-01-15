@@ -52,6 +52,7 @@ class TripRoute:
         valid_token,Tmessage,code = self.token_service.jwt_verify(token)
         ##return if invalid token
         if not valid_token:
+            print(code)
             return jsonify ({"message":Tmessage,"code":code}), 401
         
         ##decode jwt to get userdatas
@@ -131,7 +132,7 @@ class TripRoute:
         
         
         user_id  = data_from_jwt.get('user_id')
-        client_etag = request.headers.get('If-Not-Match')
+        client_etag = request.headers.get('If-None-Match')
         trip_id = request.json.get('trip_id')
         trip_data,etag = self.trip_service.get_trip_data(user_id=user_id,trip_id=trip_id,client_etag=client_etag)
         if trip_data is None and etag is not None:
@@ -150,14 +151,14 @@ class TripRoute:
 
         if not valid_token:
             return jsonify({"message":Tmessage, "code":code}),401
-        client_etag = request.headers.get('If-Not-Match')
+        client_etag = request.headers.get('If-None-Match')
         data_from_jwt = self.token_service.decode_jwt(token=token)
         user_id  = data_from_jwt.get('user_id')
         
         all_trips_data,etag = self.trip_service.get_all_trip_data(user_id=user_id,client_etag=client_etag)
 
         
-        if all_trips_data is None and etag is not None:
+        if all_trips_data is None and etag:
             return jsonify({'etag':etag}),304
         
         return jsonify({'message':'Successfully!','etag':etag,'all_trip_data':all_trips_data if all_trips_data else None}),200

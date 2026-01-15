@@ -136,17 +136,17 @@ class TripService:
     
     
     
-    def get_all_trip_data(self,user_id,client_etag) -> object | str:
+    def get_all_trip_data(self,user_id,client_etag=None) -> object | str:
         # check etag from cache
         etag_key = self.trip_etag_service.get_all_trip_etag_key(user_id=user_id)
         cache_etag = self.cache_service.get(etag_key)
-        if client_etag == cache_etag and client_etag and cache_etag:
+        if client_etag == cache_etag and cache_etag:
             print('called',cache_etag)
             return None, client_etag
         
         # if have etag but exprire on cache
         db_etag = self.trip_database_service.get_user_trips_data(user_id=user_id,data_type= DATABASEKEYS.USERDATA.TRIPS_DATA_ETAG)
-        if client_etag == db_etag and client_etag and db_etag:
+        if client_etag == db_etag and db_etag:
             self.cache_service.set(key=etag_key,time=3600,data=db_etag)
             return None, db_etag
         
