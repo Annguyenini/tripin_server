@@ -52,8 +52,7 @@ class Database:
         self.database_password = self.database_config.database_password
         self.database_port = self.database_config.database_port
         self._initialized_credentials = True
-        self.__init__authsetup()
-        self.__init__tripsetup()
+
     ## setup table if not exists (assuming exist)
     def __init__authsetup(self):
         if not self._initialized_credentials:
@@ -161,7 +160,8 @@ class Database:
         Returns:
             _cursor_: con, cur  
         """
-      
+        if not self._initialized:
+            self._init_database_credentials()
         conn = psycopg2.connect(
         host= self.database_host,
         dbname= self.database_dbname,
