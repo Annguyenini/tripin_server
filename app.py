@@ -42,11 +42,10 @@ server_auth_service.skip_indentity()
 # print("Successfully authenticated!✅")
 server = Server()
 app = server.app
-app.debug = True
 if __name__ =="__main__":
     print("initialize s3")
     print(app.url_map)
-    app.run( host ="0.0.0.0", port =8000)
+    app.run( host ="192.168.0.111", port =8000,debug=True)
 
     # app.run( host ="0.0.0.0", port =8000,ssl_context=("src/assets/https/cert.pem", "src/assets/https/key.pem"))
     

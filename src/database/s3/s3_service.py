@@ -1,6 +1,8 @@
 from src.database.s3.s3_client import s3Resource,s3Client, ClientError
 
 from src.server_config.config import Config
+from queue import Queue
+import time
 class S3Sevice:
     _instance = None
     _init =False
@@ -12,6 +14,8 @@ class S3Sevice:
         if self._init:
             return
         self.config = Config()   
+        self._queue = Queue()
+        self._init = True
         
      
     def generate_temp_uri (self,key:str,expiration:int = 3600):
@@ -35,15 +39,20 @@ class S3Sevice:
         Return:
             status(boolean)
         """
-        try:
-            respond_obj =s3Resource.Bucket(self.config.aws_bucket).put_object(Key=path,Body =data)
-            response = respond_obj.get()           # returns a dict
-            if(response['ResponseMetadata']['HTTPStatusCode']==200):
-                return True
-        except ClientError as e:
-            # Handles AWS service errors, e.g., AccessDenied, NoSuchBucket
-            print("AWS ClientError:", e)
-        except Exception as e:
-            # Handles all other exceptions
-            print("Other error:", e)
-        return False
+        self._queue.put((path,data))
+        while not self._queue.empty():
+            item_path,item_data = self._queue.get()
+            try:
+                respond_obj =s3Resource.Bucket(self.config.aws_bucket).put_object(Key=item_path,Body =item_data)
+                response = respond_obj.get()           # returns a dict
+                if(response['ResponseMetadata']['HTTPStatusCode']==200):
+                    return True
+            except ClientError as e:
+                # Handles AWS service errors, e.g., AccessDenied, NoSuchBucket
+                print("AWS ClientError:", e)
+            except Exception as e:
+                # Handles all other exceptions
+                print("Other error:", e)
+            self._queue.put((item_data,item_data))
+            time.sleep(1)
+            return False

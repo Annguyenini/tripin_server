@@ -30,6 +30,7 @@ class Database:
             return
         if getattr(self, "_initialized_credentials", False):
             return
+        
         self._initialized = True
         self._initialized_credentials = False
         self.config = Config()
@@ -51,18 +52,21 @@ class Database:
         self.database_password = self.database_config.database_password
         self.database_port = self.database_config.database_port
         self._initialized_credentials = True
-        
+
     ## setup table if not exists (assuming exist)
     def __init__authsetup(self):
         if not self._initialized_credentials:
             return
         con,cur = self.connect_db()
-        cur.execute('CREATE TABLE IF NOT EXISTS tripin_auth.userdata (id SERIAL PRIMARY KEY, email TEXT,display_name TEXT, user_name TEXT, password TEXT,created_time TIMESTAMP NOT NULL)')
+        cur.execute('''
+                    CREATE SCHEMA IF NOT EXISTS tripin_auth;
+                    CREATE TABLE IF NOT EXISTS tripin_auth.userdata (id SERIAL PRIMARY KEY, email TEXT,display_name TEXT, user_name TEXT, password TEXT,created_time TIMESTAMP NOT NULL,role TEXT NOT NULL DEFAULT user
+                    avatar TEXT, etag TEXT, trips_data_version BIGINT DEFAULT 1, trips_data_etag TEXT, userdata_version BIGINT DEFAULT 0)''')
         con.commit()
         cur.execute('''
         CREATE TABLE IF NOT EXISTS tripin_auth.tokens (
         id SERIAL PRIMARY KEY,
-        user_id INTEGER NOT NULL REFERENCES tripin_auth.auth(id) ON DELETE CASCADE,
+        user_id INTEGER NOT NULL REFERENCES tripin_auth.userdata(id) ON DELETE CASCADE,
         user_name TEXT NOT NULL,
         token TEXT NOT NULL,
         issued_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
@@ -72,8 +76,8 @@ class Database:
 
         ''')
         con.commit() 
-        cur.execute(''' CREATE TABLE IF NOT EXISTS tripin_auth.session (id SERIAL PRIMARY KEY,
-        user_id INTEGER NOT NULL REFERENCES tripin_auth.auth(id) ON DELETE CASCADE, login_time TIMESTAMP NOT NULL, last_activity TIMESTAMP NOT NULL);''')
+        # cur.execute(''' CREATE TABLE IF NOT EXISTS tripin_auth.session (id SERIAL PRIMARY KEY,
+        # user_id INTEGER NOT NULL REFERENCES tripin_auth.auth(id) ON DELETE CASCADE, login_time TIMESTAMP NOT NULL, last_activity TIMESTAMP NOT NULL);''')
         con.commit()
         con.close()
     def __init__tripsetup(self):
@@ -81,30 +85,74 @@ class Database:
             return
         con,cur = self.connect_db()
         cur.execute('''
-        CREATE TABLE IF NOT EXISTS tripin_trips.trip_table (
-        id SERIAL PRIMARY KEY,
-        trip_name INTEGER NOT NULL,
-        user_id INTEGER NOT NULL REFERENCES tripin_auth.userdata(id) ON DELETE CASCADE,
-        start_time TIMESTAMP NOT NULL,
-        end_time TIMESTAMP,
-        active BOOLEAN NOT NULL DEFAULT FALSE
+            CREATE SCHEMA IF NOT EXISTS tripin_trips;
+
+            CREATE TABLE IF NOT EXISTS tripin_trips.trips_table (
+            id INTEGER PRIMARY KEY
+                DEFAULT nextval('tripin_trips.trip_table_id_seq'),
+
+            user_id INTEGER NOT NULL
+                REFERENCES tripin_auth.userdata(id)
+                ON DELETE CASCADE,
+
+            trip_name TEXT NOT NULL,
+
+            created_time TIMESTAMPTZ NOT NULL,
+
+            ended_time TIMESTAMPTZ,
+
+            active BOOLEAN NOT NULL DEFAULT FALSE,
+
+            image TEXT,
+
+            etag TEXT,
+
+            trip_coordinates_version BIGINT DEFAULT 0,
+            trip_medias_version BIGINT DEFAULT 0,
+            trip_informations_version BIGINT DEFAULT 0
         );
 
         ''')
         con.commit() 
         cur.execute('''
-        CREATE TABLE IF NOT EXISTS tripin_trips.trip_points (
-        id SERIAL PRIMARY KEY,
-        trip_id INTEGER NOT NULL REFERENCES tripin_trips.trip_table(id) ON DELETE CASCADE,
-        altitude REAL NOT NULL,
-        latitude REAL NOT NULL,
-        longtitude REAL NOT NULL,
-        speed REAL NOT NULL,
-        heading REAL NOT NULL,
-        time_stamp TIMESTAMP NOT NULL
+            CREATE TABLE tripin_trips.trip_coordinates (
+            id SERIAL PRIMARY KEY,
+
+            trip_id INTEGER NOT NULL
+                REFERENCES tripin_trips.trips_table(id)
+                ON DELETE CASCADE,
+
+            altitude REAL NOT NULL,
+            latitude REAL NOT NULL,
+            longitude REAL NOT NULL,
+            speed REAL NOT NULL,
+            heading REAL NOT NULL,
+
+            time_stamp TIMESTAMP NOT NULL,
+
+            batch_version BIGINT DEFAULT 0
         );
         ''')
         con.commit() 
+
+        cur.execute('''
+            CREATE TABLE tripin_trips.trip_medias (
+            id SERIAL PRIMARY KEY,
+
+            trip_id INTEGER NOT NULL
+                REFERENCES tripin_trips.trips_table(id)
+                ON DELETE CASCADE,
+
+            media_type TEXT,
+
+            key TEXT NOT NULL,
+
+            longitude REAL NOT NULL,
+            latitude REAL NOT NULL,
+
+            time_stamp TIMESTAMPTZ
+        );''')
+        con.commit()
         con.close() 
     def connect_db(self,cur_options:str = 'rowDict'):
         """connect to postgres

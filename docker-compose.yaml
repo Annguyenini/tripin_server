@@ -1,0 +1,35 @@
+version: '3.8'
+services:
+
+  db:
+    build: ./db
+    container_name: tripin_db
+    environment:
+      POSTGRES_USER: ${DB_USER}
+      POSTGRES_PASSWORD: ${DB_PASS}
+      POSTGRES_DB: ${DB_NAME}
+    ports:
+      - "5433:5432"
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+  
+  redis:
+    image: redis
+    container_name: tripin_redis
+    ports:
+      - 8993":"6379"
+    volumes:
+      -redisdata:/data
+  flask:
+    container_name: tripin_server
+    build: .
+    ports:
+      - "8992:8000"
+    env_file:
+      - src/assets/configs/.env
+    depends_on:
+      - db
+      - redis
+volumes:
+  pgdata:
+  redisdata: 

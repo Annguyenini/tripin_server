@@ -96,6 +96,7 @@ class ServerAuth:
         database = os.getenv('DEV_PLAIN_DB_NAME')
         password = os.getenv('DEV_PLAIN_DB_PASS')
         port = os.getenv('DEV_PLAIN_DB_PORT')
+        print(host,user,database,password,port)
         self.database_Config._init_database_properties(host=host,dbname=database,user=user,password=password,port=port)
 
     def verify_indentity(self):
