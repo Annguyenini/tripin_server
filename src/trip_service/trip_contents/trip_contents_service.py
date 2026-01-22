@@ -37,7 +37,7 @@ class TripContentService:
         # if new data version != to next batch version return false with the request batch version
         if client_version != current_batch_version +1:
             print(current_batch_version,type(current_batch_version))
-            return False, current_batch_version  
+            return False, current_batch_version
         batch =[]
         con,cur = self.database_service.connect_db()
         # insert into db
@@ -70,22 +70,34 @@ class TripContentService:
         status = self.database_service.update_db('tripin_trips.trips_table','id',trip_id,'image',image_path)
         return status
     
-    def upload_media(self,type:str,path:str,media,longitude:float,latitude:float,trip_id:int,time):
-        insert_into_db = self.trip_database_service.insert_media_into_db(type=type,key=path,longitude=longitude,latitude=latitude,trip_id=trip_id,time=time)
+    def upload_media(self,type:str,path:str,media,longitude:float,latitude:float,trip_id:int,client_version:int,time) -> bool | int:
+        current_version = self.trip_database_service.get_trip_contents_version(trip_id=trip_id,version_type=DATABASEKEYS.TRIPS.TRIPS_MEDIAS_VERSION)
+        # print(client_version,type(client_version))
+        # print(current_version+1,type(current_version))
+        if client_version != current_version +1:
+            return False, current_version +1
+        insert_into_db = self.trip_database_service.insert_media_into_db(type=type,key=path,longitude=longitude,latitude=latitude,trip_id=trip_id,version=client_version,time=time)
         if not insert_into_db:
-            return False
+            return False,None
         
         insert_into_s3 = self.s3_service.upload_media(f'trips/{trip_id}/{path}',media)
+        
         if not insert_into_s3:
             self.database_service.delete_from_table('tripin_trips.trip_medias','trip_id',trip_id,True,'key',path)
-            return False
-        return True
+            return False,None
+        # update media version of trip 
+        
+        self.trip_database_service.update_trip_version(DATABASEKEYS.TRIPS.TRIPS_MEDIAS_VERSION,trip_id=trip_id,version=client_version)
+        
+        return True,None
     
     
     def get_trip_coors(self,client_version:int , trip_id:int):
         # return a list of rowdict from the client version up to current version
+        print(client_version,trip_id)
         coors = self.trip_database_service.get_trip_coordinates(trip_id=trip_id,client_version=client_version)
-        return [dict(r) for r in coors]
+        print(coors)
+        return [dict(r) for r in coors] if coors else None
     
     def get_trip_media(self,trip_id:int):
         medias = self.database_service.find_item_in_sql('tripin_trips.trip_medias','trip_id',trip_id,return_option='fetchall')

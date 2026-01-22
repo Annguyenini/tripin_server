@@ -62,7 +62,8 @@ CREATE TABLE IF NOT EXISTS tripin_trips.trip_medias (
     trip_id INTEGER NOT NULL REFERENCES tripin_trips.trips_table(id) ON DELETE CASCADE,
     media_type TEXT,
     key TEXT NOT NULL,
-    longitude REAL NOT NULL,
-    latitude REAL NOT NULL,
+    longitude REAL,
+    latitude REAL,
+    version BIGINT DEFAULT 0,
     time_stamp TIMESTAMPTZ
 );
