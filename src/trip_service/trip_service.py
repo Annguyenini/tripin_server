@@ -150,7 +150,7 @@ class TripService:
             self.cache_service.set(key=etag_key,time=3600,data=db_etag)
             return None, db_etag
         
-        trip_data_row = self.database_service.find_item_in_sql('tripin_trips.trips_table','user_id',user_id,return_option='fetchall')
+        trip_data_row = self.database_service.find_item_in_sql('tripin_trips.trips_table','user_id',user_id,return_option='fetchall',order_by=DATABASEKEYS.TRIPS.CREATED_TIME,order_type="DESC")
         trip_data_list= []
         for row in trip_data_row:
             default_time =row['created_time']
@@ -160,6 +160,7 @@ class TripService:
                 row['ended_time'] = int(default_time_end.timestamp()*1000)
             
             default_image_path = row['image']
+            print('image',default_image_path)
             if default_image_path:
                 row['image']= self.s3_service.generate_temp_uri(default_image_path)
             

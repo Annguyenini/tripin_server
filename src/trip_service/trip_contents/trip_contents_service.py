@@ -6,6 +6,7 @@ from src.database.trip_db_service import TripDatabaseService
 import psycopg2
 from datetime import datetime
 import json
+from src.server_config.service.cache import Cache
 class TripContentService:
     _instance = None
     _init = False
@@ -20,6 +21,7 @@ class TripContentService:
             self.trip_database_service = TripDatabaseService()
             self.s3_service = S3Sevice()
             self._init =True
+            self.cache_service = Cache()
     
            
     def insert_coordinates_to_db(self,trip_id,client_version,coordinates):
@@ -74,6 +76,7 @@ class TripContentService:
         current_version = self.trip_database_service.get_trip_contents_version(trip_id=trip_id,version_type=DATABASEKEYS.TRIPS.TRIPS_MEDIAS_VERSION)
         # print(client_version,type(client_version))
         # print(current_version+1,type(current_version))
+        print(client_version,current_version)
         if client_version != current_version +1:
             return False, current_version +1
         insert_into_db = self.trip_database_service.insert_media_into_db(type=type,key=path,longitude=longitude,latitude=latitude,trip_id=trip_id,version=client_version,time=time)
@@ -95,11 +98,19 @@ class TripContentService:
     def get_trip_coors(self,client_version:int , trip_id:int):
         # return a list of rowdict from the client version up to current version
         print(client_version,trip_id)
+        server_version = self.trip_database_service.get_trip_contents_version(trip_id=trip_id,version_type=DATABASEKEYS.TRIPS.TRIP_COORDINATES_VERSION)
+        print(client_version,server_version)
+        if client_version == server_version:
+            return None,None
         coors = self.trip_database_service.get_trip_coordinates(trip_id=trip_id,client_version=client_version)
         print(coors)
-        return [dict(r) for r in coors] if coors else None
+        return [dict(r) for r in coors] if coors else None, server_version
     
-    def get_trip_media(self,trip_id:int):
+    def get_trip_media(self,trip_id:int,client_version:int):
+        
+        server_version = self.trip_database_service.get_trip_contents_version(trip_id=trip_id,version_type=DATABASEKEYS.TRIPS.TRIP_COORDINATES_VERSION)
+        if client_version == server_version:
+            return None, None
         medias = self.database_service.find_item_in_sql('tripin_trips.trip_medias','trip_id',trip_id,return_option='fetchall')
         for i in range( len(medias)):
             default_key = medias[i]['key']
@@ -107,4 +118,4 @@ class TripContentService:
             medias[i]['key'] = self.s3_service.generate_temp_uri(f'trips/{trip_id}/'+default_key)
             medias[i]=dict(medias[i])
         print(medias)
-        return medias
+        return medias,server_version

@@ -74,6 +74,7 @@ class TripDatabaseService (Database):
         return version[0] if version else None
     
     def get_trip_coordinates (self,trip_id:int,client_version:int):
+        
         con,cur = self.connect_db()
         cur.execute(f'''SELECT * FROM {DATABASEKEYS.TABLES.TRIP_COORDINATES} 
                     WHERE {DATABASEKEYS.TRIP_COORDINATES.TRIP_ID} = %s 

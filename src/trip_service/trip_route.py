@@ -163,5 +163,4 @@ class TripRoute:
         
         return jsonify({'message':'Successfully!','etag':etag,'all_trip_data':all_trips_data if all_trips_data else None}),200
     
-    
- 
+  

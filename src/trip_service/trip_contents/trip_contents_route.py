@@ -2,6 +2,8 @@ from flask import jsonify,Blueprint,request
 from src.token.tokenservice import TokenService
 from src.trip_service.trip_contents.trip_contents_service import TripContentService
 from src.geo.geo_service import GeoService
+from src.server_config.service.smart_cast import smart_cast
+
 import json
 class TripContentsRoute:
     _instance = None
@@ -29,7 +31,7 @@ class TripContentsRoute:
         self.bp.route("/<trip_id>/coordinates",methods =["GET"])(self.get_trip_coors)
         self.bp.route('/<trip_id>/medias',methods =['GET'])(self.get_trip_medias)
 
-
+    
     def add_coordinates(self,trip_id):
         """handler from the client
 
@@ -82,20 +84,24 @@ class TripContentsRoute:
         latitude = data.get('latitude')
         time = data.get('time_stamp')  
         image = request.files.get('image')
-        version = data.get('version')
-        print (version)
         upload_status =None
         db_version =None
         if image:
             path = image.filename
-            upload_status,db_version = self.trip_contents_service.upload_media('image',path=path,media=image,longitude=float(longitude),latitude=float(latitude),trip_id=int(trip_id),client_version=int(version),time=time)
+            image_version = data.get('version')
+
+            upload_status,db_version = self.trip_contents_service.upload_media('image',path=path,media=image,longitude=longitude,latitude=latitude, trip_id=int(trip_id),client_version=int(image_version),time=time)
         else:
             video = request.files.get('video')
             video_path = video.filename
-            upload_status,db_version = self.trip_contents_service.upload_media('video',path=video_path,media=video,longitude=float(longitude),latitude=float(latitude),trip_id=int(trip_id),client_version=int(version),time=time)
-            thumpnail = request.files.get('thumpnail')
-            thump_path = thumpnail.filename
-            upload_status,db_version = self.trip_contents_service.upload_media('thump',path=thump_path,media=thumpnail,longitude=float(longitude),latitude=float(latitude),trip_id=int(trip_id),client_version=int(version),time=time)
+            video_version = data.get('video_version')
+            upload_status,db_version = self.trip_contents_service.upload_media('video',path=video_path,media=video,longitude=longitude,latitude=latitude, trip_id=int(trip_id),client_version=int(video_version),time=time)
+            
+            
+            # thumbnail = request.files.get('thumbnail')
+            # thumb_path = thumbnail.filename
+            # thumbnail_version = data.get('thumbnail_version')
+            # upload_status,db_version = self.trip_contents_service.upload_media('thump',path=thumb_path,media=thumbnail,longitude=longitude,latitude=latitude, trip_id=int(trip_id),client_version=int(thumbnail_version),time=time)
         print(upload_status,db_version)
         if not upload_status:
             
@@ -129,15 +135,16 @@ class TripContentsRoute:
         Ptoken = request.headers.get("Authorization")
         token=Ptoken.replace("Bearer ","")
         valid_token, Tmessage,code= self.token_service.jwt_verify(token)
-        data =request.json
-        client_version = data.get('version')
-        print('version',client_version)
         # return if jwt in valid or expried
 
         if not valid_token:
             return jsonify({"message":Tmessage, "code":code}),401
         
-        coors = self.trip_contents_service.get_trip_coors(client_version=client_version,trip_id=trip_id)
+        client_version = smart_cast(request.headers.get('version'))
+        print('version',client_version)
+        coors, version= self.trip_contents_service.get_trip_coors(client_version=client_version,trip_id=trip_id)
+        if not coors and not version:
+            return jsonify({'message':'match'}),304
         if not coors :
             return jsonify ({'message':'Failed'}),500
         
@@ -153,8 +160,12 @@ class TripContentsRoute:
         if not valid_token:
             return jsonify({"message":Tmessage, "code":code}),401
         
-        medias = self.trip_contents_service.get_trip_media(trip_id=trip_id)
+        client_version = smart_cast(request.headers.get('Version'))
         
+        medias,version = self.trip_contents_service.get_trip_media(trip_id=trip_id,client_version=client_version)
+        if not medias and not version:
+            return jsonify({'message':"Match"}),304
+
         
         return jsonify({'message':"Successfully",'medias':medias}),200
     

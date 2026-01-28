@@ -210,14 +210,14 @@ class Database:
             if order_by :                  
                 if not order_type:
                     raise('need to specify the order_type')
-                query =f'SELECT * FROM {table} WHERE {item}=%s ORDER_BY {order_by} {order_type}'
+                query =f'SELECT * FROM {table} WHERE {item}=%s ORDER BY {order_by} {order_type}'
             cur.execute (query=query,vars=(value,))
         else :
             query =f'SELECT * FROM {table} WHERE {item}=%s AND {second_item} =%s'
             if order_by :                  
                 if not order_type:
                     raise('need to specify the order_type')
-                query =f'SELECT * FROM {table} WHERE {item}=%s AND {second_item} =%s ORDER_BY {order_by} {order_type}'
+                query =f'SELECT * FROM {table} WHERE {item}=%s AND {second_item} =%s ORDER BY {order_by} {order_type}'
             cur.execute(query,(value,second_value,))
         
         
