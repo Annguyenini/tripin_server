@@ -120,7 +120,7 @@ class TripService:
         
         
         
-        trip_data = {'trip_id':trip_id,'trip_name':trip_name,'created_time':created_time,'trip_image':trip_image if trip_image else None}
+        trip_data = {'trip_id':trip_id,'trip_name':trip_name,'created_time':created_time,'image':trip_image if trip_image else None}
         
         # generate new etag
         new_etag_data= self.trip_etag_service.get_trip_etag_data_string(user_id=user_id,trip_id=trip_id,version=trip_information_version)
@@ -163,8 +163,9 @@ class TripService:
             print('image',default_image_path)
             if default_image_path:
                 row['image']= self.s3_service.generate_temp_uri(default_image_path)
-            
-            trip_data_list.append(dict(row))
+            row_dict = dict(row)
+            row_dict['trip_id'] = row_dict['id']
+            trip_data_list.append(row_dict)
 
         # get current version 
         db_version = self.trip_database_service.get_user_trips_data(user_id=user_id,data_type=DATABASEKEYS.USERDATA.TRIPS_DATA_VERSION)

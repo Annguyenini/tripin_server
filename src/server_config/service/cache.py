@@ -1,16 +1,21 @@
 from flask import Flask
 from redis import Redis 
-
+import dotenv
+import os
 class Cache:
     _instance =None
     def __new__(cls):
         if cls._instance is None:
             cls._instance = super().__new__(cls)
+            
         return cls._instance
     
     def __init__(self):
-        self.redis_client = Redis (host ="localhost", port =6379, decode_responses =True )
-    
+        dotenv.load_dotenv('src/assets/configs/.env')
+        host = os.getenv('REDIS_HOST')
+        port =os.getenv('REDIS_PORT')
+        self.redis_client = Redis (host =host, port =port, decode_responses =True )
+
     
     def incr (self,key):
         return self.redis_client.incr(key)

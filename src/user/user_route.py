@@ -58,9 +58,6 @@ class UserRoute :
             jsonify: json object , http code
         """
         # get token and verify token
-        ptoken = request.headers.get('Authorization')
-        
-        token = ptoken.replace('Bearer ','')
         
         Ptoken = request.headers.get("Authorization")
         token=Ptoken.replace("Bearer ","")

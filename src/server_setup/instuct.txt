@@ -1,8 +1,0 @@
-install python, pip
-run "python3 -m venv venv"
-active enviroment base on os (google) typicaly linux: Source/venv/bin/activate window:venv\Scripts\activate.bat
-run pip install -r src/server/server_setup/requirement.txt
-this will install requirement libs
-then run 'python3 src/server_setup/files_keys_database_dependcies.py
-
-then start server by python3 app.py

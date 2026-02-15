@@ -6,6 +6,7 @@ from dotenv import set_key, load_dotenv
 import getpass
 import sys
 import os
+from src.database.s3.s3_client import check_cre
 class ServerAuth:
     def __init__(self):
         self.encryption_Service = Encryption()
@@ -96,8 +97,12 @@ class ServerAuth:
         database = os.getenv('DEV_PLAIN_DB_NAME')
         password = os.getenv('DEV_PLAIN_DB_PASS')
         port = os.getenv('DEV_PLAIN_DB_PORT')
-        print(host,user,database,password,port)
         self.database_Config._init_database_properties(host=host,dbname=database,user=user,password=password,port=port)
+        check_cre()
+        print("Up!✅")
+
+        
+        
 
     def verify_indentity(self):
         """verify credential

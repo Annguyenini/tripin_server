@@ -11,7 +11,7 @@ CREATE TABLE IF NOT EXISTS tripin_auth.userdata (
     user_name TEXT, 
     password TEXT,
     created_time TIMESTAMP NOT NULL,
-    role TEXT NOT NULL DEFAULT user,
+    role TEXT NOT NULL DEFAULT 'user',
     avatar TEXT, 
     etag TEXT, 
     trips_data_version BIGINT DEFAULT 1, 
@@ -24,7 +24,7 @@ CREATE TABLE IF NOT EXISTS tripin_auth.tokens (
     user_name TEXT NOT NULL,
     token TEXT NOT NULL,
     issued_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    expires_at TIMESTAMP NOT NULL,
+    expired_at TIMESTAMP NOT NULL,
     revoked BOOLEAN NOT NULL DEFAULT FALSE
     );
 
@@ -52,7 +52,7 @@ CREATE TABLE IF NOT EXISTS tripin_trips.trip_coordinates (
     longitude REAL NOT NULL,
     speed REAL NOT NULL,
     heading REAL NOT NULL,
-    time_stamp TIMESTAMP NOT NULL,
+    time_stamp BIGINT NOT NULL,
     batch_version BIGINT DEFAULT 0
 );
 
@@ -61,9 +61,9 @@ CREATE TABLE IF NOT EXISTS tripin_trips.trip_medias (
     id SERIAL PRIMARY KEY,
     trip_id INTEGER NOT NULL REFERENCES tripin_trips.trips_table(id) ON DELETE CASCADE,
     media_type TEXT,
-    key TEXT NOT NULL,
+    media_path TEXT NOT NULL,
     longitude REAL,
     latitude REAL,
     version BIGINT DEFAULT 0,
-    time_stamp TIMESTAMPTZ
+    time_stamp BIGINT NOT NULL
 );

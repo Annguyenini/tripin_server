@@ -30,7 +30,7 @@ class AuthServer:
             Each have rate limiter of 5 per minute in total            
         """
         # pass the bound method
-        ##rate limiter
+        #rate limiter
         # @self.bp.before_request
         # def rate_limit():
         #     user_ip = request.remote_addr

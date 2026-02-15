@@ -20,17 +20,17 @@ class GeoService:
         self.cities = None
         self.cache = Cache()
         self.config = Config()
-        self._init_spatial_inx()
+        # self._init_spatial_inx()
         dotenv.load_dotenv(self.config.env_path)
         self._init = True
-    def _init_spatial_inx(self):
-        try:
-            print('Loading geopandas....... (Do not close)')
-            self.cities = geopandas.read_file('src/assets/geo/geoBoundariesCGAZ_ADM1.geojson')
-            self.sindex = self.cities.sindex
-            print('Don')
-        except Exception as e:
-            raise e
+    # def _init_spatial_inx(self):
+    #     try:
+    #         print('Loading geopandas....... (Do not close)')
+    #         self.cities = geopandas.read_file('src/assets/geo/geoBoundariesCGAZ_ADM1.geojson')
+    #         self.sindex = self.cities.sindex
+    #         print('Don')
+    #     except Exception as e:
+    #         raise e
     
 
         
@@ -118,10 +118,10 @@ class GeoService:
         """
         print('fetching geo data')
 
-        city,indexes= self.get_city_from_point(longitude=longitude,latitude=latitude)
+        # city,indexes= self.get_city_from_point(longitude=longitude,latitude=latitude)
         tempature = self.get_tempature(longitude=longitude,latitude=latitude)
         aqi = self.get_aqi(longitude=longitude,latitude=latitude)
-        data ={'city':city,'aqi':aqi,'tempature':tempature}
+        data ={'aqi':aqi,'tempature':tempature}
         return data 
     
     

@@ -98,10 +98,7 @@ class TripContentsRoute:
             upload_status,db_version = self.trip_contents_service.upload_media('video',path=video_path,media=video,longitude=longitude,latitude=latitude, trip_id=int(trip_id),client_version=int(video_version),time=time)
             
             
-            # thumbnail = request.files.get('thumbnail')
-            # thumb_path = thumbnail.filename
-            # thumbnail_version = data.get('thumbnail_version')
-            # upload_status,db_version = self.trip_contents_service.upload_media('thump',path=thumb_path,media=thumbnail,longitude=longitude,latitude=latitude, trip_id=int(trip_id),client_version=int(thumbnail_version),time=time)
+        
         print(upload_status,db_version)
         if not upload_status:
             
@@ -127,9 +124,7 @@ class TripContentsRoute:
         city = None
         if longitude and latitude:
             geo_data = self.geo_service.get_geo_data(longitude=longitude,latitude=latitude)
-            
-            city = self.geo_service.get_city(user_id=user_id,longitude=longitude,latitude=latitude)
-        return jsonify({'message':'Successfully!','geo_data':geo_data,'city':city}),200    
+            return jsonify({'message':'Successfully!','geo_data':geo_data}),200    
     
     def get_trip_coors (self,trip_id:int):
         Ptoken = request.headers.get("Authorization")
@@ -141,14 +136,14 @@ class TripContentsRoute:
             return jsonify({"message":Tmessage, "code":code}),401
         
         client_version = smart_cast(request.headers.get('version'))
-        print('version',client_version)
         coors, version= self.trip_contents_service.get_trip_coors(client_version=client_version,trip_id=trip_id)
+        belong_to =self.trip_contents_service.get_trip_belong_to(trip_id=trip_id)
         if not coors and not version:
             return jsonify({'message':'match'}),304
         if not coors :
             return jsonify ({'message':'Failed'}),500
         
-        return jsonify({'message':"Successfully",'coordinates':coors}),200
+        return jsonify({'message':"Successfully",'coordinates':coors,'user_id':belong_to,'newest_version':version}),200
     
     
     def get_trip_medias (self,trip_id:int):
@@ -161,7 +156,6 @@ class TripContentsRoute:
             return jsonify({"message":Tmessage, "code":code}),401
         
         client_version = smart_cast(request.headers.get('Version'))
-        
         medias,version = self.trip_contents_service.get_trip_media(trip_id=trip_id,client_version=client_version)
         if not medias and not version:
             return jsonify({'message':"Match"}),304

@@ -48,11 +48,11 @@ class TripContentService:
         try:
             query = "INSERT INTO tripin_trips.trip_coordinates (trip_id,batch_version,time_stamp,altitude,latitude,longitude,heading,speed) VALUES (%s,%s,%s,%s,%s,%s,%s,%s)"
             for cor in coordinates:
-                print(cor['time_stamp'])
-                time_s = cor['time_stamp']/1000
-                dt = datetime.fromtimestamp(time_s)
-                formatted = dt.strftime("%Y-%m-%d %H:%M:%S")
-                batch.append([trip_id,client_version,formatted,cor["coordinates"]["altitude"],cor["coordinates"]["latitude"],cor["coordinates"]['longitude'], cor["coordinates"]['heading'], cor["coordinates"]['speed']])
+                # print(cor['time_stamp'])
+                # time_s = cor['time_stamp']/1000
+                # dt = datetime.fromtimestamp(time_s)
+                # formatted = dt.strftime("%Y-%m-%d %H:%M:%S")
+                batch.append([trip_id,client_version,cor['time_stamp'],cor["coordinates"]["altitude"],cor["coordinates"]["latitude"],cor["coordinates"]['longitude'], cor["coordinates"]['heading'], cor["coordinates"]['speed']])
             cur.executemany(query,batch)            
             batch.clear()
         except psycopg2.Error as e:
@@ -79,7 +79,7 @@ class TripContentService:
         print(client_version,current_version)
         if client_version != current_version +1:
             return False, current_version +1
-        insert_into_db = self.trip_database_service.insert_media_into_db(type=type,key=path,longitude=longitude,latitude=latitude,trip_id=trip_id,version=client_version,time=time)
+        insert_into_db = self.trip_database_service.insert_media_into_db(type=type,media_path=path,longitude=longitude,latitude=latitude,trip_id=trip_id,version=client_version,time=time)
         if not insert_into_db:
             return False,None
         
@@ -97,25 +97,33 @@ class TripContentService:
     
     def get_trip_coors(self,client_version:int , trip_id:int):
         # return a list of rowdict from the client version up to current version
-        print(client_version,trip_id)
-        server_version = self.trip_database_service.get_trip_contents_version(trip_id=trip_id,version_type=DATABASEKEYS.TRIPS.TRIP_COORDINATES_VERSION)
-        print(client_version,server_version)
-        if client_version == server_version:
-            return None,None
-        coors = self.trip_database_service.get_trip_coordinates(trip_id=trip_id,client_version=client_version)
-        print(coors)
-        return [dict(r) for r in coors] if coors else None, server_version
-    
+        try:
+            server_version = self.trip_database_service.get_trip_contents_version(trip_id=trip_id,version_type=DATABASEKEYS.TRIPS.TRIP_COORDINATES_VERSION)
+            print(trip_id,client_version)
+            if client_version:
+                if int(client_version) == server_version:
+                    return None,None
+            coors = self.trip_database_service.get_trip_coordinates(trip_id=trip_id,client_version=client_version)
+            return [dict(r) for r in coors] if coors else None, server_version
+
+        except Exception as e:
+            print ('Error at getting coordinates ',e)
+            return None, None
+    def get_trip_belong_to(self,trip_id:int)->int:
+        user_id = self.trip_database_service.get_user_id_from_trip_id(trip_id=trip_id)
+        return user_id
     def get_trip_media(self,trip_id:int,client_version:int):
         
-        server_version = self.trip_database_service.get_trip_contents_version(trip_id=trip_id,version_type=DATABASEKEYS.TRIPS.TRIP_COORDINATES_VERSION)
-        if client_version == server_version:
-            return None, None
+        server_version = self.trip_database_service.get_trip_contents_version(trip_id=trip_id,version_type=DATABASEKEYS.TRIPS.TRIPS_MEDIAS_VERSION)
+        print('media versions ', client_version,server_version)
+        if client_version :
+            if int(client_version) == server_version:
+                return None,None
         medias = self.database_service.find_item_in_sql('tripin_trips.trip_medias','trip_id',trip_id,return_option='fetchall')
         for i in range( len(medias)):
-            default_key = medias[i]['key']
+            default_key = medias[i]['media_path']
             print(default_key)
-            medias[i]['key'] = self.s3_service.generate_temp_uri(f'trips/{trip_id}/'+default_key)
+            medias[i]['media_path'] = self.s3_service.generate_temp_uri(f'trips/{trip_id}/'+default_key)
             medias[i]=dict(medias[i])
         print(medias)
         return medias,server_version
