@@ -2,16 +2,15 @@ import configparser, os
 
 class Config:
     _instance = None
-
+    _init = False
     def __new__(cls, *args, **kwargs):
         if cls._instance is None:
             cls._instance = super().__new__(cls)
         return cls._instance
 
     def __init__(self):
-        if getattr(self, "_initialized", False):
-            return
-        self._initialized = True
+        if self._init : return
+        self._init = True
 
 
         self.config = configparser.ConfigParser()
@@ -26,6 +25,7 @@ class Config:
         self._database_salt_path = self.config.get('paths','database_salt', fallback=None)
         self._env_path = self.config.get('paths','env_path', fallback=None)
         self._aws_s3_bucket_name = self.config.get('aws','aws_s3_bucket',fallback= None)
+        self._aws_s3_log_bucket =self.config.get('aws','aws_s3_logs_bucket',fallback=None)
         # read keys
         with open(self._private_key_path,'r') as f:
             self._PRIVATE_KEY = f.read()
@@ -61,7 +61,10 @@ class Config:
     @property
     def aws_bucket(self):
         return self._aws_s3_bucket_name
-
+    @property
+    def aws_logs_bucket(self):
+        return self._aws_s3_log_bucket
+    
     def get_config_parser(self,**kwargs):
         if kwargs.get("path") is not None:
             config = configparser.ConfigParser()

@@ -1,4 +1,4 @@
-version: '3.8'
+# version: '3.8'
 services:
 
   db:
@@ -17,16 +17,18 @@ services:
     image: redis
     container_name: tripin_redis
     ports:
-      - 8993":"6379"
+      - "8993:6379"
     volumes:
-      -redisdata:/data
+      - redisdata:/data
   flask:
     container_name: tripin_server
     build: .
     ports:
       - "8992:8000"
+      - "1514:1514"
     env_file:
       - src/assets/configs/.env
+      - .env
     depends_on:
       - db
       - redis

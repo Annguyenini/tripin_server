@@ -11,7 +11,8 @@ import getpass
 import json
 import io
 import sys
-
+import threading
+from admin_portal.log_parsers.nginx_parser import Logs
 mail =Mail()
 class Server:
     def __init__(self):
@@ -30,7 +31,13 @@ class Server:
         self.app.register_blueprint(trip_route.bp,url_prefix="/trip")
         self.app.register_blueprint(trip_contents_route.bp,url_prefix ="/trip-contents")
         self.app.register_blueprint(user_route.bp,url_prefix="/user")
+        self.app.route("/health",methods=['GET'])(self.health)    
+        self.app.route("/",methods =['GET'])(self.landing)
         
+    def health(self):
+        return jsonify({'code':'success'}),200
+    def landing(self):
+        return render_template('index.html')
         
 
 
@@ -42,10 +49,11 @@ server_auth_service.skip_indentity()
 # print("Successfully authenticated!✅")
 server = Server()
 app = server.app
+log = Logs()
 if __name__ =="__main__":
     print("initialize s3")
     print(app.url_map)
-    app.run( host ="192.168.0.111", port =8000,debug=True)
 
+    app.run( host ="0.0.0.0", port =8000,debug= True)
     # app.run( host ="0.0.0.0", port =8000,ssl_context=("src/assets/https/cert.pem", "src/assets/https/key.pem"))
     

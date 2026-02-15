@@ -56,3 +56,9 @@ class S3Sevice:
             self._queue.put((item_data,item_data))
             time.sleep(1)
             return False
+    def upload_file(self,file_path:str,base_name:str):
+        try:
+            respond_obj = s3Client.upload_file(file_path,self.config.aws_logs_bucket,base_name)
+        except ClientError as e:
+            print(e)
+            

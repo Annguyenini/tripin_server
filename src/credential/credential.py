@@ -92,40 +92,44 @@ class Auth:
         return (True,{'message':"Successfully",'user_data':user_data,'tokens':token_data})
     #signup function
     def signup(self,email:str,display_name:str,username:str,password:str): 
+        try :
+            if not self.inputValidationService.email_validation(email=email): return False, 'invalid email'
+            if not self.inputValidationService.username_validation(username=username): return False, 'invalid username'
+            if not self.inputValidationService.displayname_validation(display_name=display_name) :return False, 'invalid display name'
+            if not self.inputValidationService.password_validation(password=password):return False ,'invalid password'
+            ##hash password, prepare to insert to database 
+            
+            hashed_passwords = generate_password_hash(password)
+            # print(email,display_name,username,hashed_passwords)
+            #check if email or username already exists
+            
+            ## if the Email already exists in database, return 
+            if(self.db.find_item_in_sql(table="tripin_auth.userdata",item="email",value=email)):
+                return False, "Email already exists!"
         
-        if not self.inputValidationService.email_validation(email=email): return False, 'invalid email'
-        if not self.inputValidationService.username_validation(username=username): return False, 'invalid username'
-        if not self.inputValidationService.displayname_validation(display_name=display_name) :return False, 'invalid display name'
-        if not self.inputValidationService.password_validation(password=password):return False ,'invalid password'
-        ##hash password, prepare to insert to database 
-        hashed_passwords = generate_password_hash(password)
-        # print(email,display_name,username,hashed_passwords)
-        #check if email or username already exists
+            ## if the username already exists in database, return  
+            if(self.db.find_item_in_sql(table="tripin_auth.userdata",item="user_name",value=username)):
+                return False, "Username already exists!"
+            
+            ## process to verify email
+            respond = self.mail_service.send_confirmation_code(email)
+            
+            if(respond):
+                data={
+                    "email":email,
+                    "display_name":display_name,
+                    "username":username,
+                    "password":hashed_passwords,
+                }
+                self.user_queue[email] = data
+                return True, "Successfully"
+            else :
+                return False,"Error at signup"
         
-        ## if the Email already exists in database, return 
-        if(self.db.find_item_in_sql(table="tripin_auth.userdata",item="email",value=email)):
-            return False, "Email already exists!"
-       
-        ## if the username already exists in database, return  
-        if(self.db.find_item_in_sql(table="tripin_auth.userdata",item="user_name",value=username)):
-            return False, "Username already exists!"
-        
-        ## process to verify email
-        respond = self.mail_service.send_confirmation_code(email)
-        
-        if(respond):
-            data={
-                "email":email,
-                "display_name":display_name,
-                "username":username,
-                "password":hashed_passwords,
-            }
-            self.user_queue[email] = data
-            return True, "Successfully"
-        else :
+        except Exception as e:    
+            print(e)
             return False,"Error at signup"
-    
-   
+ 
    
     def login_via_token (self,token:str):
         status, message,code = self.tokenService.jwt_verify(token)
@@ -148,7 +152,7 @@ class Auth:
     
     
     def process_new_user(self,email:str):
-        assert(type(email) is not str,"Email should be string")
+        # assert(type(email) is not str,"Email should be string")
         data =  self.user_queue.get(email)
         display_name = data.get ("display_name")
         username = data.get("username")

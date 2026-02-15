@@ -1,0 +1,146 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Tripping</title>
+  <style>
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+      font-family: sans-serif;
+    }
+
+    html, body {
+      height: 100%;
+      width: 100%;
+    }
+
+    body {
+      position: relative;
+      display: flex;
+      flex-direction: column;
+      justify-content: flex-end; /* push content to bottom */
+      align-items: center;
+      padding: 20px;
+      text-align: center;
+      overflow: hidden;
+      background: #000; /* fallback background color */
+    }
+
+    /* Background image */
+    .background {
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background-image: url('../static/background.png'); /* your background image */
+      background-size: cover;
+      background-position: center;
+      z-index: -1;
+      filter: brightness(0.8); /* darken for contrast */
+    }
+
+    /* Logo top-right */
+    .logo {
+      position: absolute;
+      top: 20px;
+      right: 20px;
+      width: 120px;
+      max-width: 20%;
+      z-index: 1;
+    }
+
+    /* Bottom container for button + list */
+    .bottom-container {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 20px;
+      margin-bottom: 20px;
+      z-index: 1;
+      position: relative;
+      width: 100%;
+      max-width: 800px;
+    }
+
+    /* App Store button */
+    .appstore-btn {
+      padding: 14px 28px;
+      background-color: #0070c9;
+      color: white;
+      text-decoration: none;
+      border-radius: 8px;
+      font-weight: bold;
+      font-size: 1rem;
+      transition: background-color 0.3s;
+    }
+
+    .appstore-btn:hover {
+      background-color: #005fa3;
+    }
+
+    /* Image list */
+    .image-list {
+      list-style: none;
+      display: flex;
+      gap: 15px;
+      flex-wrap: wrap;
+      justify-content: center;
+      width: 100%;
+    }
+
+    .image-list li {
+      flex: 1 1 100px;
+      height: 100px;
+      background: rgba(255,255,255,0.8);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      border-radius: 8px;
+      font-size: 14px;
+      color: #555;
+    }
+
+    /* Responsive tweaks */
+    @media (max-width: 600px) {
+      .logo {
+        width: 80px;
+      }
+
+      .appstore-btn {
+        padding: 10px 20px;
+        font-size: 0.9rem;
+      }
+
+      .image-list li {
+        flex: 1 1 80px;
+        height: 80px;
+        font-size: 12px;
+      }
+    }
+  </style>
+</head>
+<body>
+  <!-- Background image -->
+  <div class="background"></div>
+
+  <!-- Logo -->
+  <!-- <img src="logo.png" alt="Logo" class="logo"> -->
+
+  <!-- Bottom container -->
+  <div class="bottom-container">
+    <!-- App Store Button -->
+    <a href="https://apps.apple.com/" class="appstore-btn" target="_blank">Download on the App Store (In DEV)</a>
+
+    <!-- Placeholder list for future images -->
+    <ul class="image-list">
+      <li>Image 1</li>
+      <li>Image 2</li>
+      <li>Image 3</li>
+    </ul>
+  </div>
+</body>
+</html>
