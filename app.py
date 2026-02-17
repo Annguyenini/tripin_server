@@ -13,6 +13,7 @@ import io
 import sys
 import threading
 from admin_portal.log_parsers.nginx_parser import Logs
+from src.contents_sync.contents_sync_route import ContentsSyncRoute
 mail =Mail()
 class Server:
     def __init__(self):
@@ -27,10 +28,13 @@ class Server:
         trip_route = TripRoute()
         trip_contents_route = TripContentsRoute()
         user_route = UserRoute()
+        sync_route = ContentsSyncRoute()
         self.app.register_blueprint(auth_route.bp,url_prefix="/auth")
         self.app.register_blueprint(trip_route.bp,url_prefix="/trip")
         self.app.register_blueprint(trip_contents_route.bp,url_prefix ="/trip-contents")
         self.app.register_blueprint(user_route.bp,url_prefix="/user")
+        self.app.register_blueprint(sync_route.bp,url_prefix="/sync")
+        
         self.app.route("/health",methods=['GET'])(self.health)    
         self.app.route("/",methods =['GET'])(self.landing)
         

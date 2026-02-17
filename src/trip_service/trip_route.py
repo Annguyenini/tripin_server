@@ -145,7 +145,7 @@ class TripRoute:
         return jsonify({'message':'Successfully!','etag':etag,'trip_data':trip_data if trip_data else None}),200
 
     def request_all_trips_data(self):
-        print(request)
+        # print(request)
         Ptoken = request.headers.get("Authorization")
         token=Ptoken.replace("Bearer ","")
         valid_token, Tmessage,code= self.token_service.jwt_verify(token)

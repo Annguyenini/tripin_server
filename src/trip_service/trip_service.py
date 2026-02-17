@@ -160,7 +160,7 @@ class TripService:
                 row['ended_time'] = int(default_time_end.timestamp()*1000)
             
             default_image_path = row['image']
-            print('image',default_image_path)
+            # print('image',default_image_path)
             if default_image_path:
                 row['image']= self.s3_service.generate_temp_uri(default_image_path)
             row_dict = dict(row)

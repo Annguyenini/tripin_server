@@ -54,16 +54,15 @@ class TripContentsRoute:
         data =request.json
         coordinates = data.get("coordinates")
         client_version = data.get('version')
-        print(client_version,coordinates)
         # data_from_jwt = self.token_service.decode_jwt(token=token)
         # user_id = data_from_jwt['user_id']
 
         insert, db_version = self.trip_contents_service.insert_coordinates_to_db(trip_id=trip_id,client_version=client_version,coordinates=coordinates)
-        
+        print(insert,db_version)
        
        
         if not insert:
-            if db_version:
+            if db_version :
                 return jsonify({"code":"missing_versions","message":f"Current version: {db_version} make sure to have the version that higher than this!",'missing_versions':db_version}),409
             return jsonify({"code": "failed", "message":"Failed to save to database"}),500
 

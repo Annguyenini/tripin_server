@@ -19,12 +19,12 @@ class S3Sevice:
         
      
     def generate_temp_uri (self,key:str,expiration:int = 3600):
-        print(s3Client)
+        # print(s3Client)
         try:
             respond = s3Client.generate_presigned_url('get_object',
             Params={'Bucket': self.config.aws_bucket, 'Key': key},
             ExpiresIn=expiration,)
-            print(respond)
+            # print(respond)
         except ClientError as e:
             print(e)
             return None
