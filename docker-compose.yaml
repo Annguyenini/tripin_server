@@ -35,3 +35,17 @@ services:
 volumes:
   pgdata:
   redisdata: 
+
+
+# version: '3.8'
+
+
+
+
+
+
+
+
+
+
+

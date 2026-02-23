@@ -12,8 +12,11 @@ import json
 import io
 import sys
 import threading
-from admin_portal.log_parsers.nginx_parser import Logs
 from src.contents_sync.contents_sync_route import ContentsSyncRoute
+import logging
+from logging.handlers import RotatingFileHandler
+
+
 mail =Mail()
 class Server:
     def __init__(self):
@@ -53,11 +56,12 @@ server_auth_service.skip_indentity()
 # print("Successfully authenticated!✅")
 server = Server()
 app = server.app
-log = Logs()
+
 if __name__ =="__main__":
     print("initialize s3")
     print(app.url_map)
-
+    print('ver 2')
+    # run_tasks()
     app.run( host ="0.0.0.0", port =8000,debug= True)
     # app.run( host ="0.0.0.0", port =8000,ssl_context=("src/assets/https/cert.pem", "src/assets/https/key.pem"))
     

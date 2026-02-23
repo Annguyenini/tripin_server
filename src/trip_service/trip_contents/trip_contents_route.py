@@ -3,7 +3,8 @@ from src.token.tokenservice import TokenService
 from src.trip_service.trip_contents.trip_contents_service import TripContentService
 from src.geo.geo_service import GeoService
 from src.server_config.service.smart_cast import smart_cast
-
+from src.database.trip_db_service import TripDatabaseService
+from src.database.trip_content_db_service import TripContentsDatabaseService
 import json
 class TripContentsRoute:
     _instance = None
@@ -21,6 +22,7 @@ class TripContentsRoute:
         self.token_service = TokenService()     
         self.trip_contents_service = TripContentService() 
         self.geo_service = GeoService()
+        self.trip_data_base_service= TripDatabaseService()
         self._register_route()
 
         self._init =True
@@ -49,7 +51,11 @@ class TripContentsRoute:
         if not valid_token:
             return jsonify({"message":Tmessage, "code":code}),401
         
-        
+        # user data from token
+        user_data = self.token_service.decode_jwt(token=token)
+        user_id = user_data['user_id']
+        # check if user own the trip 
+        self.trip_data_base_service.find_item_in_sql()
         # get the request data
         data =request.json
         coordinates = data.get("coordinates")

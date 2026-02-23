@@ -1,5 +1,6 @@
 from src.server_config.service.Etag.Etag import EtagService
 from src.database.database_keys import DATABASEKEYS
+from src.server_config.service.cache import Cache
 class AuthEtagService (EtagService):
     _instance = None
     _init = False
@@ -13,7 +14,7 @@ class AuthEtagService (EtagService):
         if self._init :
             return
         super().__init__()
-        
+        self.cacheService = Cache()
         self._init = True
         
     def generate_key(self,user_id:int)->str:
@@ -42,3 +43,26 @@ class AuthEtagService (EtagService):
         con.commit()
         db_etag = cur.fetchone()
         return db_etag if db_etag else None
+
+
+    def userdata_etag_validation(self,user_id:int,client_etag:str)-> object:
+        if not client_etag: return False,None
+        etag_key = self.generate_key(user_id=user_id)
+        cache_etag = self.get_userdata_etag_from_cache(key=etag_key)
+        if cache_etag:
+            if client_etag == cache_etag:
+                return(True,cache_etag)
+        else:
+            # set the etag to cahche
+            db_etag = self.get_userdata_etag_from_database(user_id=user_id)
+            if db_etag:
+                if client_etag == db_etag:
+                    self.cacheService.set(key=etag_key,time=3600,data=db_etag)
+                    return(True,db_etag)
+        return False, None
+        
+    def generate_userdata_etag(self,user_id,userdata_version):
+        etag_string = self.genarate_etag_string(user_id=user_id,version= userdata_version)
+        etag = self.generate_etag(key=etag_string)
+        return etag
+        

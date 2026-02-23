@@ -4,6 +4,8 @@ from src.token.tokenservice import TokenService
 from src.database.database import Database
 from src.database.s3.s3_dirs import AVATAR_DIR
 from src.user.user_service import UserService
+from src.database.database_keys import DATABASEKEYS
+from src.database.userdata_db_service import UserDataDataBaseService
 class UserRoute :
     _instance = None
     def __new__(cls):
@@ -17,6 +19,7 @@ class UserRoute :
         self.TokenService = TokenService()
         self.DatabaseService = Database()
         self.UserService = UserService()
+        self.UserDataBaseService = UserDataDataBaseService()
         self._register_route()
     
     
@@ -71,27 +74,16 @@ class UserRoute :
         data_from_jwt = self.TokenService.decode_jwt(token)
         user_id = data_from_jwt.get('user_id')
         
-        # default path
-        path = f'user{user_id}_avatar.jpg'
-        
-        
         # get image and return if not image
         image = request.files.get('image')
         if image is None:
             return jsonify({"message":"No Image Found",'code':'failed'}),401
 
         # upload to s3 and return 401 if error occurr
-        s3key =AVATAR_DIR+path
-        s3_status = self.S3Service.upload_media(path=s3key,data=image)
-        if not s3_status:
-            return jsonify({"message":"Error Upload To Cloud",'code':'failed'}),500
-        
-        # write default avatar path to db and return 401 if error ocurr
-        db_status = self.DatabaseService.update_db('tripin_auth.userdata','id',user_id,'avatar',path)
-        if not db_status:
-            return jsonify({"message":"Error Upload To Database",'code':'failed'}),500
-        
+        upload = self.UserService.update_user_avartar(user_id=user_id,image=image)
         # return 200 
-        return jsonify({'message':'Successfully', 'code':'successfully'}),200       
+        if not upload['status']:
+            return jsonify(upload),500  
+        return jsonify(upload),200       
         
  
