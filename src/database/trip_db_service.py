@@ -94,3 +94,12 @@ class TripDatabaseService (Database):
             return coors if coors else None
         except Exception as e:
             print('Error at getting coordinates ',e)
+    
+    def trip_owner_validation(self,user_id:int,trip_id:int)->bool:
+        result = self.find_item_in_sql(DATABASEKEYS.TABLES.TRIPS,
+                              DATABASEKEYS.TRIPS.TRIP_ID,
+                              trip_id,
+                              True,
+                              DATABASEKEYS.TRIPS.USER_ID,
+                              user_id)
+        return True if result else False

@@ -51,7 +51,6 @@ class Auth:
         #verify user input 
         if not self.inputValidationService.username_validation(username=username): return False,({'message':'Invalid Username, require 6 to 9 letters and start with a letter'})
         if not self.inputValidationService.password_validation(password=password) :return False,({'message':'invalid password, require 8 to 15 letters and start with a letter'})
-        self.logger.info('Flask')
         ##find username in database
         
         userdata_row = self.db.find_item_in_sql(table="tripin_auth.userdata",item="user_name",value=username)
@@ -134,9 +133,8 @@ class Auth:
  
    
     def login_via_token (self,token:str):
-        print('token for verify',token)
+        
         status, message,code = self.tokenService.jwt_verify(token)
-        print('after verify', status,message,code)
         # print(status,message,code
         # if token invalid or expried, return
         if not status:

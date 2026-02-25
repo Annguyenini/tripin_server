@@ -6,7 +6,8 @@ from src.database.s3.s3_dirs import AVATAR_DIR
 from src.user.user_service import UserService
 from src.database.database_keys import DATABASEKEYS
 from src.database.userdata_db_service import UserDataDataBaseService
-class UserRoute :
+from src.base.route_base import RouteBase
+class UserRoute (RouteBase):
     _instance = None
     def __new__(cls):
         if not cls._instance:
@@ -14,6 +15,7 @@ class UserRoute :
         return cls._instance
     
     def __init__(self):
+        super().__init__()
         self.bp= Blueprint('user',__name__)
         self.S3Service = S3Sevice()
         self.TokenService = TokenService()
@@ -28,20 +30,10 @@ class UserRoute :
         self.bp.route('/get-user-data',methods=['GET'])(self.get_user_data)
     
     def get_user_data(self):
-        ptoken = request.headers.get('Authorization')
-        
-        token = ptoken.replace('Bearer ','')
-        
-        Ptoken = request.headers.get("Authorization")
-        token=Ptoken.replace("Bearer ","")
-        token_status, message, code = self.TokenService.jwt_verify(token=token)
-        
-        # return 401 if token is invalid or expired
-        if not token_status:
-            return jsonify({"message":message,'code':code}),401
-        
-        data_from_jwt = self.TokenService.decode_jwt(token)
-        user_id_from_jwt = data_from_jwt.get('user_id')
+        user_data,error = self._get_authenticated_user()
+        if error :
+            return jsonify(error),401
+        user_id_from_jwt = user_data.get('user_id')
         
         client_etag = request.headers.get('If-None-Match')
         
@@ -62,17 +54,12 @@ class UserRoute :
         """
         # get token and verify token
         
-        Ptoken = request.headers.get("Authorization")
-        token=Ptoken.replace("Bearer ","")
-        token_status, message, code = self.TokenService.jwt_verify(token=token)
-        
-        # return 401 if token is invalid or expired
-        if not token_status:
-            return jsonify({"message":message,'code':code}),401
+        user_data,error = self._get_authenticated_user()
+        if error :
+            return jsonify(error),401
         
         # get user data direcly from jwt
-        data_from_jwt = self.TokenService.decode_jwt(token)
-        user_id = data_from_jwt.get('user_id')
+        user_id = user_data.get('user_id')
         
         # get image and return if not image
         image = request.files.get('image')

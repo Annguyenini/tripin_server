@@ -59,6 +59,9 @@ class TripService:
   
     def end_a_trip(self, trip_id:int,user_id:int):
         # print(trip_id
+        onwer_validation = self.trip_database_service.trip_owner_validation(user_id=user_id,trip_id=trip_id)
+        if not onwer_validation:
+            return False,'You are not authorize to modify this trip'
         update_trip_status = self.database_service.update_db(table = "tripin_trips.trips_table", item = "id", value= trip_id, item_to_update = "active",value_to_update = False)
         if not update_trip_status:
             return False, f"Error while trying to end trip {trip_id}"
