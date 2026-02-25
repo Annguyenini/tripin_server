@@ -18,7 +18,8 @@ DATABASEKEYS= SimpleNamespace(
         AVARTAR= 'avatar',
         ETAG='etag',
         TRIPS_DATA_VERSION='trips_data_version',
-        TRIPS_DATA_ETAG ='trips_data_etag'
+        TRIPS_DATA_ETAG ='trips_data_etag',
+        USER_DATA_VERSION ='userdata_version'
     ),
     TOKENS= SimpleNamespace(
         TOKEN_ID='id',

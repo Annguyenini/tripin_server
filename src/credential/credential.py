@@ -1,5 +1,5 @@
 from werkzeug.security import generate_password_hash, check_password_hash
-from datetime import datetime,timedelta
+from datetime import datetime,timedelta,timezone
 from src.database.database import Database
 from src.server_config.config import Config
 from src.token.tokenservice import TokenService
@@ -13,6 +13,7 @@ from src.server_config.service.Etag.Etag import EtagService
 from src.server_config.service.Etag.auth_etag_service import AuthEtagService
 from src.database.database_keys import DATABASEKEYS
 from src.server_config.service.input_validation import InputValidation
+from src.logger.logging import get_logger
 #userdata user_id|email|user_name|displayname|password
 #token keyid| userid| username|token|issue name | exp name | revok
 class Auth:
@@ -35,6 +36,8 @@ class Auth:
             self.authEtagService = AuthEtagService()
             self.inputValidationService = InputValidation()
             self.user_queue = {}
+            self.logger = get_logger(__name__)
+
             self._initialize = True
     #login function
     def login(self,username:str,password:str):
@@ -46,10 +49,8 @@ class Auth:
             tuple:
         """
         #verify user input 
-        if not self.inputValidationService.username_validation(username=username): return False,({'message':'invalid username'})
-        if not self.inputValidationService.password_validation(password=password) :return False,({'message':'invalid password'})
-        
-    
+        if not self.inputValidationService.username_validation(username=username): return False,({'message':'Invalid Username, require 6 to 9 letters and start with a letter'})
+        if not self.inputValidationService.password_validation(password=password) :return False,({'message':'invalid password, require 8 to 15 letters and start with a letter'})
         ##find username in database
         
         userdata_row = self.db.find_item_in_sql(table="tripin_auth.userdata",item="user_name",value=username)
@@ -72,7 +73,7 @@ class Auth:
         user_data = {'user_id':userid,'role':role}
                 
         # old token got revoked
-        self.tokenService.revoked_refresh_token(userid=userid)
+        self.tokenService.revoke_refresh_token(user_id=userid)
         
         
         #new tokens generated
@@ -82,12 +83,12 @@ class Auth:
         
         ##inserted token into database
         self.db.insert_token_into_db(
-            user_id =userdata_row["id"],
+            user_id=userdata_row["id"],
             username=username,
             token=refresh_token,
-            issued_at=datetime.utcnow(),
-            expired_at = datetime.utcnow() + timedelta(days=30),
-            )
+            issued_at=datetime.now(timezone.utc),
+            expired_at=datetime.now(timezone.utc) + timedelta(days=30),
+        )
        
         return (True,{'message':"Successfully",'user_data':user_data,'tokens':token_data})
     #signup function
@@ -132,6 +133,7 @@ class Auth:
  
    
     def login_via_token (self,token:str):
+        
         status, message,code = self.tokenService.jwt_verify(token)
         # print(status,message,code
         # if token invalid or expried, return

@@ -6,3 +6,5 @@ __pycache__/
 gallery/
 test/
 .env
+/docs
+/logs

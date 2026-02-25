@@ -59,6 +59,9 @@ class TripService:
   
     def end_a_trip(self, trip_id:int,user_id:int):
         # print(trip_id
+        onwer_validation = self.trip_database_service.trip_owner_validation(user_id=user_id,trip_id=trip_id)
+        if not onwer_validation:
+            return False,'You are not authorize to modify this trip'
         update_trip_status = self.database_service.update_db(table = "tripin_trips.trips_table", item = "id", value= trip_id, item_to_update = "active",value_to_update = False)
         if not update_trip_status:
             return False, f"Error while trying to end trip {trip_id}"
@@ -160,7 +163,7 @@ class TripService:
                 row['ended_time'] = int(default_time_end.timestamp()*1000)
             
             default_image_path = row['image']
-            print('image',default_image_path)
+            # print('image',default_image_path)
             if default_image_path:
                 row['image']= self.s3_service.generate_temp_uri(default_image_path)
             row_dict = dict(row)

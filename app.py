@@ -12,7 +12,11 @@ import json
 import io
 import sys
 import threading
-from admin_portal.log_parsers.nginx_parser import Logs
+from src.contents_sync.contents_sync_route import ContentsSyncRoute
+import logging
+from logging.handlers import RotatingFileHandler
+
+
 mail =Mail()
 class Server:
     def __init__(self):
@@ -27,10 +31,13 @@ class Server:
         trip_route = TripRoute()
         trip_contents_route = TripContentsRoute()
         user_route = UserRoute()
+        sync_route = ContentsSyncRoute()
         self.app.register_blueprint(auth_route.bp,url_prefix="/auth")
         self.app.register_blueprint(trip_route.bp,url_prefix="/trip")
         self.app.register_blueprint(trip_contents_route.bp,url_prefix ="/trip-contents")
         self.app.register_blueprint(user_route.bp,url_prefix="/user")
+        self.app.register_blueprint(sync_route.bp,url_prefix="/sync")
+        
         self.app.route("/health",methods=['GET'])(self.health)    
         self.app.route("/",methods =['GET'])(self.landing)
         
@@ -49,11 +56,12 @@ server_auth_service.skip_indentity()
 # print("Successfully authenticated!✅")
 server = Server()
 app = server.app
-log = Logs()
+
 if __name__ =="__main__":
     print("initialize s3")
     print(app.url_map)
-
+    print('ver 2')
+    # run_tasks()
     app.run( host ="0.0.0.0", port =8000,debug= True)
     # app.run( host ="0.0.0.0", port =8000,ssl_context=("src/assets/https/cert.pem", "src/assets/https/key.pem"))
     
