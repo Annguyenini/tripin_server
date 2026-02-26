@@ -15,9 +15,12 @@ import threading
 from src.contents_sync.contents_sync_route import ContentsSyncRoute
 import logging
 from logging.handlers import RotatingFileHandler
-
-
+import sentry_sdk
+import dotenv
+import os 
 mail =Mail()
+dotenv.load_dotenv('.env')
+
 class Server:
     def __init__(self):
         self.app = Flask(__name__)
@@ -46,6 +49,17 @@ class Server:
     def landing(self):
         return render_template('index.html')
         
+def run_sentry_log():
+    sentry_dns = os.getenv('SENTRY_DNS')
+    print(sentry_dns)
+    sentry_sdk.init(
+        dsn=sentry_dns,
+        # Add data like request headers and IP for users,
+        # see https://docs.sentry.io/platforms/python/data-management/data-collected/ for more info
+        send_default_pii=True,
+        enable_logs=True,
+    )
+    sentry_sdk.logger.info('This is an info log message')
 
 
 server_auth_service = ServerAuth()
@@ -55,12 +69,14 @@ server_auth_service.skip_indentity()
 #     sys.exit(1)
 # print("Successfully authenticated!✅")
 server = Server()
-app = server.app
 
+run_sentry_log()
+app = server.app
 if __name__ =="__main__":
     print("initialize s3")
     print(app.url_map)
-    print('ver 2')
+    print('ver 3')
+   
     # run_tasks()
     app.run( host ="0.0.0.0", port =8000,debug= True)
     # app.run( host ="0.0.0.0", port =8000,ssl_context=("src/assets/https/cert.pem", "src/assets/https/key.pem"))
