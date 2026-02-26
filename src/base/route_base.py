@@ -23,5 +23,6 @@ class RouteBase:
             return None,{'message':message, 'code':code}
         
         user_data = self.tokenService.decode_jwt(token=token)
+        print (user_data)
         return user_data,None
         
