@@ -89,9 +89,12 @@ class TripRoute(RouteBase):
             json: return to client
         """
         user_data_from_jwt, error = self._get_authenticated_user()
+        if error :
+            return jsonify(error),401
         user_data = request.json
         ##decode jwt to get userdatas
-        user_id = user_data_from_jwt['user_id']
+        
+        user_id = user_data_from_jwt.get('user_id')
         trip_id = user_data.get("trip_id") 
         status,message = self.trip_service.end_a_trip(trip_id=trip_id,user_id=user_id)
         if not status:
