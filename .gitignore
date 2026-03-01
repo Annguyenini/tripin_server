@@ -4,7 +4,7 @@ __pycache__/
 127.0.0.1+1-key.pem
 127.0.0.1+1.pem
 gallery/
-test/
+# test/
 .env
 # /docs
 /logs
