@@ -92,13 +92,14 @@ class ServerAuth:
         self.master_key,keysatus = self.encryption_Service.generate_key(kdf,password)
     
     def skip_indentity(self):
-        host = os.getenv('DEV_PLAIN_DB_HOST')
-        user = os.getenv('DEV_PLAIN_DB_USER')
-        database = os.getenv('DEV_PLAIN_DB_NAME')
-        password = os.getenv('DEV_PLAIN_DB_PASS')
-        port = os.getenv('DEV_PLAIN_DB_PORT')
+        host = os.getenv('DB_HOST')
+        user = os.getenv('DB_USER')
+        database = os.getenv('DB_NAME')
+        password = os.getenv('DB_PASS')
+        port = os.getenv('DB_PORT')
         self.database_Config._init_database_properties(host=host,dbname=database,user=user,password=password,port=port)
         check_cre()
+        # print(host,user,database,password,port)
         print("Up!✅")
 
         
