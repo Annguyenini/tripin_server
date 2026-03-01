@@ -1,0 +1,12 @@
+id, INT that be generate by server
+Username: unique string, that require length >5, <10, start with letter
+displayname: dont need to be unique
+password: hashed password
+email: unique email, one per account
+created_time: time that the account been created 
+role: use for future refrence
+avatar: the name of the file in aws s3
+etag: Entity tag for userdata
+trip_data_version: unique version that take refrence in trips table
+trip_data_etag: entity tag that generate base on the trip data version 
+userdata_version

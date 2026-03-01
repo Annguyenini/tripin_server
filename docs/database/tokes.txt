@@ -1,0 +1,10 @@
+refresh jwt
+
+
+id tokenid ,
+user_id token belong to (refrence the userdata table),
+user_name (refrence the userdata table),
+token token value it self,
+issued_at time the token issue,
+expired_at time the token expired,
+revoked revoked or no

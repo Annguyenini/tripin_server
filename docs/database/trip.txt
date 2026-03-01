@@ -1,0 +1,11 @@
+id SERIAL PRIMARY KEY,
+trip_name 
+user_id refrence userdata table
+created_time  UTC +0 in ms
+ended_time UTC +0 in ms
+active BOOLEAN NOT NULL DEFAULT FALSE,
+image TEXT,
+etag TEXT,
+trip_coordinates_version BIGINT DEFAULT 0,
+trip_medias_version BIGINT DEFAULT 0,
+trip_informations_version BIGINT DEFAULT 0
