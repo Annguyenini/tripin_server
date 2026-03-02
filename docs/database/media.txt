@@ -1,0 +1,8 @@
+id SERIAL PRIMARY KEY,
+trip_id INTEGER NOT NULL REFERENCES tripin_trips.trips_table(id) ON DELETE CASCADE,
+media_type 'video','photo,
+media_path unique path,
+longitude float,
+latitude float,
+version BIGINT DEFAULT 0,
+time_stamp UTC + 0 in ms

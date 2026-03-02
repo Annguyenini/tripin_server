@@ -30,7 +30,7 @@ class AuthServer:
             Each have rate limiter of 5 per minute in total            
         """
         # pass the bound method
-        ##rate limiter
+        #rate limiter
         # @self.bp.before_request
         # def rate_limit():
         #     user_ip = request.remote_addr
@@ -71,7 +71,10 @@ class AuthServer:
         """      
         ptoken = request.headers.get("Authorization")
         token = ptoken.replace("Bearer ", "")
+        
+        
         data = self.auth.login_via_token(token=token)
+        
         status = data['status']
         message = data['message']
         code = data['code']
@@ -79,19 +82,22 @@ class AuthServer:
     
         if not status:
             return jsonify({"message": message,"user_data": None,"code":code}), 401
+        
         return jsonify({"message": message, "user_data": user_data}), 200
+
+
 
     def login(self):
         data = request.json
         username = data.get("username")
         password = data.get("password")
-        login_process= self.auth.login(username=username, password=password)
-        status = login_process['status']
+        status,login_process= self.auth.login(username=username, password=password)
         message = login_process['message']
-        user_data = login_process['user_data']
-        tokens = login_process['tokens']
         if not status:
             return jsonify({"message": message}), 401
+        user_data = login_process['user_data']
+        tokens = login_process['tokens']
+        
         return jsonify({"message": message,'tokens':tokens, "user_data": user_data }), 200
 
     def signup(self):

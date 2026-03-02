@@ -1,2 +1,2 @@
 # tripin_server
-in dev not production
+in dev not productionQ

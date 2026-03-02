@@ -2,32 +2,43 @@
 from flask import Blueprint, request, jsonify
 from src.token.tokenservice import TokenService
 from src.trip_service.trip_service import TripService
+from src.trip_service.trip_contents.trip_contents_service import TripContentService
 from src.database.s3.s3_service import S3Sevice
 from src.database.s3.s3_dirs import TRIP_DIR
 from src.geo.geo_service import GeoService
+from src.database.trip_db_service import TripDatabaseService
+from src.server_config.service.cache import Cache
+from src.base.route_base import RouteBase
 import json
-class TripRoute:
+class TripRoute(RouteBase):
     _instance = None
+    _init =False
     def __new__(cls,*args,**kwargs):
         if cls._instance is None:
             cls._instance = super().__new__(cls)
         return cls._instance
 
     def __init__(self):
+        if self._init: return
+        super().__init__()
         self.bp = Blueprint('trip',__name__)
         self.token_service = TokenService()     
         self.trip_service = TripService() 
+        self.trip_content_service = TripContentService()
         self.trip_s3 = S3Sevice()  
         self.geo_service = GeoService()
+        self.cache_service = Cache()
+        self.trip_database_service = TripDatabaseService()
+        self._init = True
         self._register_route()
     
     def _register_route(self):
         self.bp.route("/request-new-trip", methods=["POST"])(self.request_new_trip)
-        self.bp.route("/<trip_id>/coordinates",methods =["POST"])(self.add_coordinates)
-        self.bp.route('/trips',methods =['GET'])(self.request_trips_data)
-        self.bp.route ('/<trip_id>/upload',methods=['POST'])(self.media_upload)
+        self.bp.route('/trips',methods =['GET'])(self.request_all_trips_data)
+        self.bp.route('/current-trip-id', methods=['GET'])(self.request_current_trip_id)
         self.bp.route("/end-trip",methods=["POST"])(self.end_trip)
-        self.bp.route('/location-conditions',methods=['GET'])(self.request_current_location_condition)
+        self.bp.route('/trip',methods=['POST'])(self.request_trip_data)
+
     ## request new trip
     def request_new_trip(self):
         
@@ -36,19 +47,20 @@ class TripRoute:
         Returns:
             status: html status, message
         """
-        Ptoken = request.headers.get("Authorization")
-        token=Ptoken.replace("Bearer ","")
+        # Ptoken = request.headers.get("Authorization")
+        # token=Ptoken.replace("Bearer ","")
         
-        ##verify token
-        valid_token,Tmessage,code = self.token_service.jwt_verify(token)
-        ##return if invalid token
-        if not valid_token:
-            return jsonify ({"message":Tmessage,"code":code}), 401
-        
+        # ##verify token
+        # valid_token,Tmessage,code = self.token_service.jwt_verify(token)
+        # ##return if invalid token
+        # if not valid_token:
+        #     print(code)
+        #     return jsonify ({"message":Tmessage,"code":code}), 401
+        user_data , error =self._get_authenticated_user()
+        if error :
+            return jsonify(error),401
         ##decode jwt to get userdatas
-        user_data_from_jwt = self.token_service.decode_jwt(token)
-        user_id = user_data_from_jwt.get("user_id")
-        user_name = user_data_from_jwt.get("user_name")
+        user_id = user_data.get("user_id")
         trip_name = request.form.get("trip_name")
                 
         #process new trip
@@ -56,27 +68,19 @@ class TripRoute:
         #get image, and image_path
         image = request.files.get('image')
         image_path =None
-        status, message,trip_id = self.trip_service.process_new_trip(user_id,trip_name,image_path)
-
+        status, message,trip_id = self.trip_service.process_new_trip(user_id,trip_name,image_path,image=image)
         
         if image:   
             image_path = f"trips/{trip_id}/cover.jpg"
             # upload to s3
-            upload = self.trip_s3.upload_media(path=image_path,data=image)
-            upload_image = self.trip_service.upload_trip_image(trip_id,image_path=image_path)
-        
-        all_trip_data = self.trip_service.get_all_trip_data(user_id=user_id)
-        if not status or not upload or not upload_image:
-            if(not upload):
-                message +='Failed to upload into cloud'
-            if(not upload_image):
-                message +='Failed to upload into db'
-                
-            print(message)
+            upload = self.trip_s3.upload_media(path=image_path,data=image)            
+            upload_image = self.trip_content_service.upload_trip_image(trip_id,image_path=image_path)
 
+        
+        if not status :
             return jsonify({"message":message,"code":"failed"}),500
         else:
-            return jsonify({"message":message,"trip_id":trip_id,'all_trip_data':all_trip_data,"code":"successfully"}),200
+            return jsonify({"message":message,"trip_id":trip_id,"code":"successfully"}),200
    
     def end_trip(self):
         """handle end trip
@@ -84,146 +88,62 @@ class TripRoute:
         Returns:
             json: return to client
         """
+        user_data_from_jwt, error = self._get_authenticated_user()
+        if error :
+            return jsonify(error),401
         user_data = request.json
-
-        Ptoken = request.headers.get("Authorization")
-        token=Ptoken.replace("Bearer ","")
-        
-        ##verify token
-        valid_token,Tmessage,code = self.token_service.jwt_verify(token)
-        ##return if invalid token
-        if not valid_token:
-            return jsonify ({"message":Tmessage,"code":code}), 401
-        
         ##decode jwt to get userdatas
-        user_data_from_jwt = self.token_service.decode_jwt(token)
-
-        trip_id = user_data.get("trip_id")        
-        status,message = self.trip_service.end_a_trip(trip_id=trip_id)
+        
+        user_id = user_data_from_jwt.get('user_id')
+        trip_id = user_data.get("trip_id") 
+        status,message = self.trip_service.end_a_trip(trip_id=trip_id,user_id=user_id)
         if not status:
             return jsonify({"code":"failed","message":message}),500
+        
         return jsonify({"code":"successfully","message":message}),200
    
-   
-    def add_coordinates(self,trip_id):
-        """handler from the client
-
-        Returns:
-            status code: 
-        """
-       
+    
+    def request_current_trip_id(self):
+        user_data,error = self._get_authenticated_user()
+        if error:
+            return jsonify(error),401
+        user_id = user_data['user_id']
+        current_trip_id = self.trip_service.get_current_trip_id(user_id=user_id)
+        return jsonify({'current_trip_id':current_trip_id}),200
+    
+    def request_trip_data(self):
+        user_data,error =self._get_authenticated_user()
+        if error:
+            return jsonify(error),401        
+        user_id  = user_data.get('user_id')
         
-        # verify jwt 
-        Ptoken = request.headers.get("Authorization")
-        token=Ptoken.replace("Bearer ","")
-        valid_token, Tmessage,code= self.token_service.jwt_verify(token)
+        client_etag = request.headers.get('If-None-Match')
+        trip_id = request.json.get('trip_id')
+        trip_data,etag = self.trip_service.get_trip_data(user_id=user_id,trip_id=trip_id,client_etag=client_etag)
+        if trip_data is None and etag is not None:
+            return jsonify({'etag':etag}),304
+        
+        if not trip_data and not etag:
+            return jsonify({'message':'failed'}),404
+        
+        return jsonify({'message':'Successfully!','etag':etag,'trip_data':trip_data if trip_data else None}),200
+
+    def request_all_trips_data(self):
+        # print(request)
+        user_data,error = self._get_authenticated_user()
         # return if jwt in valid or expried
 
-        if not valid_token:
-            return jsonify({"message":Tmessage, "code":code}),401
+        if error:
+            return jsonify(error),401
+        client_etag = request.headers.get('If-None-Match')
+        user_id  = user_data.get('user_id')
         
-        
-        # get the request data
-        data =request.json
-        coordinates = data.get("coordinates")
-        data_from_jwt = self.token_service.decode_jwt(token=token)
-        user_id = data_from_jwt['user_id']
+        all_trips_data,etag = self.trip_service.get_all_trip_data(user_id=user_id,client_etag=client_etag)
 
-        insert = self.trip_service.insert_coordinates_to_db(trip_id=trip_id,coordinates=coordinates)
         
-       
-        if not insert:
-            return jsonify({"code": "failed", "message":"Failed to save to database"}),500
+        if all_trips_data is None and etag:
+            return jsonify({'etag':etag}),304
         
-        return jsonify({"code": "successfully", "message":"Successfully store into database"}),200
+        return jsonify({'message':'Successfully!','etag':etag,'all_trip_data':all_trips_data if all_trips_data else None}),200
     
-    def request_trips_data(self):
-        Ptoken = request.headers.get("Authorization")
-        token=Ptoken.replace("Bearer ","")
-        valid_token, Tmessage,code= self.token_service.jwt_verify(token)
-        # return if jwt in valid or expried
-
-        if not valid_token:
-            return jsonify({"message":Tmessage, "code":code}),401
-        data_from_jwt = self.token_service.decode_jwt(token=token)
-        user_id  = data_from_jwt.get('user_id')
-        current_trip_data = self.trip_service.get_trip_data(user_id=user_id)
-        all_trips_data = self.trip_service.get_all_trip_data(user_id=user_id)
-        return jsonify({'message':'Successfully!','current_trip_data':current_trip_data if current_trip_data else None,'all_trip_data':all_trips_data if all_trips_data else None})
-    
-    
-    def media_upload(self,trip_id):
-        Ptoken = request.headers.get("Authorization")
-        token=Ptoken.replace("Bearer ","")
-        valid_token, Tmessage,code= self.token_service.jwt_verify(token)
-        # return if jwt in valid or expried
-
-        if not valid_token:
-            return jsonify({"message":Tmessage, "code":code}),401
-        data = json.loads(request.form.get('data'))
-        print(data)
-        longitude = data.get('longitude')
-        latitude = data.get('latitude')
-        time = data.get('time_stamp')  
-        image = request.files.get('image')
-        if image:
-            path = image.filename
-            upload_status = self.trip_service.upload_media('image',path=path,media=image,longitude=longitude,latitude=latitude,trip_id=trip_id,time=time)
-        else:
-            video = request.files.get('video')
-            path = video.filename
-            upload_status = self.trip_service.upload_media('video',path=path,media=video,longitude=longitude,latitude=latitude,trip_id=trip_id,time=time)
-        
-        if not upload_status:
-            return jsonify({'message':'Failed!'}),500
-        return jsonify({'message':'Successfully'})
-    
-    def request_current_location_condition(self):
-        Ptoken = request.headers.get("Authorization")
-        token=Ptoken.replace("Bearer ","")
-        valid_token, Tmessage,code= self.token_service.jwt_verify(token)
-        # return if jwt in valid or expried
-
-        if not valid_token:
-            return jsonify({"message":Tmessage, "code":code}),401
-        data_from_jwt  = self.token_service.decode_jwt(token=token)
-        user_id = data_from_jwt['user_id']
-        longitude = request.args.get('longitude',type=float)
-        latitude = request.args.get('latitude',type = float)
-        geo_data = None
-        city = None
-        if longitude and latitude:
-            geo_data = self.geo_service.get_geo_data(longitude=longitude,latitude=latitude)
-            
-            city = self.geo_service.get_city(user_id=user_id,longitude=longitude,latitude=latitude)
-        return jsonify({'message':'Successfully!','geo_data':geo_data,'city':city}),200    
-    
-    def get_trip_coors (self,trip_id):
-        Ptoken = request.headers.get("Authorization")
-        token=Ptoken.replace("Bearer ","")
-        valid_token, Tmessage,code= self.token_service.jwt_verify(token)
-        # return if jwt in valid or expried
-
-        if not valid_token:
-            return jsonify({"message":Tmessage, "code":code}),401
-        
-        coors = self.trip_service.get_trip_coors(trip_id=trip_id)
-        
-        
-        return jsonify({'message':"Successfully",'coordinates':coors}),200
-    
-    
-    def get_trip_medias (self,trip_id):
-        Ptoken = request.headers.get("Authorization")
-        token=Ptoken.replace("Bearer ","")
-        valid_token, Tmessage,code= self.token_service.jwt_verify(token)
-        # return if jwt in valid or expried
-
-        if not valid_token:
-            return jsonify({"message":Tmessage, "code":code}),401
-        
-        medias = self.trip_service.get_trip_media(trip_id=trip_id)
-        
-        
-        return jsonify({'message':"Successfully",'medias':medias}),200
-    
+  

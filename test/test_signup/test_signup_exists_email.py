@@ -2,9 +2,9 @@ import requests
 def test_signup_exist_email():
     payload = {
         "email" :"test@gmail.com",
-        "displayName" : "Annguyen",
-        "username" :"Ananguyen",
-        "password" :"Annguyen2005@"
+        "displayName" : "",
+        "username" :"",
+        "password" :"@"
     }
     response = requests.post("http://127.0.0.1:8000/auth/signup",json=payload)
     assert response.status_code == 401 ,"User exist email still throught"

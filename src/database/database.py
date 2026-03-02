@@ -2,7 +2,7 @@
 ## contain functions to modify database directly
 ## helpo avoid other class, function to touch database directly
 ## act as a layer between server to database
-## all functions that contain querry must use parameter (EX: UPDATE table SET user =%s, (value))
+## all functions that contain query must use parameter (EX: UPDATE table SET user =%s, (value))
 
 
 
@@ -16,7 +16,7 @@ from src.server_config.database_config import DatabaseConfig
 import inspect
 from datetime import datetime
 from psycopg2.extras import DictCursor,RealDictCursor
-
+from src.database.database_keys import DATABASEKEYS
 
 class Database:
     _instance = None
@@ -30,6 +30,7 @@ class Database:
             return
         if getattr(self, "_initialized_credentials", False):
             return
+        
         self._initialized = True
         self._initialized_credentials = False
         self.config = Config()
@@ -51,18 +52,21 @@ class Database:
         self.database_password = self.database_config.database_password
         self.database_port = self.database_config.database_port
         self._initialized_credentials = True
-        
+
     ## setup table if not exists (assuming exist)
     def __init__authsetup(self):
         if not self._initialized_credentials:
             return
         con,cur = self.connect_db()
-        cur.execute('CREATE TABLE IF NOT EXISTS tripin_auth.userdata (id SERIAL PRIMARY KEY, email TEXT,display_name TEXT, user_name TEXT, password TEXT,created_time TIMESTAMP NOT NULL)')
+        cur.execute('''
+                    CREATE SCHEMA IF NOT EXISTS tripin_auth;
+                    CREATE TABLE IF NOT EXISTS tripin_auth.userdata (id SERIAL PRIMARY KEY, email TEXT,display_name TEXT, user_name TEXT, password TEXT,created_time TIMESTAMP NOT NULL,role TEXT NOT NULL DEFAULT user
+                    avatar TEXT, etag TEXT, trips_data_version BIGINT DEFAULT 1, trips_data_etag TEXT, userdata_version BIGINT DEFAULT 0)''')
         con.commit()
         cur.execute('''
         CREATE TABLE IF NOT EXISTS tripin_auth.tokens (
         id SERIAL PRIMARY KEY,
-        user_id INTEGER NOT NULL REFERENCES tripin_auth.auth(id) ON DELETE CASCADE,
+        user_id INTEGER NOT NULL REFERENCES tripin_auth.userdata(id) ON DELETE CASCADE,
         user_name TEXT NOT NULL,
         token TEXT NOT NULL,
         issued_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
@@ -72,8 +76,8 @@ class Database:
 
         ''')
         con.commit() 
-        cur.execute(''' CREATE TABLE IF NOT EXISTS tripin_auth.session (id SERIAL PRIMARY KEY,
-        user_id INTEGER NOT NULL REFERENCES tripin_auth.auth(id) ON DELETE CASCADE, login_time TIMESTAMP NOT NULL, last_activity TIMESTAMP NOT NULL);''')
+        # cur.execute(''' CREATE TABLE IF NOT EXISTS tripin_auth.session (id SERIAL PRIMARY KEY,
+        # user_id INTEGER NOT NULL REFERENCES tripin_auth.auth(id) ON DELETE CASCADE, login_time TIMESTAMP NOT NULL, last_activity TIMESTAMP NOT NULL);''')
         con.commit()
         con.close()
     def __init__tripsetup(self):
@@ -81,30 +85,74 @@ class Database:
             return
         con,cur = self.connect_db()
         cur.execute('''
-        CREATE TABLE IF NOT EXISTS tripin_trips.trip_table (
-        id SERIAL PRIMARY KEY,
-        trip_name INTEGER NOT NULL,
-        user_id INTEGER NOT NULL REFERENCES tripin_auth.userdata(id) ON DELETE CASCADE,
-        start_time TIMESTAMP NOT NULL,
-        end_time TIMESTAMP,
-        active BOOLEAN NOT NULL DEFAULT FALSE
+            CREATE SCHEMA IF NOT EXISTS tripin_trips;
+
+            CREATE TABLE IF NOT EXISTS tripin_trips.trips_table (
+            id INTEGER PRIMARY KEY
+                DEFAULT nextval('tripin_trips.trip_table_id_seq'),
+
+            user_id INTEGER NOT NULL
+                REFERENCES tripin_auth.userdata(id)
+                ON DELETE CASCADE,
+
+            trip_name TEXT NOT NULL,
+
+            created_time TIMESTAMPTZ NOT NULL,
+
+            ended_time TIMESTAMPTZ,
+
+            active BOOLEAN NOT NULL DEFAULT FALSE,
+
+            image TEXT,
+
+            etag TEXT,
+
+            trip_coordinates_version BIGINT DEFAULT 0,
+            trip_medias_version BIGINT DEFAULT 0,
+            trip_informations_version BIGINT DEFAULT 0
         );
 
         ''')
         con.commit() 
         cur.execute('''
-        CREATE TABLE IF NOT EXISTS tripin_trips.trip_points (
-        id SERIAL PRIMARY KEY,
-        trip_id INTEGER NOT NULL REFERENCES tripin_trips.trip_table(id) ON DELETE CASCADE,
-        altitude REAL NOT NULL,
-        latitude REAL NOT NULL,
-        longtitude REAL NOT NULL,
-        speed REAL NOT NULL,
-        heading REAL NOT NULL,
-        time_stamp TIMESTAMP NOT NULL
+            CREATE TABLE tripin_trips.trip_coordinates (
+            id SERIAL PRIMARY KEY,
+
+            trip_id INTEGER NOT NULL
+                REFERENCES tripin_trips.trips_table(id)
+                ON DELETE CASCADE,
+
+            altitude REAL NOT NULL,
+            latitude REAL NOT NULL,
+            longitude REAL NOT NULL,
+            speed REAL NOT NULL,
+            heading REAL NOT NULL,
+
+            time_stamp TIMESTAMP NOT NULL,
+
+            batch_version BIGINT DEFAULT 0
         );
         ''')
         con.commit() 
+
+        cur.execute('''
+            CREATE TABLE tripin_trips.trip_medias (
+            id SERIAL PRIMARY KEY,
+
+            trip_id INTEGER NOT NULL
+                REFERENCES tripin_trips.trips_table(id)
+                ON DELETE CASCADE,
+
+            media_type TEXT,
+
+            key TEXT NOT NULL,
+
+            longitude REAL NOT NULL,
+            latitude REAL NOT NULL,
+
+            time_stamp TIMESTAMPTZ
+        );''')
+        con.commit()
         con.close() 
     def connect_db(self,cur_options:str = 'rowDict'):
         """connect to postgres
@@ -131,29 +179,15 @@ class Database:
         return conn, cur
 
 
-    def check_allowance(self,table:str|None =None, item:str|None = None):
-        """check for allowance base on table and value
-
-        Args:
-            table (str): table_name 
-            item (str): column_name
-        """
-        db_allow={
-            'tripin_auth.userdata':['email','user_name','password','display_name','id','avatar'],
-            'tripin_auth.tokens':['token','user_id','user_name','issued_at','exprires_at','revoked'],
-            'tripin_trips.trip_coordinates':['trip_id','altitude','longitude','latitude','heading','speed','time_stamp'],
-            'tripin_trips.trips_table':['trip_name','id','created_time','ended_time','active','image','user_id'],
-            'tripis_trips.trip_medias':['trip_id','media_type','key','longitude','latitude','time_stamp'],
-            
-        }
-        if not table or db_allow[table] is None:
-            raise "Table is invalid"
-         
-        if not item or item not in db_allow[table]:
-            raise "Item is invalid"
+    
                 
-                
-    def find_item_in_sql(self, table:str, item:str, value:str, second_condition:bool | None=None, second_item:str |None = None, second_value: str| None=None, return_option:str |None="fetchone",):
+    def find_item_in_sql(self, table:str, 
+                         item:str, value, 
+                         second_condition:bool | None=None, 
+                         second_item:str |None = None, second_value: str| None=None, 
+                         order_by:str | None=None, 
+                         order_type:str |None = None,
+                         return_option:str |None="fetchone",):
         """return value base on table and item in postgress
 
         Args:
@@ -169,13 +203,23 @@ class Database:
             _list_: list of tuple or tuple
         """
         con,cur = self.connect_db()
-        
-        self.check_allowance(table,item)
-        
+
+    
         if not second_condition:
-            cur.execute (f'SELECT * FROM {table} WHERE {item}=%s',(value,))
+            query = f'SELECT * FROM {table} WHERE {item}=%s'
+            if order_by :                  
+                if not order_type:
+                    raise('need to specify the order_type')
+                query =f'SELECT * FROM {table} WHERE {item}=%s ORDER BY {order_by} {order_type}'
+            cur.execute (query=query,vars=(value,))
         else :
-            cur.execute(f'SELECT * FROM {table} WHERE {item}=%s AND {second_item} =%s',(value,second_value,))
+            query =f'SELECT * FROM {table} WHERE {item}=%s AND {second_item} =%s'
+            if order_by :                  
+                if not order_type:
+                    raise('need to specify the order_type')
+                query =f'SELECT * FROM {table} WHERE {item}=%s AND {second_item} =%s ORDER BY {order_by} {order_type}'
+            cur.execute(query,(value,second_value,))
+        
         
         if return_option =="fetchall":
             item = cur.fetchall()
@@ -196,8 +240,7 @@ class Database:
             bool: status
         """
         con,cur = self.connect_db()
-        self.check_allowance(table,item)
-        self.check_allowance(table=table,item = item_to_update)
+
 
         cur.execute(f'UPDATE {table} SET {item_to_update} =%s WHERE {item} = %s',(value_to_update,value,))
         con.commit()
@@ -208,8 +251,7 @@ class Database:
 
     def delete_from_table(self,table:str, item:str,value:str, second_condition:bool | None=None, second_item:str | None=None , second_value:str | None=None):
         con,cur = self.connect_db()
-        self.check_allowance(table=table,item=item)
-        self.check_allowance(table=table,item= second_item)
+
         if second_condition:
             cur.execute(f'DELETE FROM {table} WHERE {item} = %s AND {second_item} = %s',(value,second_value))
         else:
@@ -219,26 +261,7 @@ class Database:
             return False
         else :return True
         
-    def insert_to_database_trip(self,user_id:int,trip_name:str,imageUri:str):
-        """insert new row in to database trip table / return 2 value
-
-        Args:
-            user_id (int): _userid_
-            trip_name (str): _tripname_
-
-        Returns:
-            _bool, int_: _status, trip_id_
-        """
-        con,cur = self.connect_db()
-        created_time = datetime.now()
-        cur.execute(f'INSERT INTO tripin_trips.trips_table (user_id,trip_name,created_time, active,image) VALUES (%s,%s,%s,%s,%s) RETURNING id',(user_id,trip_name,created_time,True,imageUri))
-        trip_id = cur.fetchone()['id']
-        con.commit()
-        con.close()
-        if cur.rowcount >=1:
-            print("insert successfully")
-            return True, trip_id
-        return False,0 
+   
         
     def insert_to_database_singup(self, email:str, display_name:str, username:str, password:str):
         """insert to database, credential table
@@ -254,7 +277,7 @@ class Database:
         """
         con,cur= self.connect_db()
         current_time = datetime.now()
-        cur.execute(f'INSERT INTO tripin_auth.userdata (email,display_name,user_name,password,created_time) VALUES(%s,%s,%s,%s,%s)',(email,display_name,username,password,current_time))
+        cur.execute(f'INSERT INTO {DATABASEKEYS.TABLES.USERDATA} (email,display_name,user_name,password,created_time) VALUES(%s,%s,%s,%s,%s)',(email,display_name,username,password,current_time))
         con.commit()
         con.close()
         if cur.rowcount >=1:
@@ -277,17 +300,9 @@ class Database:
         """
 
         con,cur = self.connect_db()
-        cur.execute(f'INSERT INTO tripin_auth.tokens (user_id,user_name,token,issued_at,expired_at) VALUES (%s, %s, %s, %s, %s)',(user_id,username,token,issued_at,expired_at,))
+        cur.execute(f'INSERT INTO {DATABASEKEYS.TABLES.TOKENS} (user_id,user_name,token,issued_at,expired_at) VALUES (%s, %s, %s, %s, %s)',(user_id,username,token,issued_at,expired_at,))
         con.commit()
         if(cur.rowcount>=1):
             return True
         return False
     
-    
-    def insert_media_into_db(self, type:str,key:str,longitude:float,latitude:float,trip_id:int,time):
-        con,cur = self.connect_db()
-        cur.execute(f'INSERT INTO tripin_trips.trip_medias (media_type,key,longitude,latitude,trip_id,time_stamp) VALUES (%s,%s,%s,%s,%s,%s)',(type,key,longitude,latitude,trip_id,time))
-        con.commit()
-        if cur.rowcount >=1:
-            return True
-        else: return False
