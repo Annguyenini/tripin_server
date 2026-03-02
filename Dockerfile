@@ -15,5 +15,5 @@ COPY . .
 
 
 EXPOSE 8000 1514
-# CMD ["gunicorn", "-w", "2", "-b", "0.0.0.0:8000", "--timeout", "60", "app:app"]
-CMD ["python3","app.py"]
+CMD ["gunicorn", "-w", "2", "-b", "0.0.0.0:8000", "--timeout", "60", "app:app"]
+# CMD ["python3","app.py"]
