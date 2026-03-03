@@ -51,7 +51,6 @@ class Server:
         
 def run_sentry_log():
     sentry_dns = os.getenv('SENTRY_DNS')
-    print(sentry_dns)
     sentry_sdk.init(
         dsn=sentry_dns,
         # Add data like request headers and IP for users,
@@ -75,7 +74,7 @@ app = server.app
 if __name__ =="__main__":
     print("initialize s3")
     print(app.url_map)
-    print('ver 3')
+    print('ver 4')
    
     # run_tasks()
     app.run( host ="0.0.0.0", port =8000,debug= True)
