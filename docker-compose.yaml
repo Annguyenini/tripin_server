@@ -32,6 +32,16 @@ services:
     depends_on:
       - db
       - redis
+  logs:
+    image: 2axxaxx/nginx_logs:latest
+    ports:
+      - '12345:12345/udp'
+    env_file:
+      - '.env'
+    environment:
+      - LOG_DIR=/app/logs
+    volumes:
+      - ./logs:/app/logs
 volumes:
   pgdata:
   redisdata: 
