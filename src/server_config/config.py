@@ -14,7 +14,7 @@ class Config:
 
 
         self.config = configparser.ConfigParser()
-        self.config.read('src/assets/configs/Confignure.ini')
+        self.config.read('Confignure.ini')
 
         # paths
         self._private_key_path = self.config.get('paths','private_key',fallback=None)
