@@ -21,7 +21,7 @@ class GeoService:
         self.cache = Cache()
         self.config = Config()
         # self._init_spatial_inx()
-        dotenv.load_dotenv(self.config.env_path)
+        dotenv.load_dotenv('.env')
         self._init = True
     # def _init_spatial_inx(self):
     #     try:
