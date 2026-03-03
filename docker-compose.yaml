@@ -27,7 +27,8 @@ services:
       - "8992:8000"
       - "1514:1514"
     env_file:
-      # - src/assets/configs/.env
+      - src/assets/configs/.env
+      - ./src/assets:/app/src/assets    # ← add this
       - .env
     depends_on:
       - db
