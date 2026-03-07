@@ -77,7 +77,7 @@ server_auth_service.skip_indentity()
 # print("Successfully authenticated!✅")
 server = Server()
 
-# run_sentry_log()
+run_sentry_log()
 app = server.app
 if __name__ =="__main__":
     print("initialize s3")

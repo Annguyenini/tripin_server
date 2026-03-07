@@ -1,0 +1,9 @@
+
+    trip_id INTEGER NOT NULL REFERENCES tripin_trips.trips_table(id) ON DELETE CASCADE,
+    altitude float ,
+    latitude float ,
+    longitude float ,
+    speed float ,
+    heading float ,
+    time_stamp UTC + 0 in ms,
+    batch_version version
