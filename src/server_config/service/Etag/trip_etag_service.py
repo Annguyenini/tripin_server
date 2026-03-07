@@ -21,14 +21,14 @@ class TripEtagService(EtagService):
     def get_all_trip_etag_key(self,user_id:int):
         return f'user{user_id}:alltrips'
     
-    def get_trip_etag_key(self,user_id:int,trip_id:int):
-        return f'user{user_id}:trip:{trip_id}'
+    def get_trip_etag_key(self,trip_id:int):
+        return f'trip:{trip_id}'
     
     def get_all_trip_etag_data_string(self, user_id:int,version:int):
         return f'user{user_id}:alltrips:version{version}'
         
-    def get_trip_etag_data_string(self,user_id,trip_id,version):
-        return f'user{user_id}:trip:{trip_id}:version:{version}'
+    def get_trip_etag_data_string(self,trip_id,version):
+        return f'trip:{trip_id}:version:{version}'
     
     
     def regenerate_user_trips_etag_handler(self,user_id:int) ->str:

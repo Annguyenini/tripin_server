@@ -6,6 +6,7 @@ DATABASEKEYS= SimpleNamespace(
         TRIP_COORDINATES='tripin_trips.trip_coordinates',
         TRIP_MEDIAS='tripin_trips.trip_medias',
         TRIPS = 'tripin_trips.trips_table',
+        TRIP_SHARED_LINKS ='tripin_trips.trip_shared_links'
     ),
     USERDATA = SimpleNamespace(
         USER_ID='id',
@@ -62,6 +63,16 @@ DATABASEKEYS= SimpleNamespace(
         SPEED='speed',
         HEADING='heading',
         TIME_STAMP='time_stamp',
+    ),
+    TRIP_SHARED_LINKS = SimpleNamespace(
+        LINKS_ID='id',
+        USER_ID ='user_id',
+        TRIP_ID='trip_id',
+        CREATED_TIME='created_time',
+        EXPIRED_TIME ='expired_time',
+        REVOKE ='revoke',
+        VISIBILITY='visibility',
+        TOKEN='token'
     )
     
 )

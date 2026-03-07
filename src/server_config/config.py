@@ -65,6 +65,8 @@ class Config:
     def aws_logs_bucket(self):
         return self._aws_s3_log_bucket
     
+    def server_url(self):
+        return f'https://tripping.live'
     def get_config_parser(self,**kwargs):
         if kwargs.get("path") is not None:
             config = configparser.ConfigParser()

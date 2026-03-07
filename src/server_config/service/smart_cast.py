@@ -9,5 +9,5 @@ def smart_cast(value):
                 return float(value)
            
             except ValueError:
-                pass
+                return None
     return value

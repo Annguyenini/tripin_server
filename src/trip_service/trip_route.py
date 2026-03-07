@@ -38,7 +38,7 @@ class TripRoute(RouteBase):
         self.bp.route('/current-trip-id', methods=['GET'])(self.request_current_trip_id)
         self.bp.route("/end-trip",methods=["POST"])(self.end_trip)
         self.bp.route('/trip',methods=['POST'])(self.request_trip_data)
-
+        self.bp.route('/trip-by-token/<token>',methods=['GET'])(self.request_trip_data_by_shared_links)
     ## request new trip
     def request_new_trip(self):
         
@@ -112,6 +112,12 @@ class TripRoute(RouteBase):
         return jsonify({'current_trip_id':current_trip_id}),200
     
     def request_trip_data(self):
+        """use for app api 
+            return tripd data
+        Returns:
+            _type_: _description_
+        """
+        # verify jwt
         user_data,error =self._get_authenticated_user()
         if error:
             return jsonify(error),401        
@@ -119,7 +125,11 @@ class TripRoute(RouteBase):
         
         client_etag = request.headers.get('If-None-Match')
         trip_id = request.json.get('trip_id')
-        trip_data,etag = self.trip_service.get_trip_data(user_id=user_id,trip_id=trip_id,client_etag=client_etag)
+        # if the trip doesnt belong to the user
+        if not self.trip_database_service.trip_owner_validation(user_id=user_id,trip_id=trip_id):
+            return jsonify({'code':'permission_denied','message':'You dont have permission!'})
+        
+        trip_data,etag = self.trip_service.get_trip_data(trip_id=trip_id,client_etag=client_etag)
         if trip_data is None and etag is not None:
             return jsonify({'etag':etag}),304
         
@@ -128,6 +138,32 @@ class TripRoute(RouteBase):
         
         return jsonify({'message':'Successfully!','etag':etag,'trip_data':trip_data if trip_data else None}),200
 
+    def request_trip_data_by_shared_links(self,token):
+        # get etag from browser cache to check if data has changed
+        client_etag = request.headers.get('If-None-Match')
+        
+        # extract token from request body
+        
+        # validate token exists and is correct sha256 length (64 chars)
+        if not token or len(token) != 64:
+            return jsonify({'code': 'invalid_token', 'message': 'Invalid token'})
+        
+        # look up token in share_links table to get trip info
+        trip_data_from_token = self.trip_database_service.get_trip_data_by_shared_token(token=token)
+        trip_id = trip_data_from_token['trip_id']
+        
+        # fetch trip data, returns None if etag matches (data unchanged)
+        trip_data, etag = self.trip_service.get_trip_data(trip_id=trip_id, client_etag=client_etag)
+        
+        # data unchanged — tell browser to use its cache
+        if not trip_data and etag is not None:
+            return jsonify({'etag': etag}), 304
+        
+        # new data — return with etag so browser can cache it
+        response = jsonify({'trip_data': trip_data})
+        response.headers['ETag'] = etag
+        return response, 200
+    
     def request_all_trips_data(self):
         # print(request)
         user_data,error = self._get_authenticated_user()

@@ -81,7 +81,7 @@ class TripService:
         return trip_id
 
     
-    def get_trip_data(self,user_id,trip_id,client_etag):
+    def get_trip_data(self,trip_id,client_etag):
         """_summary_
 
         Args:
@@ -89,7 +89,7 @@ class TripService:
             etag (_type_): _description_
         """
         
-        etag_key =self.trip_etag_service.get_trip_etag_key(user_id=user_id,trip_id=trip_id)
+        etag_key =self.trip_etag_service.get_trip_etag_key(trip_id=trip_id)
         # fetch the etag from cache if match return        
         etag_from_cache = self.cache_service.get(etag_key)
         if client_etag == etag_from_cache and client_etag and etag_from_cache:
@@ -99,8 +99,8 @@ class TripService:
         self.cache_service.delete(etag_key)
         
         # fetch user current trip 
-        print(user_id,trip_id)
-        trip_data_row = self.database_service.find_item_in_sql(DATABASEKEYS.TABLES.TRIPS,'user_id',user_id,True,'id',trip_id)
+        # print(user_id,trip_id)
+        trip_data_row = self.database_service.find_item_in_sql(DATABASEKEYS.TABLES.TRIPS,'id',trip_id)
         # if doesnt exist return
         if trip_data_row is None :
             return None,None
@@ -114,7 +114,9 @@ class TripService:
         trip_id = trip_data_row['id']
         trip_name = trip_data_row['trip_name']
         created_timestamp = trip_data_row['created_time']
+        ended_timestamp = trip_data_row['ended_time']
         created_time = int(created_timestamp.timestamp() * 1000)
+        ended_time = int(created_timestamp.timestamp() * 1000) if ended_timestamp else None
         trip_image_default = trip_data_row['image']
         trip_information_version = trip_data_row[DATABASEKEYS.TRIPS.TRIP_INFO_VERSION]
         trip_image = None
@@ -123,10 +125,10 @@ class TripService:
         
         
         
-        trip_data = {'trip_id':trip_id,'trip_name':trip_name,'created_time':created_time,'image':trip_image if trip_image else None}
+        trip_data = {'trip_id':trip_id,'trip_name':trip_name,'created_time':created_time,'ended_time':ended_time,'image':trip_image if trip_image else None}
         
         # generate new etag
-        new_etag_data= self.trip_etag_service.get_trip_etag_data_string(user_id=user_id,trip_id=trip_id,version=trip_information_version)
+        new_etag_data= self.trip_etag_service.get_trip_etag_data_string(trip_id=trip_id,version=trip_information_version)
         new_etag = self.etag_service.generate_etag(new_etag_data)
         # add to cache
         self.cache_service.set(key=etag_key,time=3600,data=new_etag)
@@ -135,6 +137,7 @@ class TripService:
         return trip_data, new_etag
     
     
+        
     
     
     

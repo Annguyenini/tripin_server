@@ -80,7 +80,7 @@ class TripDatabaseService (Database):
     
     def get_trip_coordinates (self,trip_id:int,client_version:int = 0):
         if not client_version: client_version =0
-        print(trip_id,client_version)
+        # print(trip_id,client_version)
         try:
             con,cur = self.connect_db()
             cur.execute(f'''SELECT * FROM {DATABASEKEYS.TABLES.TRIP_COORDINATES} 
@@ -90,7 +90,7 @@ class TripDatabaseService (Database):
             con.commit()
             coors = cur.fetchall()
             con.close()
-            print(coors)
+            # print(coors)
             return coors if coors else None
         except Exception as e:
             print('Error at getting coordinates ',e)
@@ -103,3 +103,15 @@ class TripDatabaseService (Database):
                               DATABASEKEYS.TRIPS.USER_ID,
                               user_id)
         return True if result else False
+    
+    def get_trip_data_by_shared_token(self,token:str):
+        con,cur = self.connect_db()
+        cur.execute(f'''SELECT * FROM {DATABASEKEYS.TABLES.TRIP_SHARED_LINKS}
+                    INNER JOIN {DATABASEKEYS.TABLES.TRIPS}
+                    ON {DATABASEKEYS.TRIP_SHARED_LINKS.TRIP_ID} = {DATABASEKEYS.TABLES.TRIPS}.id
+                    WHERE {DATABASEKEYS.TRIP_SHARED_LINKS.TOKEN} = %s''', (token,))
+        
+        row = cur.fetchone()
+        con.commit()
+        con.close()
+        return row if row else None

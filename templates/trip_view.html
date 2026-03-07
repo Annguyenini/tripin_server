@@ -1,0 +1,95 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Mapbox Explorer</title>
+  <link href="https://api.mapbox.com/mapbox-gl-js/v3.3.0/mapbox-gl.css" rel="stylesheet"/>
+  <link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;700;800&family=DM+Mono:wght@300;400&display=swap" rel="stylesheet"/>
+  <script src="https://api.mapbox.com/mapbox-gl-js/v3.3.0/mapbox-gl.js"></script>
+    <link rel="stylesheet" href="../static/styles/map.css" /></head>
+    <link rel="stylesheet" href="../static/styles/trip_banner.css" /></head>
+<body>
+
+<div id="map"></div>
+
+
+<!-- Style switcher -->
+<div class="style-switcher">
+  <div class="style-label">Style</div>
+  <button class="style-btn active" id="style-dark" title="Dark" style="background: linear-gradient(135deg,#1a1a2e,#16213e)"></button>
+  <button class="style-btn" id="style-streets" title="Streets" style="background: linear-gradient(135deg,#e8dcc8,#c5b48a)"></button>
+  <button class="style-btn" id="style-satellite" title="Satellite" style="background: linear-gradient(135deg,#1a3a1a,#2d5a2d)"></button>
+</div>
+
+<!-- Coordinates bar -->
+<div class="coords-bar" id="coords-bar">
+  lng <span id="lng-val">0.0000</span> &nbsp;|&nbsp; lat <span id="lat-val">0.0000</span> &nbsp;|&nbsp; zoom <span id="zoom-val">2</span>
+</div>
+
+<!-- Info card (shown on click) -->
+<div class="info-card" id="info-card">
+  <div class="info-card-label">Selected Location</div>
+  <div class="info-card-title" id="info-title">—</div>
+  <div class="info-card-coords" id="info-coords"></div>
+</div>
+
+<!-- ── TRIP BANNER ── -->
+<!-- Desktop: bottom-right | Mobile: top bar -->
+<div class="trip-banner" id="trip-banner">
+  <div class="trip-banner-title" id="banner-title">Loading...</div>
+  <div class="trip-banner-divider"></div>
+  <div class="trip-banner-meta">
+    <div class="trip-banner-item">
+      <span class="trip-banner-item-icon">◎</span>
+    </div>
+    <div class="trip-banner-item">
+      <span class="trip-banner-item-icon">◷</span>
+      <span class="trip-banner-item-value" id="banner-dates">—</span>
+    </div>
+  </div>
+  <div class="trip-banner-badge" id="banner-badge">shared</div>
+</div>
+
+<!-- ── POLAROID VIEWER PANEL ── -->
+<!-- Desktop: right half | Mobile: bottom half -->
+<div class="polaroid-viewer" id="polaroid-viewer">
+
+  <!-- close -->
+  <button class="polaroid-close" onclick="closePolaroidViewer()">✕</button>
+
+  <!-- polaroid frame -->
+  <div class="polaroid">
+    <img class="polaroid-img" id="polaroid-img" src="" alt="trip photo"/>
+    <div class="polaroid-caption">
+      <div class="polaroid-caption-title" id="polaroid-title">—</div>
+      <div class="polaroid-caption-meta"  id="polaroid-meta"></div>
+    </div>
+  </div>
+
+  <!-- nav -->
+  <div class="polaroid-nav">
+    <button class="polaroid-nav-btn" onclick="polaroidPrev()">←</button>
+    <span   class="polaroid-counter" id="polaroid-counter">1 / 1</span>
+    <button class="polaroid-nav-btn" onclick="polaroidNext()">→</button>
+  </div>
+
+</div>
+
+<!-- scripts -->
+ <script>
+    const MAPBOX_TOKEN = "{{ MAPTOKEN }}";
+ </script>
+<script src="../static/scripts/polaroid_viewer.js"></script>
+<script src='../static/scripts/keys/urls.js'></script>
+
+<script src='../static/scripts/style_switcher.js'></script>
+<script src='../static/scripts/trip_view/request_trip_data.js'></script>
+<script src='../static/scripts/trip_view/trip_data_banner.js'></script>
+<script src='../static/scripts/trip_view/render_trip_coordinates.js'></script>
+<script src='../static/scripts/trip_view/render_image_label.js'></script>
+
+<script src='../static/scripts/trip_view_main.js'></script>
+
+</body>
+</html>
