@@ -67,3 +67,15 @@ CREATE TABLE IF NOT EXISTS tripin_trips.trip_medias (
     version BIGINT DEFAULT 0,
     time_stamp BIGINT NOT NULL
 );
+ 
+-- Trip's view token
+CREATE TABLE IF NOT EXISTS tripin_trips.trip_shared_links(
+    id SERIAL PRIMARY KEY,
+    token TEXT NOT NULL,
+    user_id INTEGER NOT NULL REFERENCES tripin_auth.userdata(id) ON DELETE CASCADE,
+    trip_id INTEGER NOT NULL REFERENCES tripin_trips.trips_table(id) ON DELETE CASCADE,
+    created_time BIGINT NOT NULL,
+    expired_time BIGINT NOT NULL,
+    revoke BOOLEAN DEFAULT FALSE,
+    visibility TEXT DEFAULT 'public'
+);

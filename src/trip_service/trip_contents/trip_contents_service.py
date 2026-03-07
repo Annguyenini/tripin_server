@@ -37,10 +37,10 @@ class TripContentService:
         # get current version 
         current_batch_version = self.trip_database_service.get_trip_contents_version(trip_id=trip_id,version_type=DATABASEKEYS.TRIPS.TRIP_COORDINATES_VERSION)
         # if new data version != to next batch version return false with the request batch version
-        print(client_version,current_batch_version+1)
+        # print(client_version,current_batch_version+1)
         if client_version != current_batch_version +1:
-            print(current_batch_version,type(current_batch_version))
-            print(client_version,type(client_version))
+            # print(current_batch_version,type(current_batch_version))
+            # print(client_version,type(client_version))
 
             return False, current_batch_version +1
         batch =[]
@@ -51,7 +51,7 @@ class TripContentService:
         try:
             query = "INSERT INTO tripin_trips.trip_coordinates (trip_id,batch_version,time_stamp,altitude,latitude,longitude,heading,speed) VALUES (%s,%s,%s,%s,%s,%s,%s,%s)"
             for cor in coordinates:
-                print(cor)
+                # print(cor)
                 # print(cor['time_stamp'])
                 # time_s = cor['time_stamp']/1000
                 # dt = datetime.fromtimestamp(time_s)
@@ -80,7 +80,7 @@ class TripContentService:
         current_version = self.trip_database_service.get_trip_contents_version(trip_id=trip_id,version_type=DATABASEKEYS.TRIPS.TRIPS_MEDIAS_VERSION)
         # print(client_version,type(client_version))
         # print(current_version+1,type(current_version))
-        print(client_version,current_version)
+        # print(client_version,current_version)
         if client_version != current_version +1:
             return False, current_version +1
         insert_into_db = self.trip_database_service.insert_media_into_db(type=type,media_path=path,longitude=longitude,latitude=latitude,trip_id=trip_id,version=client_version,time=time)
@@ -103,7 +103,6 @@ class TripContentService:
         # return a list of rowdict from the client version up to current version
         try:
             server_version = self.trip_database_service.get_trip_contents_version(trip_id=trip_id,version_type=DATABASEKEYS.TRIPS.TRIP_COORDINATES_VERSION)
-            print(trip_id,client_version)
             if client_version:
                 if int(client_version) == server_version:
                     return None,None
@@ -119,7 +118,7 @@ class TripContentService:
     def get_trip_media(self,trip_id:int,client_version:int):
         
         server_version = self.trip_database_service.get_trip_contents_version(trip_id=trip_id,version_type=DATABASEKEYS.TRIPS.TRIPS_MEDIAS_VERSION)
-        print('media versions ', client_version,server_version)
+        # print('media versions ', client_version,server_version)
         if client_version :
             if int(client_version) == server_version:
                 return None,None
@@ -129,5 +128,5 @@ class TripContentService:
             print(default_key)
             medias[i]['media_path'] = self.s3_service.generate_temp_uri(f'trips/{trip_id}/'+default_key)
             medias[i]=dict(medias[i])
-        print(medias)
+        # print(medias)
         return medias,server_version

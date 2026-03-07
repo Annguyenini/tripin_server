@@ -7,6 +7,7 @@ from src.mail.mail_config import MailConfig
 from src.trip_service.trip_route import TripRoute
 from src.trip_service.trip_contents.trip_contents_route import TripContentsRoute
 from src.user.user_route import UserRoute
+from src.trip_view.trip_view_route import TripViewRoute
 import getpass
 import json
 import io
@@ -35,20 +36,27 @@ class Server:
         trip_contents_route = TripContentsRoute()
         user_route = UserRoute()
         sync_route = ContentsSyncRoute()
+        trip_view_route = TripViewRoute()
         self.app.register_blueprint(auth_route.bp,url_prefix="/auth")
         self.app.register_blueprint(trip_route.bp,url_prefix="/trip")
         self.app.register_blueprint(trip_contents_route.bp,url_prefix ="/trip-contents")
         self.app.register_blueprint(user_route.bp,url_prefix="/user")
         self.app.register_blueprint(sync_route.bp,url_prefix="/sync")
-        
+        self.app.register_blueprint(trip_view_route.bp,url_prefix ="/trip-view")
         self.app.route("/health",methods=['GET'])(self.health)    
         self.app.route("/",methods =['GET'])(self.landing)
+        # self.app.route("/trip-view",methods =['GET'])(self.trip_view)
+        self.app.errorhandler(404)(self.error_404_site)
         
     def health(self):
         return jsonify({'code':'success'}),200
     def landing(self):
         return render_template('index.html')
-        
+    def trip_view(self):
+        return render_template('trip_view.html')
+    def error_404_site(self,e):
+        return render_template('404.html'),404
+
 def run_sentry_log():
     sentry_dns = os.getenv('SENTRY_DNS')
     sentry_sdk.init(
@@ -69,7 +77,7 @@ server_auth_service.skip_indentity()
 # print("Successfully authenticated!✅")
 server = Server()
 
-run_sentry_log()
+# run_sentry_log()
 app = server.app
 if __name__ =="__main__":
     print("initialize s3")
