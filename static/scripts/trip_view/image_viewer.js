@@ -10,10 +10,14 @@ let _index  = 0;
 function openPolaroidViewer(images, startIndex = 0) {
   _images = images;
   _index  = startIndex;
-
+  console.log(_index)
   document.body.classList.add('viewer-open');
   document.getElementById('polaroid-viewer').classList.add('open');
-
+// re-trigger draw animation on every open
+  const title = document.querySelector('.polaroid-viewer-title')
+  title.style.animation = 'none'
+  title.offsetHeight // reflow
+  title.style.animation = ''
   _renderPolaroid();
 }
 
@@ -27,8 +31,10 @@ function closePolaroidViewer() {
 function _renderPolaroid() {
   const img = _images[_index];
   if (!img) return;
+  console.log('image',img)
+  finalizeDisplayCoordinate(img.longitude, img.latitude,map)
 
-  document.getElementById('polaroid-img').src          = img.url;
+  document.getElementById('polaroid-img').src          = img.media_path;
   document.getElementById('polaroid-title').textContent = img.title      || '—';
   document.getElementById('polaroid-meta').textContent  = img.timestamp  || '';
   document.getElementById('polaroid-counter').textContent = `${_index + 1} / ${_images.length}`;
@@ -56,3 +62,4 @@ document.addEventListener('keydown', (e) => {
   if (e.key === 'ArrowLeft')  polaroidPrev();
   if (e.key === 'Escape')     closePolaroidViewer();
 });
+

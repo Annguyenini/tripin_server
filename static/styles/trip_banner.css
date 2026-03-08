@@ -23,7 +23,7 @@
 @media (min-width: 601px) {
   .trip-banner {
     top: 20px;
-    right: 20px;
+    right: 100px;
     width: 240px;
   }
 }
