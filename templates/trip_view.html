@@ -57,6 +57,7 @@
 
   <!-- close -->
   <button class="polaroid-close" onclick="closePolaroidViewer()">✕</button>
+ <div class="polaroid-viewer-title">TRIPPING</div>
 
   <!-- polaroid frame -->
   <div class="polaroid">
@@ -75,18 +76,34 @@
   </div>
 
 </div>
-
+<div class="loading-overlay" id="loading-overlay">
+  <div class="loading-content">
+    <div class="loading-logo">TRIPPING</div>
+    <div class="loading-drip">
+      <span></span><span></span><span></span><span></span><span></span>
+    </div>
+    <div class="loading-text">loading your trip...</div>
+  </div>
+</div>
 <!-- scripts -->
  <script>
     const MAPBOX_TOKEN = "{{ MAPTOKEN }}";
  </script>
-<script src="../static/scripts/polaroid_viewer.js"></script>
 <script src='../static/scripts/keys/urls.js'></script>
+<script src='../static/scripts/loading.js'></script>
 
 <script src='../static/scripts/style_switcher.js'></script>
-<script src='../static/scripts/trip_view/request_trip_data.js'></script>
 <script src='../static/scripts/trip_view/trip_data_banner.js'></script>
+
+<script src='../static/scripts/trip_view/zoom_control.js'></script>
 <script src='../static/scripts/trip_view/render_trip_coordinates.js'></script>
+<script src='../static/scripts/trip_view/coordinate_calculate.js'></script>
+
+<script src='../static/scripts/trip_view/cluster.js'></script>
+
+<script src='../static/scripts/trip_view/display.js'></script>
+
+<script src='../static/scripts/trip_view/image_viewer.js'></script>
 <script src='../static/scripts/trip_view/render_image_label.js'></script>
 
 <script src='../static/scripts/trip_view_main.js'></script>

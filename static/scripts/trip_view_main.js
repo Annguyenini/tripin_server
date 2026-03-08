@@ -7,6 +7,7 @@ const STYLES = {
     streets:   'mapbox://styles/mapbox/streets-v12',
     satellite: 'mapbox://styles/mapbox/satellite-streets-v12',
 };
+showLoading('Loading Map')
 const map = new mapboxgl.Map({
     container: 'map',
     style: STYLES.streets,
@@ -27,7 +28,7 @@ map.on('move', () => {
     document.getElementById('lat-val').textContent = c.lat.toFixed(4);
     document.getElementById('zoom-val').textContent = map.getZoom().toFixed(1);
 });
-
+zoomControl(map)
 // Click marker
 
 
@@ -36,4 +37,5 @@ map.on('move', () => {
 styleSwitcher(map)
 // setup trip banner
 setUpTripDataBanner()
-renderTripMedias(map)
+
+hideLoading()

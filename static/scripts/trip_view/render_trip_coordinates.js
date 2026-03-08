@@ -11,8 +11,8 @@ const renderTripCoordinates = async (map) => {
     console.log(coordinates)
     map.flyTo({
         center: [coordinates[0].longitude, coordinates[0].latitude],
-        zoom: 12,
-        duration: 2000
+        zoom: 13,
+        duration: 5000
     })
 
     // points
