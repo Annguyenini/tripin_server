@@ -41,6 +41,7 @@ jobs:
       INVALID_REFRESH_JWT: ${{ secrets.INVALID_REFRESH_JWT }}
       EXPIRED_ACCESS_JWT: ${{ secrets.EXPIRED_ACCESS_JWT }}
       EXPIRED_REFRESH_JWT: ${{ secrets.EXPIRED_REFRESH_JWT }}
+      DATABASE_URL: postgresql://testuser:testpass@localhost:5432/tripin
     steps:
       - uses: actions/checkout@v3
 
