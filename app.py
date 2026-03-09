@@ -47,7 +47,8 @@ class Server:
         self.app.route("/",methods =['GET'])(self.landing)
         # self.app.route("/trip-view",methods =['GET'])(self.trip_view)
         self.app.errorhandler(404)(self.error_404_site)
-        
+        self.app.errorhandler(500)(self.error_500_site)
+
     def health(self):
         return jsonify({'code':'success'}),200
     def landing(self):
@@ -56,6 +57,8 @@ class Server:
         return render_template('trip_view.html')
     def error_404_site(self,e):
         return render_template('404.html'),404
+    def error_500_site(self,e):
+        return render_template('500.html'),500
 
 def run_sentry_log():
     sentry_dns = os.getenv('SENTRY_DNS')
@@ -77,14 +80,16 @@ server_auth_service.skip_indentity()
 # print("Successfully authenticated!✅")
 server = Server()
 
-# run_sentry_log()
+run_sentry_log()
 app = server.app
+def create_app():
+    return server.app
 if __name__ =="__main__":
     print("initialize s3")
     print(app.url_map)
     print('ver 4')
    
     # run_tasks()
-    app.run( host ="0.0.0.0", port =8000,debug= True)
+    app.run( host ="0.0.0.0", port =8000)
     # app.run( host ="0.0.0.0", port =8000,ssl_context=("src/assets/https/cert.pem", "src/assets/https/key.pem"))
     
