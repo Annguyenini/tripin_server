@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>Mapbox Explorer</title>
+  <title>Trip View</title>
   <link href="https://api.mapbox.com/mapbox-gl-js/v3.3.0/mapbox-gl.css" rel="stylesheet"/>
   <link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;700;800&family=DM+Mono:wght@300;400&display=swap" rel="stylesheet"/>
   <script src="https://api.mapbox.com/mapbox-gl-js/v3.3.0/mapbox-gl.js"></script>
@@ -62,11 +62,12 @@
   <!-- polaroid frame -->
   <div class="polaroid">
     <img class="polaroid-img" id="polaroid-img" src="" alt="trip photo"/>
+    <video class="polaroid-img" id="polaroid-video" style="display:auto" autoplay controls playsinline loop ></video>
     <div class="polaroid-caption">
-      <div class="polaroid-caption-title" id="polaroid-title">—</div>
-      <div class="polaroid-caption-meta"  id="polaroid-meta"></div>
+        <div class="polaroid-caption-title" id="polaroid-title">—</div>
+        <div class="polaroid-caption-meta" id="polaroid-meta"></div>
     </div>
-  </div>
+</div>
 
   <!-- nav -->
   <div class="polaroid-nav">

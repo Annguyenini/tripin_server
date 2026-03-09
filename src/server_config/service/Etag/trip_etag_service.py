@@ -30,7 +30,10 @@ class TripEtagService(EtagService):
     def get_trip_etag_data_string(self,trip_id,version):
         return f'trip:{trip_id}:version:{version}'
     
-    
+    def get_trip_coordinate_etag_key(self,trip_id:int):
+        return f'trip:{trip_id}:coordinates'
+    def get_trip_medias_etag_key(self,trip_id:int,time_in_s:int):
+        return f'trip:{trip_id}:medias:time{time_in_s}'
     def regenerate_user_trips_etag_handler(self,user_id:int) ->str:
         etag_key = self.get_all_trip_etag_key(user_id=user_id)
         # delete old etag from cache

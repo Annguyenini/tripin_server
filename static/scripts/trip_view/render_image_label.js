@@ -46,9 +46,13 @@ const renderImageLabels = (medias, map) => {
         const el = document.createElement('div');
         el.className = 'img-marker';
         el.innerHTML = `
-            <img src="${media.members[0].media_path}" alt="trip photo" />
-            ${media.members.length > 1 
-                ? `<div class="img-marker-badge">${media.members.length}</div>` 
+            ${media.members[0].media_type === 'video'
+                ? `<video src="${media.members[0].media_path}" style="width:100%; height:100%; object-fit:cover" muted preload="metadata"></video>
+                <div class="img-marker-play"></div>` 
+                : `<img src="${media.members[0].media_path}" alt="trip photo" />`
+            }
+            ${media.members.length > 1
+                ? `<div class="img-marker-badge">${media.members.length}</div>`
                 : ''}
         `;
         el.id = index

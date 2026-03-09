@@ -6,8 +6,9 @@ from src.server_config.service.smart_cast import smart_cast
 from src.database.trip_db_service import TripDatabaseService
 from src.database.trip_content_db_service  import TripContentsDatabaseService
 from src.base.route_base import RouteBase
+from src.server_config.service.Etag.trip_etag_service import TripEtagService
 import json
-
+import time
 class TripContentsRoute(RouteBase):
     _instance = None
     _init = False
@@ -27,6 +28,7 @@ class TripContentsRoute(RouteBase):
         self.geo_service = GeoService()
         self.trip_data_base_service= TripDatabaseService()
         self.trip_content_database_service = TripContentsDatabaseService()
+        self.trip_etag_service =TripEtagService()
         self._register_route()
         self._init =True
 
@@ -191,14 +193,19 @@ class TripContentsRoute(RouteBase):
         if not token or len(token) != 64:
             return jsonify({'code': 'invalid_token', 'message': 'Invalid token'})
 
-        # get client etag from request headers
-        client_version = request.headers.get('If-None-Match')
-
         # resolve token → trip_id from share_links table
         trip_data = self.trip_data_base_service.get_trip_data_by_shared_token(token=token)
         trip_id = trip_data['trip_id']
-
-        coors, version= self.trip_contents_service.get_trip_coors(client_version=client_version,trip_id=trip_id)
+        #check for etag if it match the time frame
+        client_etag = request.headers.get('If-None-Match')
+        etag =None
+        etag_key = self.trip_etag_service.get_trip_coordinate_etag_key(trip_id)
+        etag= self.trip_etag_service.generate_etag(etag_key)
+        
+        if client_etag == etag:
+            return jsonify({'message':"Match"}),304
+        # if not match
+        coors, version= self.trip_contents_service.get_trip_coors(client_version=0,trip_id=trip_id)
 
         # cache hit — data unchanged
         if not coors and not version:
@@ -210,7 +217,7 @@ class TripContentsRoute(RouteBase):
         # attach ETag to response so browser can cache it
         response = jsonify ({'coordinates':coors})
         if version:
-            response.headers['ETag'] = version
+            response.headers['ETag'] = etag
         return response,200
         
         
@@ -248,14 +255,22 @@ class TripContentsRoute(RouteBase):
         if not token or len(token) != 64:
             return jsonify({'code': 'invalid_token', 'message': 'Invalid token'})
 
-        # get client etag from request headers
-        client_version = request.headers.get('If-None-Match')
-
+       
         # resolve token → trip_id from share_links table
         trip_data = self.trip_data_base_service.get_trip_data_by_shared_token(token=token)
         trip_id = trip_data['trip_id']
-
-        medias,version = self.trip_contents_service.get_trip_media(trip_id=trip_id,client_version=smart_cast(client_version))
+        #check for etag if it match the time frame
+        # due to link of image only valid 1 hour
+        client_etag = request.headers.get('If-None-Match')
+        etag =None
+        hour_bucket = int(time.time()) // 3600
+        etag_key = self.trip_etag_service.get_trip_medias_etag_key(trip_id,hour_bucket)
+        etag= self.trip_etag_service.generate_etag(etag_key)
+        
+        if client_etag == etag:
+            return jsonify({'message':"Match"}),304
+        # if not match
+        medias,version = self.trip_contents_service.get_trip_media(trip_id=trip_id,client_version=0)
 
         # cache hit — data unchanged
         if not medias and not version:
@@ -268,5 +283,5 @@ class TripContentsRoute(RouteBase):
         # attach ETag to response so browser can cache it
         response = jsonify ({'medias':medias})
         if version:
-            response.headers['ETag'] = version
+            response.headers['ETag'] = etag
         return response,200

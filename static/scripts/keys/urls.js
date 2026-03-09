@@ -1,5 +1,5 @@
-// const BASE_URL ='http://192.168.0.111:8000'
-const BASE_URL ='https://tripping.live'
+const BASE_URL ='http://192.168.0.111:8000'
+// const BASE_URL ='https://tripping.live'
 
 const TRIP_DATA_URL =(token)=>{
     return `${BASE_URL}/trip/trip-by-token/${token}`
