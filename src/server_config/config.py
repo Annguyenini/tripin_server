@@ -27,10 +27,17 @@ class Config:
         self._aws_s3_bucket_name = self.config.get('aws','aws_s3_bucket',fallback= None)
         self._aws_s3_log_bucket =self.config.get('aws','aws_s3_logs_bucket',fallback=None)
         # read keys
-        with open(self._private_key_path,'r') as f:
-            self._PRIVATE_KEY = f.read()
-        with open(self._public_key_path,'r') as f:
-            self._PUBLIC_KEY = f.read()
+        if os.path.exists(self._private_key_path):
+            with open(self._private_key_path,'r') as f:
+                self._PRIVATE_KEY = f.read()
+        else:
+            self._PRIVATE_KEY = os.getenv('PRIVATE_KEY')
+        if os.path.exists(self._public_key_path):
+            with open(self._public_key_path,'r') as f:
+                self._PUBLIC_KEY = f.read()
+        else:
+            self._PUBLIC_KEY = os.getenv('PUBLIC_KEY')
+
     
         
     
