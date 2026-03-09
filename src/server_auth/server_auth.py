@@ -28,7 +28,7 @@ class ServerAuth:
         self.access_key =None
         self.database_key =None
         self.database_derived_key =None
-        self.__init__access_key()
+        # self.__init__access_key()
         
         
     def __init__salt(self,path):
