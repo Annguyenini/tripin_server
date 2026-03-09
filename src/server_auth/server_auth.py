@@ -6,7 +6,6 @@ from dotenv import set_key, load_dotenv
 import getpass
 import sys
 import os
-from src.database.s3.s3_client import check_cre
 class ServerAuth:
     def __init__(self):
         self.encryption_Service = Encryption()
