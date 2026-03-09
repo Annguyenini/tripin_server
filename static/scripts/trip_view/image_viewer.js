@@ -33,11 +33,22 @@ function _renderPolaroid() {
   if (!img) return;
   console.log('image',img)
   finalizeDisplayCoordinate(img.longitude, img.latitude,map)
-
-  document.getElementById('polaroid-img').src          = img.media_path;
+  const photo = document.getElementById('polaroid-img');
+  const video = document.getElementById('polaroid-video');
   document.getElementById('polaroid-title').textContent = img.title      || '—';
   document.getElementById('polaroid-meta').textContent  = img.timestamp  || '';
   document.getElementById('polaroid-counter').textContent = `${_index + 1} / ${_images.length}`;
+  if (img.media_type === 'video') {
+        video.src = img.media_path;
+        video.style.display = 'block';
+        photo.style.display = 'none';
+    } else {
+        photo.src = img.media_path;
+        photo.style.display = 'block';
+        video.style.display = 'none';
+        video.pause();
+        video.src = ''; // stop video when switching away
+    }
 }
 
 // ── NAV ──

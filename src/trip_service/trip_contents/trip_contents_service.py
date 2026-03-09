@@ -116,7 +116,7 @@ class TripContentService:
         user_id = self.trip_database_service.get_user_id_from_trip_id(trip_id=trip_id)
         return user_id
     def get_trip_media(self,trip_id:int,client_version:int):
-        
+      
         server_version = self.trip_database_service.get_trip_contents_version(trip_id=trip_id,version_type=DATABASEKEYS.TRIPS.TRIPS_MEDIAS_VERSION)
         # print('media versions ', client_version,server_version)
         if client_version :
