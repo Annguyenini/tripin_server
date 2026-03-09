@@ -62,9 +62,9 @@ jobs:
           echo "Migration complete!"
     
       - name: Created Test User
-        run: python tests/create_test_user.py
+        run: python scripts/create_test_user.py
 
       - name DEBUG
-        run: python tests/debugdb.py
+        run: python scripts/debugdb.py
       - name: Run tests
         run: pytest tests/ -v
