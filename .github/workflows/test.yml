@@ -16,7 +16,7 @@ jobs:
       postgres:
         image: postgres:15
         env:
-          POSTGRES_USER: tripin_master
+          POSTGRES_USER: testuser
           POSTGRES_PASSWORD: testpass
           POSTGRES_DB: tripin
         ports:
@@ -30,11 +30,11 @@ jobs:
     env:
       PRIVATE_KEY: ${{ secrets.PRIVATE_KEY }}
       PUBLIC_KEY: ${{ secrets.PUBLIC_KEY }}
-      DB_HOST: ${{ secrets.DB_HOST }}
-      DB_PORT: ${{ secrets.DB_PORT }}
-      DB_USER: ${{ secrets.DB_USER }}
-      DB_PASS: ${{ secrets.DB_PASS }}
-      DB_NAME: ${{ secrets.DB_NAME }}
+      DB_HOST: localhost
+      DB_PORT: 5432
+      DB_USER: testuser
+      DB_PASS: testpass
+      DB_NAME: tripin
       TEST_USER: ${{ secrets.TEST_USER }}
       TEST_PASS: ${{ secrets.TEST_PASS }}
       INVALID_ACCESS_JWT: ${{ secrets.INVALID_ACCESS_JWT }}
@@ -52,6 +52,18 @@ jobs:
 
       - name: Install requirements
         run: pip install -r requirements.txt
-
+    
+      - name: Migration
+        run: |
+          alembic upgrade head
+          echo "Migration complete!"
+    
+      - name: Created Test User
+        run: |
+          psql postgresql://testuser:testpass@localhost:5432/tripin -c "
+          INSERT INTO tripin_auth.userdata (email, display_name, user_name, password, created_time, role) 
+          VALUES ('test@tripping.com', 'TestUser', 'testuser', 'scrypt:32768:8:1$b73e1iOWIeiC07wP$cd4abad24e0dda58a6a00b6dedcce6f3f1a1461eb0eb88d35c57a0ea5791c113ad47c00914ccfa435dfd2da82f5a1ba92a635bf3b3043e9158a676130b831dab', NOW(), 'user');"
+          echo "Created test user"
+    
       - name: Run tests
         run: pytest tests/ -v
