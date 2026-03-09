@@ -98,7 +98,7 @@ class ServerAuth:
         password = os.getenv('DB_PASS')
         port = os.getenv('DB_PORT')
         self.database_Config._init_database_properties(host=host,dbname=database,user=user,password=password,port=port)
-        check_cre()
+        # check_cre()
         # print(host,user,database,password,port)
         print("Up!✅")
 
