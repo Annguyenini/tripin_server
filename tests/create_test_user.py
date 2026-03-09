@@ -7,4 +7,4 @@ cur.execute("INSERT INTO tripin_auth.userdata (email, display_name, user_name, p
 conn.commit()
 cur.close()
 conn.close()
-print('Test user created')
+print('Test user created',hashed)
