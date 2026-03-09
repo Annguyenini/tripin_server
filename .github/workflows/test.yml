@@ -14,18 +14,18 @@ jobs:
     runs-on: ubuntu-latest
     services:
       postgres:
-      image: postgres:15
-      env:
-        POSTGRES_USER: tripin_master
-        POSTGRES_PASSWORD: testpass
-        POSTGRES_DB: tripin
-      ports:
-        - 5432:5432
-      options: >-
-        --health-cmd pg_isready
-        --health-interval 10s
-        --health-timeout 5s
-        --health-retries 5
+        image: postgres:15
+        env:
+          POSTGRES_USER: tripin_master
+          POSTGRES_PASSWORD: testpass
+          POSTGRES_DB: tripin
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
 
     env:
       PRIVATE_KEY: ${{ secrets.PRIVATE_KEY }}
