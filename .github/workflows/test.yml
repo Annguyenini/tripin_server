@@ -35,8 +35,8 @@ jobs:
       DB_USER: testuser
       DB_PASS: testpass
       DB_NAME: tripin
-      TEST_USER: testuser
-      TEST_PASS: testpass
+      TEST_USER: Testuserhihi
+      TEST_PASS: Testpasshihi11234@
       INVALID_ACCESS_JWT: ${{ secrets.INVALID_ACCESS_JWT }}
       INVALID_REFRESH_JWT: ${{ secrets.INVALID_REFRESH_JWT }}
       EXPIRED_ACCESS_JWT: ${{ secrets.EXPIRED_ACCESS_JWT }}
@@ -63,5 +63,8 @@ jobs:
     
       - name: Created Test User
         run: python tests/create_test_user.py
+
+      - name DEBUG
+        run: python tests/debugdb.py
       - name: Run tests
         run: pytest tests/ -v
