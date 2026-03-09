@@ -64,7 +64,7 @@ jobs:
       - name: Created Test User
         run: python scripts/create_test_user.py
 
-      - name DEBUG
-        run: python scripts/debugdb.py
+      # - name: DEBUG
+      #   run: python scripts/debugdb.py
       - name: Run tests
         run: pytest tests/ -v
