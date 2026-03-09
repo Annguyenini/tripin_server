@@ -5,6 +5,7 @@ def test_login_valid_credential(client,user_credential):
         'password':user_credential['password']
     }
     response = client.post("auth/login",json=payload)
+    print(response.get_json())
     assert response.status_code == 200 
     assert 'tokens' in response.get_json()
 

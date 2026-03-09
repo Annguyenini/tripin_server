@@ -14,33 +14,34 @@ jobs:
     runs-on: ubuntu-latest
     services:
       postgres:
-      image: postgres:15
-      env:
-        POSTGRES_USER: tripin_master
-        POSTGRES_PASSWORD: testpass
-        POSTGRES_DB: tripin
-      ports:
-        - 5432:5432
-      options: >-
-        --health-cmd pg_isready
-        --health-interval 10s
-        --health-timeout 5s
-        --health-retries 5
+        image: postgres:15
+        env:
+          POSTGRES_USER: testuser
+          POSTGRES_PASSWORD: testpass
+          POSTGRES_DB: tripin
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
 
     env:
       PRIVATE_KEY: ${{ secrets.PRIVATE_KEY }}
       PUBLIC_KEY: ${{ secrets.PUBLIC_KEY }}
-      DB_HOST: ${{ secrets.DB_HOST }}
-      DB_PORT: ${{ secrets.DB_PORT }}
-      DB_USER: ${{ secrets.DB_USER }}
-      DB_PASS: ${{ secrets.DB_PASS }}
-      DB_NAME: ${{ secrets.DB_NAME }}
-      TEST_USER: ${{ secrets.TEST_USER }}
-      TEST_PASS: ${{ secrets.TEST_PASS }}
+      DB_HOST: localhost
+      DB_PORT: 5432
+      DB_USER: testuser
+      DB_PASS: testpass
+      DB_NAME: tripin
+      TEST_USER: Testuserhihi
+      TEST_PASS: Testpasshihi11234@
       INVALID_ACCESS_JWT: ${{ secrets.INVALID_ACCESS_JWT }}
       INVALID_REFRESH_JWT: ${{ secrets.INVALID_REFRESH_JWT }}
       EXPIRED_ACCESS_JWT: ${{ secrets.EXPIRED_ACCESS_JWT }}
       EXPIRED_REFRESH_JWT: ${{ secrets.EXPIRED_REFRESH_JWT }}
+      DATABASE_URL: postgresql://testuser:testpass@localhost:5432/tripin
     steps:
       - uses: actions/checkout@v3
 
@@ -52,6 +53,18 @@ jobs:
 
       - name: Install requirements
         run: pip install -r requirements.txt
+    
+      - name: Migration
+        run: |
+          psql postgresql://testuser:testpass@localhost:5432/tripin -c "
+          CREATE SCHEMA IF NOT EXISTS tripin_migrations"
+          alembic upgrade head
+          echo "Migration complete!"
+    
+      - name: Created Test User
+        run: python tests/create_test_user.py
 
+      - name DEBUG
+        run: python tests/debugdb.py
       - name: Run tests
         run: pytest tests/ -v
