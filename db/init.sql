@@ -1,7 +1,7 @@
 -- init.sql
 CREATE SCHEMA IF NOT EXISTS tripin_auth;
 CREATE SCHEMA IF NOT EXISTS tripin_trips;
-
+CREATE SCHEMA IF NOT EXISTS tripin_migrations;
 -- Users table
 
 CREATE TABLE IF NOT EXISTS tripin_auth.userdata (

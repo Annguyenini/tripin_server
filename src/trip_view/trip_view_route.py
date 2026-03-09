@@ -11,6 +11,7 @@ import os
 from datetime import datetime,timezone,timedelta
 load_dotenv('.env')
 MAPTOKEN =os.getenv('MAPBOX_PUBLIC_KEY')
+BASE_URL =os.getenv('BASE_URL')
 class TripViewRoute(RouteBase):
     _instance =None 
     _init = False
@@ -54,8 +55,7 @@ class TripViewRoute(RouteBase):
         if not token:
             return jsonify({'code':'failed','message':'Failed to generate view url'}),500
         
-        server_url = self.Config.server_url()
-        full_url = f'{server_url}/trip-view/{token}'
+        full_url = f'{BASE_URL}/trip-view/{token}'
         return jsonify({'code':'successfully','message':'Successfully create url','url':full_url}),200
     
     def _handle_generate_trips_view_link(self,user_id:int,trip_id:int,expired_days:object) -> str :
@@ -85,7 +85,7 @@ class TripViewRoute(RouteBase):
         # check if visibility allow
         if trip_data ['visibility'] != 'public':
             return jsonify({'code':'permission denied','message':f'you dont have permission to view this trip, this trip is set as {trip_data ['visibility']}'}),500
-        return render_template('trip_view.html',MAPTOKEN=MAPTOKEN)
+        return render_template('trip_view.html',MAPTOKEN=MAPTOKEN,BASE_URL=BASE_URL)
         # if pass we get ready to return template
         
         

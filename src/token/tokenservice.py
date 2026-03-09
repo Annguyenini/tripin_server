@@ -125,6 +125,7 @@ class TokenService:
             expired_at = expired_at.replace(tzinfo=timezone.utc)
 
         if datetime.now(timezone.utc) >= expired_at:
+            print('wrong',refresh_token,datetime.now(timezone.utc),expired_at)
             self.revoke_refresh_token(user_id=row['user_id'])
             return False
 
