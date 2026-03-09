@@ -35,8 +35,8 @@ jobs:
       DB_USER: testuser
       DB_PASS: testpass
       DB_NAME: tripin
-      TEST_USER: ${{ secrets.TEST_USER }}
-      TEST_PASS: ${{ secrets.TEST_PASS }}
+      TEST_USER: testuser
+      TEST_PASS: testpass
       INVALID_ACCESS_JWT: ${{ secrets.INVALID_ACCESS_JWT }}
       INVALID_REFRESH_JWT: ${{ secrets.INVALID_REFRESH_JWT }}
       EXPIRED_ACCESS_JWT: ${{ secrets.EXPIRED_ACCESS_JWT }}
