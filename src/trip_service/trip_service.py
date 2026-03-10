@@ -7,6 +7,7 @@ from src.server_config.service.cache import Cache
 from src.server_config.service.Etag.Etag import EtagService
 from src.server_config.service.Etag.trip_etag_service import TripEtagService
 from src.database.database_keys import DATABASEKEYS
+from src.server_config.service.input_validation import InputValidation
 import psycopg2
 from datetime import datetime
 import json
@@ -27,6 +28,7 @@ class TripService:
             self.etag_service = EtagService()
             self.trip_etag_service = TripEtagService()
             self.cache_service = Cache()
+            self.input_validation = InputValidation()
             self._init =True
     
     def process_new_trip(self,user_id,trip_name,imageUri:str = None,image =None):
@@ -235,3 +237,82 @@ class TripService:
         # print(trip_data_list)
         return ({'trip_data_list':trip_data_list if len(trip_data_list)>=1 else None},new_etag)
 
+    def change_trip_data(self,trip_name:str,trip_id:str,user_id:int,image= None)->bool:
+        _changed_name = False
+        if not trip_name and not image :
+            return False,None
+        old_trip_data = self.database_service.find_item_in_sql(DATABASEKEYS.TABLES.TRIPS,'id',trip_id)
+        # if want to change trip name
+        if trip_name:
+            # check if new trip name samee with the old one
+            if trip_name != old_trip_data['trip_name']:
+                exist_trip_name = self.database_service.find_item_in_sql(table = "tripin_trips.trips_table", item = "trip_name", value = trip_name,second_condition=True, second_item="user_id",second_value=user_id)
+                
+                # check if user already have a trip that have the same name with new_name                
+                if not exist_trip_name:
+                    
+                    # input validation for trip name 
+                    trip_name_validation = self.input_validation.trip_name_validation(trip_name=trip_name)
+                    if not trip_name_validation:
+                        return False, {'code':'invalid_trip_name','message': 'Trip name is invalid make sure to have between 5-10 words and not secial character'}
+                    # update to database
+                    update_trip_name = self.trip_database_service.update_db(
+                        DATABASEKEYS.TABLES.TRIPS,
+                        DATABASEKEYS.TRIPS.TRIP_ID,
+                        trip_id,
+                        DATABASEKEYS.TRIPS.TRIP_NAME,
+                        trip_name
+                    )
+                    # if failed
+                    if not update_trip_name:
+                        return False, {'code':'failed_update_db','message': 'Faild to update into database'}
+                    _changed_name = True
+            elif trip_name == old_trip_data['trip_name']:
+                return False, {'code':'duplicate_trip_name','message': 'Trip Name aldready exist!'}
+            pass
+        
+        # roll back
+        def trip_name_rollback():
+            if not _changed_name:return
+            self.trip_database_service.update_db(
+                        DATABASEKEYS.TABLE.TRIPS,
+                        DATABASEKEYS.TRIPS.TRIP_ID,
+                        trip_id,
+                        DATABASEKEYS.TRIPS.TRIP_NAME,
+                        old_trip_data['trip_name']
+                    )
+
+        if image:
+            image_path = f"trips/{trip_id}/cover.jpg"
+            # key will not be change
+            upload_image = self.s3_service.upload_media(path=image_path,data=image)
+    
+            # upload new image to s3
+            if not upload_image:
+                trip_name_rollback()
+                return False,{'code':'failed_cloud','message':'Failed to upload to cloud'}
+            
+            # update to postgres if not exist
+            media_path_update = self.trip_database_service.update_db(
+                DATABASEKEYS.TABLES.TRIPS,
+                DATABASEKEYS.TRIPS.TRIP_ID,
+                trip_id,
+                DATABASEKEYS.TRIPS.IMAGE_KEY,
+                image_path
+            )
+            if not media_path_update:
+                trip_name_rollback()
+                return False,{'code':'failed_database','message':'Failed update image key'}
+            
+        
+        # update trip_data version         
+        update_version =self.trip_database_service.update_trip_version(
+            DATABASEKEYS.TRIPS.TRIP_INFO_VERSION,
+            trip_id,
+        )
+        
+        if not update_version:
+            return False,{'code':'failed_update_version','message':'Failed update trip data version'}
+        
+        return True,{'code':'successfully','message':'Successfully update trip data'}
+            
