@@ -239,16 +239,19 @@ class Database:
         Returns:
             bool: status
         """
-        con,cur = self.connect_db()
+        try:
+            con,cur = self.connect_db()
 
-
-        cur.execute(f'UPDATE {table} SET {item_to_update} =%s WHERE {item} = %s',(value_to_update,value,))
-        con.commit()
-        con.close()
-        if cur.rowcount <0:
+            
+            cur.execute(f'UPDATE {table} SET {item_to_update} =%s WHERE {item} = %s',(value_to_update,value,))
+            con.commit()
+            con.close()
+            if cur.rowcount <0:
+                return False
+            return True
+        except Exception as e:
+            print ('failed to update to database',e)
             return False
-        return True
-
     def delete_from_table(self,table:str, item:str,value:str, second_condition:bool | None=None, second_item:str | None=None , second_value:str | None=None):
         con,cur = self.connect_db()
 

@@ -1,6 +1,7 @@
 from src.database.database import Database
 from datetime import datetime
 from src.database.database_keys import DATABASEKEYS
+import logging
 class TripDatabaseService (Database):
     _instance = None
     _init = False
@@ -53,11 +54,14 @@ class TripDatabaseService (Database):
     
     def update_trip_version (self,type_of_version:str,trip_id:int,version:int = None):
         allow_type = ['']
-        con,cur = self.connect_db()
-        cur.execute(f'UPDATE {DATABASEKEYS.TABLES.TRIPS} SET {type_of_version} = {type_of_version}+1 WHERE id = %s',(trip_id,))
-        con.commit()
-        return True if cur.rowcount>=1 else False
-        
+        try:
+            con,cur = self.connect_db()
+            cur.execute(f'UPDATE {DATABASEKEYS.TABLES.TRIPS} SET {type_of_version} = {type_of_version}+1 WHERE id = %s',(trip_id,))
+            con.commit()
+            return True if cur.rowcount>=1 else False
+        except Exception as e:
+            logging.exception('Failed to update trip version:{e}')
+            return False
     
     def get_user_trips_data(self,user_id:int,data_type:str) -> any:
         con,cur =self.connect_db()

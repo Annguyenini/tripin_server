@@ -39,6 +39,7 @@ class TripRoute(RouteBase):
         self.bp.route("/end-trip",methods=["POST"])(self.end_trip)
         self.bp.route('/trip',methods=['POST'])(self.request_trip_data)
         self.bp.route('/trip-by-token/<token>',methods=['GET'])(self.request_trip_data_by_shared_links)
+        self.bp.route('/modify-trip-data',methods=["POST"])(self.change_trip_data)
     ## request new trip
     def request_new_trip(self):
         
@@ -186,4 +187,20 @@ class TripRoute(RouteBase):
         
         return jsonify({'message':'Successfully!','etag':etag,'all_trip_data':all_trips_data if all_trips_data else None}),200
     
-  
+    def change_trip_data(self):
+        user_data,error = self._get_authenticated_user()
+        if error:
+            return jsonify(error),401
+        user_id = user_data['user_id']
+
+        trip_id = request.form.get('trip_id') or None
+        trip_name = request.form.get('trip_name') or None
+        image = request.files.get('image')
+        trip_owner = self.trip_database_service.trip_owner_validation(user_id=user_id,trip_id=trip_id)
+        if not trip_owner:
+            return jsonify({'code':'permission_denied','message':'Your dont have permission to modify this trip!'}),403
+        update, data =self.trip_service.change_trip_data(trip_name=trip_name,trip_id=trip_id,user_id=user_id,image=image)
+        if not update:
+            print(data)
+            return jsonify (data),500
+        return jsonify(data),200
