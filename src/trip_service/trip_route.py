@@ -134,7 +134,7 @@ class TripRoute(RouteBase):
             return jsonify({'etag':etag}),304
         
         if not trip_data and not etag:
-            return jsonify({'message':'failed'}),404
+            return jsonify({'message':'failed'}),500
         
         return jsonify({'message':'Successfully!','etag':etag,'trip_data':trip_data if trip_data else None}),200
 
@@ -159,11 +159,15 @@ class TripRoute(RouteBase):
         if not trip_data and etag is not None:
             return jsonify({'etag': etag}), 304
         
+        if not trip_data and not etag:
+            return jsonify({'message':'failed'}),500
         # new data — return with etag so browser can cache it
         response = jsonify({'trip_data': trip_data})
         response.headers['ETag'] = etag
+        print(response)
         return response, 200
-    
+   
+        
     def request_all_trips_data(self):
         # print(request)
         user_data,error = self._get_authenticated_user()

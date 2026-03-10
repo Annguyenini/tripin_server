@@ -74,3 +74,22 @@ document.addEventListener('keydown', (e) => {
   if (e.key === 'Escape')     closePolaroidViewer();
 });
 
+let _fullImage = false
+
+function toggleFullImage() {
+  _fullImage = !_fullImage
+  const viewer = document.getElementById('polaroid-viewer')
+  const btn    = document.getElementById('fullscreen-btn')
+  viewer.classList.toggle('full-image', _fullImage)
+  btn.classList.toggle('active', _fullImage)
+  btn.textContent = _fullImage ? '⊡' : '⛶'
+}
+
+// reset when closing
+function closePolaroidViewer() {
+  document.body.classList.remove('viewer-open')
+  document.getElementById('polaroid-viewer').classList.remove('open')
+  // reset full image mode
+  if (_fullImage) toggleFullImage()
+}
+
