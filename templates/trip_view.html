@@ -1,114 +1,232 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8" />
+  <meta charset="UTF-8"/>
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>Trip View</title>
+  <title>Trip View — TRIPPING</title>
   <link href="https://api.mapbox.com/mapbox-gl-js/v3.3.0/mapbox-gl.css" rel="stylesheet"/>
-  <link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;700;800&family=DM+Mono:wght@300;400&display=swap" rel="stylesheet"/>
+  <link href="https://fonts.googleapis.com/css2?family=Permanent+Marker&family=DM+Mono:wght@300;400;500&display=swap" rel="stylesheet"/>
   <script src="https://api.mapbox.com/mapbox-gl-js/v3.3.0/mapbox-gl.js"></script>
-    <link rel="stylesheet" href="../static/styles/map.css" /></head>
-    <link rel="stylesheet" href="../static/styles/trip_banner.css" /></head>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+
+  <link rel="stylesheet" href="/static/styles/map.css"/>
+  <link rel="stylesheet" href="/static/styles/trip_banner.css"/>
+  <link rel="stylesheet" href="/static/styles/cover.css"/>
+  <style>
+    /* ── COVER PAGE OVERLAY ── */
+    #cover-screen {
+      position: fixed;
+      inset: 0;
+      z-index: 100;
+      transition: opacity 0.6s cubic-bezier(.16,1,.3,1),
+                  transform 0.6s cubic-bezier(.16,1,.3,1);
+    }
+
+    #cover-screen.hidden {
+      opacity: 0;
+      transform: scale(1.03);
+      pointer-events: none;
+    }
+
+    /* ── MAP SCREEN — hidden until cover dismissed ── */
+    #map-screen {
+      position: fixed;
+      inset: 0;
+      z-index: 1;
+      opacity: 0;
+      transition: opacity 0.6s cubic-bezier(.16,1,.3,1) 0.3s;
+      pointer-events: none;
+    }
+
+    #map-screen.visible {
+      opacity: 1;
+      pointer-events: all;
+    }
+  </style>
+</head>
 <body>
 
-<div id="map"></div>
+<!-- ════════════════════════════════
+     COVER SCREEN
+════════════════════════════════ -->
+<div id="cover-screen">
 
+  <div class="cover-bg"></div>
 
-<!-- Style switcher -->
-<div class="style-switcher">
-  <div class="style-label">Style</div>
-  <button class="style-btn active" id="style-dark" title="Dark" style="background: linear-gradient(135deg,#1a1a2e,#16213e)"></button>
-  <button class="style-btn" id="style-streets" title="Streets" style="background: linear-gradient(135deg,#e8dcc8,#c5b48a)"></button>
-  <button class="style-btn" id="style-satellite" title="Satellite" style="background: linear-gradient(135deg,#1a3a1a,#2d5a2d)"></button>
-</div>
-
-<!-- Coordinates bar -->
-<div class="coords-bar" id="coords-bar">
-  lng <span id="lng-val">0.0000</span> &nbsp;|&nbsp; lat <span id="lat-val">0.0000</span> &nbsp;|&nbsp; zoom <span id="zoom-val">2</span>
-</div>
-
-<!-- Info card (shown on click) -->
-<div class="info-card" id="info-card">
-  <div class="info-card-label">Selected Location</div>
-  <div class="info-card-title" id="info-title">—</div>
-  <div class="info-card-coords" id="info-coords"></div>
-</div>
-
-<!-- ── TRIP BANNER ── -->
-<!-- Desktop: bottom-right | Mobile: top bar -->
-<div class="trip-banner" id="trip-banner">
-  <div class="trip-banner-title" id="banner-title">Loading...</div>
-  <div class="trip-banner-divider"></div>
-  <div class="trip-banner-meta">
-    <div class="trip-banner-item">
-      <span class="trip-banner-item-icon">◎</span>
-    </div>
-    <div class="trip-banner-item">
-      <span class="trip-banner-item-icon">◷</span>
-      <span class="trip-banner-item-value" id="banner-dates">—</span>
-    </div>
+  <div class="cover-drips">
+    <div class="cover-drip" style="--h:45px;--w:5px;--dur:4.2s;--delay:0s"></div>
+    <div class="cover-drip" style="--h:75px;--w:8px;--dur:5s;--delay:0.7s"></div>
+    <div class="cover-drip" style="--h:30px;--w:5px;--dur:3.6s;--delay:1.4s"></div>
+    <div class="cover-drip" style="--h:90px;--w:9px;--dur:5.5s;--delay:0.2s"></div>
+    <div class="cover-drip" style="--h:55px;--w:6px;--dur:4.5s;--delay:2.1s"></div>
+    <div class="cover-drip" style="--h:65px;--w:7px;--dur:4.8s;--delay:0.9s"></div>
+    <div class="cover-drip" style="--h:38px;--w:5px;--dur:3.9s;--delay:1.7s"></div>
+    <div class="cover-drip" style="--h:80px;--w:8px;--dur:5.2s;--delay:0.4s"></div>
   </div>
-  <div class="trip-banner-badge" id="banner-badge">shared</div>
+
+  <div class="cover-page">
+
+    <!-- HEADER -->
+    <div class="cover-header">
+      <div class="cover-trip-name" id="trip-name">TRIP NAME</div>
+      <div class="cover-brand">TRIPPING</div>
+    </div>
+
+    <!-- PHOTO -->
+    <div class="cover-photo-wrap">
+      <!-- inside .cover-photo-wrap, hidden by default -->
+      <div class="cover-no-image" id="cover-no-image" style="display:none">
+        <div class="cover-no-image-drips">
+          <span style="--h:80px;  --d:3.2s; --dl:0s"></span>
+          <span style="--h:140px; --d:4s;   --dl:0.3s"></span>
+          <span style="--h:60px;  --d:2.8s; --dl:0.8s"></span>
+          <span style="--h:180px; --d:4.5s; --dl:0.1s"></span>
+          <span style="--h:100px; --d:3.6s; --dl:1.2s"></span>
+          <span style="--h:160px; --d:4.2s; --dl:0.5s"></span>
+          <span style="--h:70px;  --d:3s;   --dl:1.5s"></span>
+          <span style="--h:120px; --d:3.8s; --dl:0.9s"></span>
+          <span style="--h:90px;  --d:3.4s; --dl:0.2s"></span>
+          <span style="--h:150px; --d:4.1s; --dl:1.8s"></span>
+        </div>
+        <div class="cover-no-image-title" id="no-image-trip-name">TRIPPING</div>
+      </div>
+      <img id="trip-cover" src="" alt="Trip cover photo"/>
+    </div>
+
+    <!-- FOOTER -->
+    <div class="cover-footer">
+      <div class="cover-qr" id="cover-qr"></div>
+
+
+      <div class="cover-divider"></div>
+
+      <div class="cover-meta">
+        <div class="cover-meta-coords" id="trip-coords">—</div>
+        <div class="cover-meta-author">BY <span id="trip-author">—</span></div>
+      </div>
+
+      <div class="cover-desc" id="trip-desc">—</div>
+    </div>
+
+  </div>
+
+  <!-- ENTER BUTTON -->
+  <div class="cover-enter-wrap">
+    <button class="cover-enter-btn" id="enter-btn" onclick="enterTrip()">VIEW TRIP →</button>
+  </div>
+
+  <div class="cover-stamp">TRIPPING · TRIP PREVIEW</div>
+
 </div>
 
-<!-- ── POLAROID VIEWER PANEL ── -->
-<!-- Desktop: right half | Mobile: bottom half -->
-<div class="polaroid-viewer" id="polaroid-viewer">
 
-  <!-- close -->
-  <button class="polaroid-close" onclick="closePolaroidViewer()">✕</button>
- <div class="polaroid-viewer-title">TRIPPING</div>
+<!-- ════════════════════════════════
+     MAP SCREEN
+════════════════════════════════ -->
+<div id="map-screen">
 
-  <!-- polaroid frame -->
-  <div class="polaroid">
-    <img class="polaroid-img" id="polaroid-img" src="" alt="trip photo"/>
-    <video class="polaroid-img" id="polaroid-video" style="display:auto" autoplay controls playsinline loop ></video>
-    <div class="polaroid-caption">
+  <div id="map"></div>
+
+  <!-- Style switcher -->
+  <div class="style-switcher">
+    <div class="style-label">Style</div>
+    <button class="style-btn active" id="style-dark"      title="Dark"      style="background:linear-gradient(135deg,#1a1a2e,#16213e)"></button>
+    <button class="style-btn"        id="style-streets"   title="Streets"   style="background:linear-gradient(135deg,#e8dcc8,#c5b48a)"></button>
+    <button class="style-btn"        id="style-satellite" title="Satellite" style="background:linear-gradient(135deg,#1a3a1a,#2d5a2d)"></button>
+  </div>
+
+  <!-- Coordinates bar -->
+  <div class="coords-bar" id="coords-bar">
+    lng <span id="lng-val">0.0000</span> &nbsp;|&nbsp; lat <span id="lat-val">0.0000</span> &nbsp;|&nbsp; zoom <span id="zoom-val">2</span>
+  </div>
+
+  <!-- Info card -->
+  <div class="info-card" id="info-card">
+    <div class="info-card-label">Selected Location</div>
+    <div class="info-card-title" id="info-title">—</div>
+    <div class="info-card-coords" id="info-coords"></div>
+  </div>
+
+  <!-- Trip banner -->
+  <div class="trip-banner" id="trip-banner">
+    <div class="trip-banner-title" id="banner-title">Loading...</div>
+    <div class="trip-banner-divider"></div>
+    <div class="trip-banner-meta">
+      <div class="trip-banner-item">
+        <span class="trip-banner-item-icon">◎</span>
+      </div>
+      <div class="trip-banner-item">
+        <span class="trip-banner-item-icon">◷</span>
+        <span class="trip-banner-item-value" id="banner-dates">—</span>
+      </div>
+    </div>
+    <div class="trip-banner-badge" id="banner-badge">shared</div>
+  </div>
+
+  <!-- Polaroid viewer -->
+  <div class="polaroid-viewer" id="polaroid-viewer">
+  <button class="polaroid-fullscreen-btn" id="fullscreen-btn" onclick="toggleFullImage()" title="Full image mode">⛶</button>
+  <button class="polaroid-cluster-btn" id="cluster-btn" onclick="toggleFullMediasMode()">CLUSTER</button>
+    <button class="polaroid-close" onclick="closePolaroidViewer()">✕</button>
+    <div class="polaroid-viewer-title">TRIPPING</div>
+    <div class="polaroid">
+      <img class="polaroid-img" id="polaroid-img" src="" alt="trip photo"/>
+      <video class="polaroid-img" id="polaroid-video" style="display:none" autoplay muted playsinline loop></video>
+      <div class="polaroid-caption">
         <div class="polaroid-caption-title" id="polaroid-title">—</div>
-        <div class="polaroid-caption-meta" id="polaroid-meta"></div>
+        <div class="polaroid-caption-meta"  id="polaroid-meta"></div>
+      </div>
     </div>
-</div>
+    <div class="polaroid-nav">
+      <button class="polaroid-nav-btn" onclick="polaroidPrev()">←</button>
+      <span   class="polaroid-counter" id="polaroid-counter">1 / 1</span>
+      <button class="polaroid-nav-btn" onclick="polaroidNext()">→</button>
+    </div>
+  </div>
 
-  <!-- nav -->
-  <div class="polaroid-nav">
-    <button class="polaroid-nav-btn" onclick="polaroidPrev()">←</button>
-    <span   class="polaroid-counter" id="polaroid-counter">1 / 1</span>
-    <button class="polaroid-nav-btn" onclick="polaroidNext()">→</button>
+  <!-- Loading overlay -->
+  <div class="loading-overlay" id="loading-overlay">
+    <div class="loading-content">
+      <div class="loading-logo">TRIPPING</div>
+      <div class="loading-drip">
+        <span></span><span></span><span></span><span></span><span></span>
+      </div>
+      <div class="loading-text">loading your trip...</div>
+    </div>
   </div>
 
 </div>
-<div class="loading-overlay" id="loading-overlay">
-  <div class="loading-content">
-    <div class="loading-logo">TRIPPING</div>
-    <div class="loading-drip">
-      <span></span><span></span><span></span><span></span><span></span>
-    </div>
-    <div class="loading-text">loading your trip...</div>
-  </div>
-</div>
-<!-- scripts -->
- <script>
-    const MAPBOX_TOKEN = "{{ MAPTOKEN }}";
-    const BASE_URL ="{{ BASE_URL }}"
- </script>
-<script src='../static/scripts/keys/urls.js'></script>
-<script src='../static/scripts/loading.js'></script>
 
-<script src='../static/scripts/style_switcher.js'></script>
-<script src='../static/scripts/trip_view/trip_data_banner.js'></script>
 
-<script src='../static/scripts/trip_view/zoom_control.js'></script>
-<script src='../static/scripts/trip_view/render_trip_coordinates.js'></script>
-<script src='../static/scripts/trip_view/coordinate_calculate.js'></script>
+<!-- ── SCRIPTS ── -->
+<script>
+  const MAPBOX_TOKEN = "{{ MAPTOKEN }}";
+  const BASE_URL     = "{{ BASE_URL }}";
+</script>
 
-<script src='../static/scripts/trip_view/cluster.js'></script>
+<script src="../static/scripts/keys/urls.js"></script>
+<script src="../static/scripts/loading.js"></script>
+<script src="../static/scripts/style_switcher.js"></script>
+<script src="../static/scripts/trip_view/trip_data_banner.js"></script>
+<script src="../static/scripts/trip_view/zoom_control.js"></script>
+<script src="../static/scripts/trip_view/render_trip_coordinates.js"></script>
+<script src="../static/scripts/trip_view/coordinate_calculate.js"></script>
+<script src="../static/scripts/trip_view/cluster.js"></script>
+<script src="../static/scripts/trip_view/display.js"></script>
+<script src="../static/scripts/trip_view/image_viewer.js"></script>
+<script src="../static/scripts/trip_view/render_image_label.js"></script>
+<script src="../static/scripts/trip_view_main.js"></script>
+<script src="../static/scripts/trip_cover/trip_cover.js"></script>
 
-<script src='../static/scripts/trip_view/display.js'></script>
-
-<script src='../static/scripts/trip_view/image_viewer.js'></script>
-<script src='../static/scripts/trip_view/render_image_label.js'></script>
-
-<script src='../static/scripts/trip_view_main.js'></script>
+<script>
+// ── TRANSITION: cover → map ──
+const enterTrip =()=> {
+    showLoading()
+    document.getElementById('cover-screen').classList.add('hidden')
+    document.getElementById('map-screen').classList.add('visible')
+    hideLoading()
+}
+</script>
 
 </body>
 </html>

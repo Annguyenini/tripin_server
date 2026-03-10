@@ -8,6 +8,8 @@ const requestTripMedias =async()=>{
 let _cluster = null
 let _zoom = null
 let _medias = null
+let _clusterMode = true
+let _preMeidaArray = null
 const renderTripMedias= async (map,zoom) => {
     if (zoom === _zoom) return
     _zoom =zoom
@@ -20,7 +22,22 @@ const renderTripMedias= async (map,zoom) => {
     }
     renderImageLabels(_cluster[zoom]||[],map)
 }
+const toggleFullMediasMode=()=>{
+    _clusterMode = !_clusterMode
+    const btn = document.getElementById('cluster-btn')
+    btn.textContent = _clusterMode ? 'CLUSTER' : 'ALLMEDIAS'
+    btn.classList.toggle('active', !_clusterMode)
+    console.log(_clusterMode)
+    if(!_clusterMode){
+        openPolaroidViewer(_medias||[],0)
+    }
+    else{
+        if(!_preMeidaArray)return
+        openPolaroidViewer(_preMeidaArray,0)
 
+    }
+
+}
 const clustersMap = (assetsArray) => {
     return {
         10: computeCluster(assetsArray, 1000),
@@ -65,6 +82,7 @@ const renderImageLabels = (medias, map) => {
         _markers.push(marker)
 
         el.addEventListener('click', () => {
+            _preMeidaArray = media.members
             openPolaroidViewer(media.members, 0)
         })
     });

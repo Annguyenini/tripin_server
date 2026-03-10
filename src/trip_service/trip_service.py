@@ -10,6 +10,7 @@ from src.database.database_keys import DATABASEKEYS
 import psycopg2
 from datetime import datetime
 import json
+import time
 class TripService:
     _instance = None
     _init = False
@@ -81,6 +82,63 @@ class TripService:
         return trip_id
 
     
+    # def get_trip_data(self,trip_id,client_etag):
+    #     """_summary_
+
+    #     Args:
+    #         user_id (_type_): _description_
+    #         etag (_type_): _description_
+    #     """
+        
+    #     etag_key =self.trip_etag_service.get_trip_etag_key(trip_id=trip_id)
+    #     # fetch the etag from cache if match return        
+    #     etag_from_cache = self.cache_service.get(etag_key)
+    #     if client_etag == etag_from_cache and client_etag and etag_from_cache:
+    #         return None, client_etag
+        
+    #     # if key doesnt exist, clean up just in case
+    #     self.cache_service.delete(etag_key)
+        
+    #     # fetch user current trip 
+    #     # print(user_id,trip_id)
+    #     trip_data_row = self.database_service.find_item_in_sql(DATABASEKEYS.TABLES.TRIPS,'id',trip_id)
+    #     # if doesnt exist return
+    #     if trip_data_row is None :
+    #         return None,None
+    #     # get etag from bd
+    #     db_etag = trip_data_row['etag']
+    #     if client_etag == db_etag and client_etag and db_etag:
+    #         self.cache_service.set(etag_key,3600,client_etag)
+    #         return None, client_etag
+        
+    #     # data object
+    #     trip_id = trip_data_row['id']
+    #     trip_name = trip_data_row['trip_name']
+    #     created_timestamp = trip_data_row['created_time']
+    #     ended_timestamp = trip_data_row['ended_time']
+    #     created_time = int(created_timestamp.timestamp() * 1000)
+    #     ended_time = int(created_timestamp.timestamp() * 1000) if ended_timestamp else None
+    #     trip_image_default = trip_data_row['image']
+    #     trip_information_version = trip_data_row[DATABASEKEYS.TRIPS.TRIP_INFO_VERSION]
+    #     trip_image = None
+    #     if trip_image_default:
+    #         trip_image = self.s3_service.generate_temp_uri(trip_image_default)
+        
+        
+        
+    #     trip_data = {'trip_id':trip_id,'trip_name':trip_name,'created_time':created_time,'ended_time':ended_time,'image':trip_image if trip_image else None}
+        
+    #     # generate new etag
+    #     new_etag_data= self.trip_etag_service.get_trip_etag_data_string(trip_id=trip_id,version=trip_information_version)
+    #     new_etag = self.etag_service.generate_etag(new_etag_data)
+    #     # add to cache
+    #     self.cache_service.set(key=etag_key,time=3600,data=new_etag)
+    #     # update etag to db
+    #     status_update = self.database_service.update_db(DATABASEKEYS.TABLES.TRIPS,DATABASEKEYS.TRIPS.TRIP_ID,trip_id,DATABASEKEYS.TRIPS.TRIP_ETAG,new_etag)
+    #     return trip_data, new_etag
+    
+    
+        
     def get_trip_data(self,trip_id,client_etag):
         """_summary_
 
@@ -88,27 +146,29 @@ class TripService:
             user_id (_type_): _description_
             etag (_type_): _description_
         """
-        
+        # etag key  
         etag_key =self.trip_etag_service.get_trip_etag_key(trip_id=trip_id)
         # fetch the etag from cache if match return        
         etag_from_cache = self.cache_service.get(etag_key)
         if client_etag == etag_from_cache and client_etag and etag_from_cache:
-            return None, client_etag
+            return None, etag_from_cache
         
-        # if key doesnt exist, clean up just in case
-        self.cache_service.delete(etag_key)
-        
-        # fetch user current trip 
-        # print(user_id,trip_id)
+        # trip data from database
         trip_data_row = self.database_service.find_item_in_sql(DATABASEKEYS.TABLES.TRIPS,'id',trip_id)
-        # if doesnt exist return
+        # if doesnt exist return nothing
         if trip_data_row is None :
             return None,None
-        # get etag from bd
-        db_etag = trip_data_row['etag']
-        if client_etag == db_etag and client_etag and db_etag:
-            self.cache_service.set(etag_key,3600,client_etag)
-            return None, client_etag
+        
+        # checking for etag based on hour bucket and data version
+        trip_information_version = trip_data_row[DATABASEKEYS.TRIPS.TRIP_INFO_VERSION]
+
+        hour_bucket = int(time.time()//3600)
+        new_etag_data= self.trip_etag_service.get_trip_etag_data_string(trip_id=trip_id,version=trip_information_version,hour_bucket=hour_bucket)
+        new_etag = self.etag_service.generate_etag(new_etag_data)
+        if client_etag == new_etag:
+            return None, new_etag
+        # set etag to redis
+        self.cache_service.set(etag_key,3600,new_etag)
         
         # data object
         trip_id = trip_data_row['id']
@@ -118,26 +178,15 @@ class TripService:
         created_time = int(created_timestamp.timestamp() * 1000)
         ended_time = int(created_timestamp.timestamp() * 1000) if ended_timestamp else None
         trip_image_default = trip_data_row['image']
-        trip_information_version = trip_data_row[DATABASEKEYS.TRIPS.TRIP_INFO_VERSION]
         trip_image = None
+        # generate url for image
         if trip_image_default:
             trip_image = self.s3_service.generate_temp_uri(trip_image_default)
         
         
-        
         trip_data = {'trip_id':trip_id,'trip_name':trip_name,'created_time':created_time,'ended_time':ended_time,'image':trip_image if trip_image else None}
-        
-        # generate new etag
-        new_etag_data= self.trip_etag_service.get_trip_etag_data_string(trip_id=trip_id,version=trip_information_version)
-        new_etag = self.etag_service.generate_etag(new_etag_data)
-        # add to cache
-        self.cache_service.set(key=etag_key,time=3600,data=new_etag)
-        # update etag to db
-        status_update = self.database_service.update_db(DATABASEKEYS.TABLES.TRIPS,DATABASEKEYS.TRIPS.TRIP_ID,trip_id,DATABASEKEYS.TRIPS.TRIP_ETAG,new_etag)
+    
         return trip_data, new_etag
-    
-    
-        
     
     
     

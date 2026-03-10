@@ -27,8 +27,8 @@ class TripEtagService(EtagService):
     def get_all_trip_etag_data_string(self, user_id:int,version:int):
         return f'user{user_id}:alltrips:version{version}'
         
-    def get_trip_etag_data_string(self,trip_id,version):
-        return f'trip:{trip_id}:version:{version}'
+    def get_trip_etag_data_string(self,trip_id:int,version:int,hour_bucket:int):
+        return f'trip:{trip_id}:version:{version}:hour_bucket{hour_bucket}'
     
     def get_trip_coordinate_etag_key(self,trip_id:int):
         return f'trip:{trip_id}:coordinates'
