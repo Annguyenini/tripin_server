@@ -747,3 +747,22 @@ body.viewer-open .style-switcher { right: calc(55% + 14px); }
 
 .polaroid-cluster-btn:hover  { background: rgba(0,0,0,0.08); }
 .polaroid-cluster-btn.active { background: var(--black); color: #f0f0ec; }
+/* ── MOBILE POLAROID BUTTONS ── */
+@media (max-width: 700px) {
+
+  /* stack fullscreen + cluster vertically */
+  .polaroid-fullscreen-btn {
+    top: 14px;
+    right: 14px;
+  }
+
+  .polaroid-cluster-btn {
+    top: 70px;   /* below fullscreen btn */
+    right: 14px;
+  }
+
+  /* move prev/next nav up */
+  .polaroid-nav {
+    margin-bottom: 30px;
+  }
+}
