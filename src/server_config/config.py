@@ -32,6 +32,7 @@ class Config:
                 self._PRIVATE_KEY = f.read()
         else:
             self._PRIVATE_KEY = os.getenv('PRIVATE_KEY')
+            
         if os.path.exists(self._public_key_path):
             with open(self._public_key_path,'r') as f:
                 self._PUBLIC_KEY = f.read()

@@ -1,13 +1,17 @@
 const setTripData=( tripName, coverImage )=> {
-    console.log(tripName)
-    if (coverImage) {
+    console.log(tripName,coverImage)
+   if (coverImage) {
         const img = document.getElementById('trip-cover')
-        img.crossOrigin = 'anonymous'
-        img.src = coverImage
-        img.style.display = 'block'
-        document.getElementById('cover-no-image').style.display = 'none'
-        img.onload = () => setDynamicBorder(img)
-    } else {
+        
+        img.onload = () => {
+            img.style.display = 'block'
+            document.getElementById('cover-no-image').style.display = 'none'
+            // setDynamicBorder(img)  ← won't work without CORS headers on S3
+        }
+        img.onerror = () => console.error('failed:', coverImage)
+        img.src = coverImage  // ← no crossOrigin
+    } 
+    else {
         document.getElementById('trip-cover').style.display = 'none'
         document.getElementById('cover-no-image').style.display = 'flex'
         document.getElementById('no-image-trip-name').textContent = tripName || 'TRIPPING'
@@ -29,6 +33,6 @@ const setUpTripCover =async()=>{
     
     const trip_data = res.trip_data
     console.log(res)
-    setTripData(trip_data.trip_name)
+    setTripData(trip_data.trip_name,trip_data.image)
 }
 setUpTripCover()
