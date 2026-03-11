@@ -9,3 +9,5 @@ gallery/
 # /docs
 /logs
 .env.test
+.__pycache__
+.pytest_cache

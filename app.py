@@ -81,11 +81,11 @@ sentry()
 
 app = server.app
 def create_app():
-    return server.app
+    return server.appQ
 if __name__ =="__main__":
     print("initialize s3")
     print(app.url_map)
-    print('ver 4')
+    print('ver 5')
    
     # run_tasks()
     app.run( host ="0.0.0.0", port =8000,debug=True)
