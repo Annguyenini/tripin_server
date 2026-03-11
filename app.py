@@ -68,7 +68,6 @@ def run_sentry_log():
         enable_logs=True,
     )
     sentry_sdk.logger.info('This is an info log message')
-    print(1111)
 
 
 server_auth_service = ServerAuth()
@@ -79,6 +78,7 @@ def sentry():
     if os.getenv('ENABLE_SENTRY') == 'true':
         run_sentry_log()
 sentry()
+
 app = server.app
 def create_app():
     return server.app
