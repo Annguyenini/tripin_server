@@ -64,23 +64,21 @@ def run_sentry_log():
     sentry_dns = os.getenv('SENTRY_DNS')
     sentry_sdk.init(
         dsn=sentry_dns,
-        # Add data like request headers and IP for users,
-        # see https://docs.sentry.io/platforms/python/data-management/data-collected/ for more info
         send_default_pii=True,
         enable_logs=True,
     )
     sentry_sdk.logger.info('This is an info log message')
+    print(1111)
 
 
 server_auth_service = ServerAuth()
 server_auth_service.skip_indentity()
-# if not server_auth_service.verify_indentity():
-#     print("Wrong password!❌")
-#     sys.exit(1)
-# print("Successfully authenticated!✅")
 server = Server()
 
-# run_sentry_log()
+def sentry():
+    if os.getenv('ENABLE_SENTRY') == 'true':
+        run_sentry_log()
+sentry()
 app = server.app
 def create_app():
     return server.app
