@@ -32,7 +32,7 @@ class TripViewRoute(RouteBase):
         
     def _register_routes(self):
         self.bp.route('/<token>',methods=['GET'])(self.request_trip_view)
-        self.bp.route('/generate-trip-view-link',methods=['GET'])(self.generate_trip_view_link)
+        self.bp.route('/generate-trip-view-link',methods=['POST'])(self.generate_trip_view_link)
     def generate_trip_view_link(self):
         """generate url using trip view
 

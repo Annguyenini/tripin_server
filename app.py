@@ -80,7 +80,7 @@ server_auth_service.skip_indentity()
 # print("Successfully authenticated!✅")
 server = Server()
 
-run_sentry_log()
+# run_sentry_log()
 app = server.app
 def create_app():
     return server.app

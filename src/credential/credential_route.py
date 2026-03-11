@@ -10,13 +10,15 @@ from src.token.tokenservice import TokenService
 from src.server_config.encryption.encryption import Encryption
 from src.server_auth.server_auth import ServerAuth
 from src.server_config.service.cache import Cache
-class AuthServer:
+from src.base.route_base import RouteBase
+class AuthServer(RouteBase):
     _instance = None 
     def __new__(cls,*args,**kwargs):
         if cls._instance is None:
             cls._instance = super().__new__(cls)
         return cls._instance
     def __init__(self):
+        super().__init__()
         self.bp = Blueprint("auth", __name__)
         self.auth = Auth()
         self.token_service = TokenService()
