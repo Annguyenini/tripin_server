@@ -26,3 +26,7 @@ class RouteBase:
         print (user_data)
         return user_data,None
         
+        
+    def _get_trip_data(self):
+        trip_data = request.json
+    

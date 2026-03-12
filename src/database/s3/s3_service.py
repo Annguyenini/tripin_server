@@ -56,6 +56,20 @@ class S3Sevice:
             self._queue.put((item_data,item_data))
             time.sleep(1)
             return False
+    def delete_media(self,path:str)->bool:
+        try:
+            respond_obj = s3Resource.Object(self.config.aws_bucket, path).delete()
+            response = respond_obj.get()           # returns a dict
+            if(response['ResponseMetadata']['HTTPStatusCode']==204):
+                return True
+        except ClientError as e:
+            # Handles AWS service errors, e.g., AccessDenied, NoSuchBucket
+            print("AWS ClientError:", e)
+        except Exception as e:
+            # Handles all other exceptions
+            print("Other error:", e)
+        return False
+    
     def upload_file(self,file_path:str,base_name:str):
         try:
             respond_obj = s3Client.upload_file(file_path,self.config.aws_logs_bucket,base_name)

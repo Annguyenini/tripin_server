@@ -98,7 +98,27 @@ class TripContentService:
         
         return True,None
     
-    
+    def delete_media(self,media_path:str,trip_id:int) -> bool | str:
+        # remove from db,
+        remove_from_db = self.trip_database_service.delete_from_table(
+            table= DATABASEKEYS.TABLES.TRIP_MEDIAS,
+            item= DATABASEKEYS.TRIP_MEDIAS.KEY,
+            value=media_path,
+            second_condition= True,
+            second_item=DATABASEKEYS.TRIP_MEDIAS.TRIP_ID,
+            second_value=trip_id
+        )
+        if not remove_from_db:
+            return False,{'code':'failed_database'}
+        s3_path = f'trips/{trip_id}/{media_path}'
+        # remove form s3
+        remove_from_s3 = self.s3_service.delete_media(path=s3_path)
+        if not remove_from_s3:
+            if not remove_from_db:
+                return False,{'code':'failed_cloud'}
+        
+        return True,None
+       
     def get_trip_coors(self,client_version:int , trip_id:int):
         # return a list of rowdict from the client version up to current version
         try:
