@@ -261,7 +261,7 @@ class TripContentsRoute(RouteBase):
         trip_id = trip_data['trip_id']
         #check for etag if it match the time frame
         # due to link of image only valid 1 hour
-        client_etag = request.headers.get('If-None-Match')
+        client_etag = None
         etag =None
         hour_bucket = int(time.time()) // 3600
         etag_key = self.trip_etag_service.get_trip_medias_etag_key(trip_id,hour_bucket)

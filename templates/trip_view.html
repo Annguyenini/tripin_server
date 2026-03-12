@@ -12,36 +12,213 @@
   <link rel="stylesheet" href="/static/styles/map.css"/>
   <link rel="stylesheet" href="/static/styles/trip_banner.css"/>
   <link rel="stylesheet" href="/static/styles/cover.css"/>
+
   <style>
-    /* ── COVER PAGE OVERLAY ── */
-    #cover-screen {
-      position: fixed;
-      inset: 0;
-      z-index: 100;
-      transition: opacity 0.6s cubic-bezier(.16,1,.3,1),
-                  transform 0.6s cubic-bezier(.16,1,.3,1);
-    }
+  /* ══════════════════════════════════════════
+     COVER / MAP SCREEN TRANSITIONS
+  ══════════════════════════════════════════ */
+  #cover-screen {
+    position: fixed; inset: 0; z-index: 100;
+    transition: opacity 0.6s cubic-bezier(.16,1,.3,1),
+                transform 0.6s cubic-bezier(.16,1,.3,1);
+  }
+  #cover-screen.hidden {
+    opacity: 0; transform: scale(1.03); pointer-events: none;
+  }
+  #map-screen {
+    position: fixed; inset: 0; z-index: 1;
+    opacity: 0; pointer-events: none;
+    transition: opacity 0.6s cubic-bezier(.16,1,.3,1) 0.3s;
+  }
+  #map-screen.visible { opacity: 1; pointer-events: all; }
 
-    #cover-screen.hidden {
-      opacity: 0;
-      transform: scale(1.03);
-      pointer-events: none;
-    }
+  /* ══════════════════════════════════════════
+     CLOTHESLINE PANEL — slides up from bottom
+  ══════════════════════════════════════════ */
+  #line-panel {
+    position: fixed;
+    bottom: 0; left: 0; right: 0;
+    height: 280px;
+    z-index: 50;
+    background: linear-gradient(to top, #0d0c0a 65%, transparent 100%);
+    transform: translateY(100%);
+    transition: transform 0.5s cubic-bezier(.16,1,.3,1);
+    pointer-events: none;
+  }
+  #line-panel.open {
+    transform: translateY(0);
+    pointer-events: all;
+  }
 
-    /* ── MAP SCREEN — hidden until cover dismissed ── */
-    #map-screen {
-      position: fixed;
-      inset: 0;
-      z-index: 1;
-      opacity: 0;
-      transition: opacity 0.6s cubic-bezier(.16,1,.3,1) 0.3s;
-      pointer-events: none;
-    }
+  /* ── TOOLBAR ── */
+  #line-toolbar {
+    position: absolute;
+    top: 10px; left: 0; right: 0;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 0 56px; /* leave room for scroll btns */
+    z-index: 55;
+    gap: 8px;
+  }
 
-    #map-screen.visible {
-      opacity: 1;
-      pointer-events: all;
-    }
+  .toolbar-left  { display: flex; align-items: center; gap: 7px; }
+  .toolbar-right { display: flex; align-items: center; gap: 6px; }
+
+  /* ── CLOSE BUTTON ── */
+  .line-close-btn {
+    height: 30px;
+    padding: 0 12px;
+    background: rgba(13,12,10,0.85);
+    border: 1.5px solid rgba(200,184,152,0.2);
+    color: rgba(200,184,152,0.8);
+    font-family: 'DM Mono', monospace;
+    font-size: 10px;
+    letter-spacing: 0.1em;
+    border-radius: 3px;
+    cursor: pointer;
+    display: flex; align-items: center; gap: 5px;
+    transition: background 0.15s, border-color 0.15s;
+    backdrop-filter: blur(6px);
+    box-shadow: 2px 2px 0 rgba(0,0,0,0.5);
+    white-space: nowrap;
+  }
+  .line-close-btn:hover {
+    background: rgba(200,184,152,0.12);
+    border-color: rgba(200,184,152,0.45);
+    color: rgba(200,184,152,1);
+  }
+
+  /* ── CLUSTER TOGGLE ── */
+  .line-cluster-btn {
+    height: 30px;
+    padding: 0 10px;
+    background: rgba(13,12,10,0.85);
+    border: 1.5px solid rgba(200,184,152,0.2);
+    color: rgba(200,184,152,0.6);
+    font-family: 'DM Mono', monospace;
+    font-size: 9px;
+    letter-spacing: 0.1em;
+    border-radius: 3px;
+    cursor: pointer;
+    transition: background 0.15s, border-color 0.15s, color 0.15s;
+    backdrop-filter: blur(6px);
+    box-shadow: 2px 2px 0 rgba(0,0,0,0.5);
+  }
+  .line-cluster-btn:hover,
+  .line-cluster-btn.active {
+    background: rgba(200,184,152,0.12);
+    border-color: rgba(200,184,152,0.45);
+    color: rgba(200,184,152,1);
+  }
+
+  /* ── STYLE PILLS inside toolbar ── */
+  .line-style-group {
+    display: flex;
+    align-items: center;
+    gap: 5px;
+    background: rgba(13,12,10,0.85);
+    border: 1px solid rgba(200,184,152,0.12);
+    border-radius: 3px;
+    padding: 4px 8px;
+    backdrop-filter: blur(6px);
+    box-shadow: 2px 2px 0 rgba(0,0,0,0.5);
+  }
+  .line-style-label {
+    font-family: 'DM Mono', monospace;
+    font-size: 9px;
+    color: rgba(200,184,152,0.35);
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    margin-right: 2px;
+  }
+  .line-style-btn {
+    width: 18px; height: 18px;
+    border-radius: 2px;
+    border: 1.5px solid rgba(255,255,255,0.12);
+    cursor: pointer;
+    padding: 0;
+    transition: border-color 0.15s, transform 0.1s;
+  }
+  .line-style-btn:hover  { border-color: rgba(200,184,152,0.6); transform: scale(1.12); }
+  .line-style-btn.active { border-color: #c8a87a; box-shadow: 0 0 0 1px #c8a87a; }
+
+  /* ── SCROLL BUTTONS ── */
+  .line-scroll-btn {
+    position: absolute;
+    top: 50%; transform: translateY(-50%);
+    z-index: 56;
+    background: rgba(13,12,10,0.8);
+    border: 1.5px solid rgba(200,184,152,0.2);
+    color: rgba(200,184,152,0.8);
+    font-family: 'Permanent Marker', cursive;
+    font-size: 15px;
+    width: 34px; height: 34px;
+    border-radius: 2px;
+    cursor: pointer;
+    display: flex; align-items: center; justify-content: center;
+    transition: background 0.15s, opacity 0.3s;
+    backdrop-filter: blur(6px);
+    box-shadow: 3px 3px 0 rgba(0,0,0,0.4);
+  }
+  .line-scroll-btn:hover { background: rgba(200,184,152,0.12); }
+  .line-scroll-btn.hidden { opacity: 0; pointer-events: none; }
+  #line-btn-left  { left:  8px; }
+  #line-btn-right { right: 8px; }
+
+  /* ── LINE OUTER / SCENE ── */
+  #line-outer {
+    position: absolute;
+    top: 48px; left: 0; right: 0; bottom: 0;
+    overflow: hidden;
+  }
+  #line-scene {
+    position: relative;
+    height: 100%;
+    will-change: transform;
+    transition: transform 0.5s cubic-bezier(.16,1,.3,1);
+  }
+  #line-wire-svg {
+    position: absolute;
+    top: 0; left: 0;
+    height: 55%;
+    pointer-events: none;
+    z-index: 1;
+  }
+  #line-outer::before,
+  #line-outer::after {
+    content: '';
+    position: absolute;
+    top: 0; bottom: 0; width: 80px;
+    z-index: 10; pointer-events: none;
+  }
+  #line-outer::before { left: 0;  background: linear-gradient(to right, #0d0c0a, transparent); }
+  #line-outer::after  { right: 0; background: linear-gradient(to left,  #0d0c0a, transparent); }
+
+  /* ── PHOTOS TRIGGER BUTTON (on map) ── */
+  #open-line-btn {
+    position: fixed;
+    bottom: 20px; right: 20px;
+    z-index: 40;
+    background: rgba(13,12,10,0.88);
+    border: 1.5px solid rgba(200,184,152,0.25);
+    color: rgba(200,184,152,0.9);
+    font-family: 'Permanent Marker', cursive;
+    font-size: 13px;
+    padding: 0 16px;
+    height: 40px;
+    border-radius: 3px;
+    cursor: pointer;
+    backdrop-filter: blur(8px);
+    box-shadow: 3px 3px 0 rgba(0,0,0,0.5);
+    transition: background 0.15s, opacity 0.3s;
+    letter-spacing: 0.06em;
+    display: none;
+    align-items: center;
+    gap: 8px;
+  }
+  #open-line-btn:hover { background: rgba(200,184,152,0.12); border-color: rgba(200,184,152,0.5); }
+  #open-line-btn.visible { display: flex; }
   </style>
 </head>
 <body>
@@ -50,7 +227,6 @@
      COVER SCREEN
 ════════════════════════════════ -->
 <div id="cover-screen">
-
   <div class="cover-bg"></div>
 
   <div class="cover-drips">
@@ -65,58 +241,45 @@
   </div>
 
   <div class="cover-page">
-
-    <!-- HEADER -->
     <div class="cover-header">
       <div class="cover-trip-name" id="trip-name">TRIP NAME</div>
       <div class="cover-brand">TRIPPING</div>
     </div>
 
-    <!-- PHOTO -->
     <div class="cover-photo-wrap">
-      <!-- inside .cover-photo-wrap, hidden by default -->
       <div class="cover-no-image" id="cover-no-image" style="display:none">
         <div class="cover-no-image-drips">
-          <span style="--h:80px;  --d:3.2s; --dl:0s"></span>
-          <span style="--h:140px; --d:4s;   --dl:0.3s"></span>
-          <span style="--h:60px;  --d:2.8s; --dl:0.8s"></span>
-          <span style="--h:180px; --d:4.5s; --dl:0.1s"></span>
-          <span style="--h:100px; --d:3.6s; --dl:1.2s"></span>
-          <span style="--h:160px; --d:4.2s; --dl:0.5s"></span>
-          <span style="--h:70px;  --d:3s;   --dl:1.5s"></span>
-          <span style="--h:120px; --d:3.8s; --dl:0.9s"></span>
-          <span style="--h:90px;  --d:3.4s; --dl:0.2s"></span>
-          <span style="--h:150px; --d:4.1s; --dl:1.8s"></span>
+          <span style="--h:80px;--d:3.2s;--dl:0s"></span>
+          <span style="--h:140px;--d:4s;--dl:0.3s"></span>
+          <span style="--h:60px;--d:2.8s;--dl:0.8s"></span>
+          <span style="--h:180px;--d:4.5s;--dl:0.1s"></span>
+          <span style="--h:100px;--d:3.6s;--dl:1.2s"></span>
+          <span style="--h:160px;--d:4.2s;--dl:0.5s"></span>
+          <span style="--h:70px;--d:3s;--dl:1.5s"></span>
+          <span style="--h:120px;--d:3.8s;--dl:0.9s"></span>
+          <span style="--h:90px;--d:3.4s;--dl:0.2s"></span>
+          <span style="--h:150px;--d:4.1s;--dl:1.8s"></span>
         </div>
         <div class="cover-no-image-title" id="no-image-trip-name">TRIPPING</div>
       </div>
       <img id="trip-cover" src="" alt="Trip cover photo"/>
     </div>
 
-    <!-- FOOTER -->
     <div class="cover-footer">
       <div class="cover-qr" id="cover-qr"></div>
-
-
       <div class="cover-divider"></div>
-
       <div class="cover-meta">
         <div class="cover-meta-coords" id="trip-coords">—</div>
         <div class="cover-meta-author">BY <span id="trip-author">—</span></div>
       </div>
-
       <div class="cover-desc" id="trip-desc">—</div>
     </div>
-
   </div>
 
-  <!-- ENTER BUTTON -->
   <div class="cover-enter-wrap">
     <button class="cover-enter-btn" id="enter-btn" onclick="enterTrip()">VIEW TRIP →</button>
   </div>
-
   <div class="cover-stamp">TRIPPING · TRIP PREVIEW</div>
-
 </div>
 
 
@@ -127,8 +290,8 @@
 
   <div id="map"></div>
 
-  <!-- Style switcher -->
-  <div class="style-switcher">
+  <!-- Style switcher (top right on map, hidden when line panel open) -->
+  <div class="style-switcher" id="map-style-switcher">
     <div class="style-label">Style</div>
     <button class="style-btn active" id="style-dark"      title="Dark"      style="background:linear-gradient(135deg,#1a1a2e,#16213e)"></button>
     <button class="style-btn"        id="style-streets"   title="Streets"   style="background:linear-gradient(135deg,#e8dcc8,#c5b48a)"></button>
@@ -137,7 +300,9 @@
 
   <!-- Coordinates bar -->
   <div class="coords-bar" id="coords-bar">
-    lng <span id="lng-val">0.0000</span> &nbsp;|&nbsp; lat <span id="lat-val">0.0000</span> &nbsp;|&nbsp; zoom <span id="zoom-val">2</span>
+    lng <span id="lng-val">0.0000</span> &nbsp;|&nbsp;
+    lat <span id="lat-val">0.0000</span> &nbsp;|&nbsp;
+    zoom <span id="zoom-val">2</span>
   </div>
 
   <!-- Info card -->
@@ -152,9 +317,7 @@
     <div class="trip-banner-title" id="banner-title">Loading...</div>
     <div class="trip-banner-divider"></div>
     <div class="trip-banner-meta">
-      <div class="trip-banner-item">
-        <span class="trip-banner-item-icon">◎</span>
-      </div>
+      <div class="trip-banner-item"><span class="trip-banner-item-icon">◎</span></div>
       <div class="trip-banner-item">
         <span class="trip-banner-item-icon">◷</span>
         <span class="trip-banner-item-value" id="banner-dates">—</span>
@@ -163,14 +326,14 @@
     <div class="trip-banner-badge" id="banner-badge">shared</div>
   </div>
 
-  <!-- Polaroid viewer -->
+  <!-- Polaroid viewer (single photo) -->
   <div class="polaroid-viewer" id="polaroid-viewer">
-  <button class="polaroid-fullscreen-btn" id="fullscreen-btn" onclick="toggleFullImage()" title="Full image mode">⛶</button>
-  <button class="polaroid-cluster-btn" id="cluster-btn" onclick="toggleFullMediasMode()">CLUSTER</button>
-    <button class="polaroid-close" onclick="closePolaroidViewer()">✕</button>
+    <button class="polaroid-fullscreen-btn" id="fullscreen-btn" onclick="toggleFullImage()" title="Full image">⛶</button>
+    <button class="polaroid-cluster-btn"    id="cluster-btn"    onclick="toggleFullMediasMode()">CLUSTER</button>
+    <button class="polaroid-close"          onclick="closePolaroidViewer()">✕</button>
     <div class="polaroid-viewer-title">TRIPPING</div>
     <div class="polaroid">
-      <img class="polaroid-img" id="polaroid-img" src="" alt="trip photo"/>
+      <img   class="polaroid-img" id="polaroid-img"   src="" alt="trip photo"/>
       <video class="polaroid-img" id="polaroid-video" style="display:none" autoplay muted playsinline loop></video>
       <div class="polaroid-caption">
         <div class="polaroid-caption-title" id="polaroid-title">—</div>
@@ -195,7 +358,62 @@
     </div>
   </div>
 
-</div>
+  <!-- ── OPEN PHOTOS BUTTON ── -->
+  <button id="open-line-btn" onclick="openLinePanel()">📷 PHOTOS</button>
+
+  <!-- ════════════════════════════════
+       CLOTHESLINE PANEL
+  ════════════════════════════════ -->
+  <div id="line-panel">
+
+    <!-- TOOLBAR: close + cluster (left) | style pills (right) -->
+    <div id="line-toolbar">
+      <div class="toolbar-left">
+        <button class="line-close-btn"    onclick="closeLinePanel()">✕ CLOSE</button>
+        <button class="line-cluster-btn active" id="line-cluster-toggle" onclick="toggleLineCluster()">CLUSTER</button>
+      </div>
+      <div class="toolbar-right">
+        <div class="line-style-group">
+          <span class="line-style-label">map</span>
+          <button class="line-style-btn active" id="line-style-dark"
+                  title="Dark" style="background:linear-gradient(135deg,#1a1a2e,#16213e)"
+                  onclick="setMapStyleSync('dark')"></button>
+          <button class="line-style-btn" id="line-style-streets"
+                  title="Streets" style="background:linear-gradient(135deg,#e8dcc8,#c5b48a)"
+                  onclick="setMapStyleSync('streets')"></button>
+          <button class="line-style-btn" id="line-style-satellite"
+                  title="Satellite" style="background:linear-gradient(135deg,#1a3a1a,#2d5a2d)"
+                  onclick="setMapStyleSync('satellite')"></button>
+        </div>
+      </div>
+    </div>
+
+    <!-- SCROLL BUTTONS -->
+    <button class="line-scroll-btn hidden" id="line-btn-left"  onclick="scrollLine(-1)">←</button>
+    <button class="line-scroll-btn"        id="line-btn-right" onclick="scrollLine(1)">→</button>
+
+    <!-- SCENE -->
+    <div id="line-outer">
+      <div id="line-scene">
+        <svg id="line-wire-svg" preserveAspectRatio="none">
+          <defs>
+            <marker id="line-arrowhead" markerWidth="9" markerHeight="7"
+                    refX="7" refY="3.5" orient="auto">
+              <path d="M0,0 L0,7 L9,3.5 z"
+                    fill="none" stroke="#c8a87a" stroke-width="1.2" stroke-linejoin="round"/>
+            </marker>
+          </defs>
+          <path id="line-wire-shadow" fill="none" stroke="rgba(0,0,0,0.3)"
+                stroke-width="3" transform="translate(0,3)"/>
+          <path id="line-wire-path" fill="none" stroke="#c8b898"
+                stroke-width="1.4" opacity="0.8"/>
+          <g id="line-arrows"></g>
+        </svg>
+      </div>
+    </div>
+
+  </div><!-- /line-panel -->
+</div><!-- /map-screen -->
 
 
 <!-- ── SCRIPTS ── -->
@@ -217,14 +435,49 @@
 <script src="../static/scripts/trip_view/render_image_label.js"></script>
 <script src="../static/scripts/trip_view_main.js"></script>
 <script src="../static/scripts/trip_cover/trip_cover.js"></script>
+<script src="../static/scripts/trip_view/polaroid_line_render.js"></script>
 
 <script>
-// ── TRANSITION: cover → map ──
-const enterTrip =()=> {
-    showLoading()
-    document.getElementById('cover-screen').classList.add('hidden')
-    document.getElementById('map-screen').classList.add('visible')
-    hideLoading()
+// ══════════════════════════════════════════
+// COVER → MAP
+// ══════════════════════════════════════════
+const enterTrip = () => {
+  showLoading()
+  document.getElementById('cover-screen').classList.add('hidden')
+  document.getElementById('map-screen').classList.add('visible')
+  hideLoading()
+}
+
+// ══════════════════════════════════════════
+// LINE PANEL
+// ══════════════════════════════════════════
+const openLinePanel = () => {
+  document.getElementById('line-panel').classList.add('open')
+  document.getElementById('open-line-btn').style.opacity = '0.3'
+  document.getElementById('open-line-btn').style.pointerEvents = 'none'
+}
+
+const closeLinePanel = () => {
+  document.getElementById('line-panel').classList.remove('open')
+  document.getElementById('open-line-btn').style.opacity = '1'
+  document.getElementById('open-line-btn').style.pointerEvents = ''
+}
+
+const toggleLineCluster = () => {
+  const btn = document.getElementById('line-cluster-toggle')
+  btn.classList.toggle('active')
+  // hook: window.dispatchEvent(new CustomEvent('clusterModeChanged', { detail: { cluster: btn.classList.contains('active') } }))
+}
+
+// ── sync style between toolbar pills and map style switcher ──
+const setMapStyleSync = (style) => {
+  // line toolbar pills
+  document.querySelectorAll('.line-style-btn').forEach(b => b.classList.remove('active'))
+  document.getElementById(`line-style-${style}`).classList.add('active')
+  // map top-right switcher
+  document.querySelectorAll('.style-btn').forEach(b => b.classList.remove('active'))
+  document.getElementById(`style-${style}`).classList.add('active')
+  // hook into your existing: switchStyle(style)
 }
 </script>
 
