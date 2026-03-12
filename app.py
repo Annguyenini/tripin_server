@@ -64,8 +64,6 @@ def run_sentry_log():
     sentry_dns = os.getenv('SENTRY_DNS')
     sentry_sdk.init(
         dsn=sentry_dns,
-        # Add data like request headers and IP for users,
-        # see https://docs.sentry.io/platforms/python/data-management/data-collected/ for more info
         send_default_pii=True,
         enable_logs=True,
     )
@@ -74,20 +72,20 @@ def run_sentry_log():
 
 server_auth_service = ServerAuth()
 server_auth_service.skip_indentity()
-# if not server_auth_service.verify_indentity():
-#     print("Wrong password!❌")
-#     sys.exit(1)
-# print("Successfully authenticated!✅")
 server = Server()
 
-# run_sentry_log()
+def sentry():
+    if os.getenv('ENABLE_SENTRY') == 'true':
+        run_sentry_log()
+sentry()
+
 app = server.app
 def create_app():
     return server.app
 if __name__ =="__main__":
     print("initialize s3")
     print(app.url_map)
-    print('ver 4')
+    print('ver 5')
    
     # run_tasks()
     app.run( host ="0.0.0.0", port =8000,debug=True)
