@@ -81,7 +81,7 @@ sentry()
 
 app = server.app
 def create_app():
-    return server.appQ
+    return server.app
 if __name__ =="__main__":
     print("initialize s3")
     print(app.url_map)
