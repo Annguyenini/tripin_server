@@ -48,10 +48,12 @@ DATABASEKEYS= SimpleNamespace(
         MEDIA_ID ='id',
         TRIP_ID='trip_id',
         MEDIA_TYPE='media_type',
+        MEDIA_PATH='media_path',
         KEY='key',
         LONGITUDE='longitude',
         LATITUDE='latitude',
-        TIME_STAMP='time_stamp'
+        TIME_STAMP='time_stamp',
+        VERSION = 'version'
     ),
     TRIP_COORDINATES =SimpleNamespace(
         COORDINATES_ID = 'id',

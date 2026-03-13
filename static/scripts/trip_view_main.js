@@ -12,7 +12,7 @@ const map = new mapboxgl.Map({
     container: 'map',
     style: STYLES.streets,
     center: [0, 20],
-    zoom: 2,
+    zoom: 10,
     projection: 'globe',
 });
 
@@ -37,5 +37,6 @@ zoomControl(map)
 styleSwitcher(map)
 // setup trip banner
 setUpTripDataBanner()
+renderTripMedias(map, 10)
 
 hideLoading()

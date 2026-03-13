@@ -15,13 +15,17 @@ const renderTripMedias= async (map,zoom) => {
     _zoom =zoom
     if (!_medias){
         _medias = await requestTripMedias()
+        console.log('setup')
+        setUpPolaroidLine(_medias)
+        
     }
+    
     if (!_cluster ){
         // console.log('compute')
         _cluster = clustersMap(_medias)
     }
     renderImageLabels(_cluster[zoom]||[],map)
-}
+}   
 const toggleFullMediasMode=()=>{
     _clusterMode = !_clusterMode
     const btn = document.getElementById('cluster-btn')

@@ -1,0 +1,746 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>Polaroid Line — TRIPPING</title>
+<link href="https://fonts.googleapis.com/css2?family=Permanent+Marker&family=DM+Mono:wght@300;400&display=swap" rel="stylesheet"/>
+<style>
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+:root {
+  --bg:           #0d0c0a;
+  --bg2:          #141210;
+  --white:        #f5f0e8;
+  --tape:         #40372a;
+  --tape2:        #342411;
+  --wire:         #000000;
+  --black:        #1a1a1a;
+  --muted:        #5a5550;
+  --red:          #c03030;
+  --font-mono:    'DM Mono', monospace;
+  --font-display: 'Permanent Marker', cursive;
+}
+
+html, body {
+  width: 100%; height: 100%;
+  background: var(--bg);
+  font-family: var(--font-mono);
+  overflow: hidden;
+  cursor: crosshair;
+}
+
+/* ── BACKGROUND GRADIENT ── */
+body::before {
+  content: '';
+  position: fixed; inset: 0;
+  background: radial-gradient(ellipse 80% 60% at 40% 30%, #eee0cf 0%, #c7b389 60%, #5b4937 100%);
+  z-index: 0;
+}
+
+/* ── GRAIN ── */
+body::after {
+  content: '';
+  position: fixed; inset: 0;
+  z-index: 999;
+  pointer-events: none;
+  opacity: 0.055;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='300' height='300'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.75' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='300' height='300' filter='url(%23n)'/%3E%3C/svg%3E");
+}
+
+/* ── DRIPS at top ── */
+.drips {
+  position: fixed;
+  top: 0; left: 0; right: 0;
+  display: flex;
+  justify-content: space-around;
+  padding: 0 40px;
+  z-index: 5;
+  pointer-events: none;
+}
+
+.drip {
+  width: var(--w, 5px);
+  border-radius: 0 0 50% 50%;
+  background: #1a1a1a;
+  animation: dripFall var(--dur, 4s) ease-in var(--delay, 0s) infinite;
+  opacity: 0;
+}
+
+@keyframes dripFall {
+  0%        { height: 0; opacity: 0; }
+  8%        { opacity: 0.6; }
+  60%       { height: var(--h, 50px); opacity: 0.6; }
+  78%,100%  { height: var(--h, 50px); opacity: 0; }
+}
+
+/* ── PETALS ── */
+.petal {
+  position: fixed;
+  top: -30px;
+  pointer-events: none;
+  z-index: 4;
+  opacity: 0;
+  animation: petalFall var(--pd, 6s) ease-in var(--pdelay, 0s) infinite;
+}
+
+@keyframes petalFall {
+  0%   { transform: translateX(0) rotate(0deg); opacity: 0; top: -30px; }
+  5%   { opacity: var(--po, 0.18); }
+  85%  { opacity: var(--po, 0.18); }
+  100% { transform: translateX(var(--px, 40px)) rotate(var(--pr, 360deg)); opacity: 0; top: 110vh; }
+}
+
+/* ── BRAND WATERMARK ── */
+.brand-watermark {
+  position: fixed;
+  bottom: 20px;
+  left: 50%;
+  transform: translateX(-50%);
+  font-family: var(--font-display);
+  font-size: 11px;
+  color: rgba(200,184,152,0.2);
+  letter-spacing: 0.3em;
+  z-index: 6;
+  pointer-events: none;
+  white-space: nowrap;
+}
+
+/* ── OUTER CONTAINER ── */
+#line-outer {
+  position: relative;
+  width: 100%; height: 100vh;
+  overflow: hidden;
+  z-index: 2;
+}
+
+/* ── SCROLLABLE SCENE ── */
+#scene {
+  position: relative;
+  height: 100vh;
+  will-change: transform;
+  transition: transform 0.55s cubic-bezier(.16,1,.3,1);
+}
+
+/* ── SVG WIRE ── */
+#wire-svg {
+  position: absolute;
+  top: 0; left: 0;
+  height: 65%;
+  pointer-events: none;
+  z-index: 1;
+}
+
+/* ── POLAROID ── */
+.polaroid {
+  position: absolute;
+  background: var(--white);
+  padding: 6px 6px 30px 6px;
+  box-shadow:
+    2px 3px 0 rgba(0,0,0,0.3),
+    4px 6px 16px rgba(0,0,0,0.55),
+    0 0 0 1px rgba(0,0,0,0.08);
+  cursor: pointer;
+  transform-origin: top center;
+  z-index: 3;
+  user-select: none;
+  /* aged paper tint via filter */
+  filter: sepia(0.12) contrast(0.97);
+  transition: filter 0.2s, box-shadow 0.2s;
+}
+
+.polaroid:hover {
+  box-shadow:
+    3px 5px 0 rgba(0,0,0,0.35),
+    8px 12px 28px rgba(0,0,0,0.75),
+    0 0 0 1px rgba(0,0,0,0.1);
+  filter: sepia(0.06) contrast(1.02);
+  z-index: 10;
+}
+
+/* aged corner fold effect */
+.polaroid::after {
+  content: '';
+  position: absolute;
+  bottom: 0; right: 0;
+  width: 14px; height: 14px;
+  background: linear-gradient(135deg, transparent 50%, rgba(0,0,0,0.08) 50%);
+  pointer-events: none;
+}
+
+.polaroid img,
+.polaroid video {
+  display: block;
+  width: 100%; height: 100%;
+  object-fit: cover;
+  background: #1a1a1a;
+  /* slight vintage film look */
+  filter: contrast(1.04) saturate(0.88);
+}
+
+.polaroid-empty {
+  width: 100%; height: 100%;
+  background: linear-gradient(135deg, #1a1714 0%, #0e0d0b 100%);
+  display: flex; align-items: center; justify-content: center;
+}
+
+.polaroid-empty::after {
+  content: 'no photo';
+  font-size: 8px;
+  color: rgba(200,184,152,0.2);
+  letter-spacing: 0.12em;
+  font-family: var(--font-mono);
+}
+
+/* handwritten-style label */
+.polaroid-label {
+  position: absolute;
+  bottom: 6px;
+  left: 0; right: 0;
+  text-align: center;
+  font-family: var(--font-display);
+  font-size: 10px;
+  color: #444;
+  letter-spacing: 0.04em;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  padding: 0 6px;
+}
+
+/* ── TAPE ── */
+.tape {
+  position: absolute;
+  top: -10px;
+  left: 50%;
+  transform: translateX(-50%) rotate(var(--tape-rot, -1deg));
+  width: 28px; height: 16px;
+  background: var(--tape);
+  opacity: 0.7;
+  border-radius: 1px;
+  z-index: 4;
+  /* tape texture lines */
+  background-image: repeating-linear-gradient(
+    90deg,
+    transparent,
+    transparent 2px,
+    rgba(255,255,255,0.06) 2px,
+    rgba(255,255,255,0.06) 4px
+  );
+}
+
+/* ── SWING ── */
+@keyframes swing {
+  0%,100% { transform: var(--base-rot) rotate(-1.2deg); }
+  50%      { transform: var(--base-rot) rotate(1.2deg); }
+}
+
+.polaroid.swinging {
+  animation:
+    dropIn 0.6s cubic-bezier(.16,1,.3,1) var(--drop-delay, 0s) both,
+    swing  var(--swing-dur, 4s) ease-in-out calc(var(--drop-delay,0s) + 0.6s) infinite;
+}
+
+@keyframes dropIn {
+  from { opacity: 0; transform: var(--base-rot) translateY(-28px); }
+  to   { opacity: 1; transform: var(--base-rot); }
+}
+
+/* ── BADGE ── */
+.polaroid-badge {
+  position: absolute;
+  top: -9px; right: -9px;
+  width: 21px; height: 21px;
+  background: var(--red);
+  color: var(--white);
+  border-radius: 50%;
+  font-size: 8px;
+  display: flex; align-items: center; justify-content: center;
+  font-family: var(--font-mono);
+  font-weight: 500;
+  z-index: 5;
+  box-shadow: 1px 1px 5px rgba(0,0,0,0.6);
+  border: 1px solid rgba(255,255,255,0.1);
+}
+
+/* ── VIDEO PLAY ── */
+.polaroid-play {
+  position: absolute;
+  inset: 6px 6px 30px 6px;
+  display: flex; align-items: center; justify-content: center;
+  pointer-events: none;
+  background: rgba(0,0,0,0.15);
+}
+.polaroid-play::after {
+  content: '▶';
+  font-size: 16px;
+  color: rgba(245,240,232,0.9);
+  text-shadow: 0 1px 8px rgba(0,0,0,0.7);
+}
+
+/* ── SCROLL BUTTONS ── */
+.scroll-btn {
+  position: fixed;
+  top: 50%;
+  transform: translateY(-50%);
+  z-index: 20;
+  background: rgba(13,12,10,0.7);
+  border: 1.5px solid rgba(200,184,152,0.2);
+  color: rgba(200,184,152,0.8);
+  font-family: var(--font-display);
+  font-size: 18px;
+  width: 40px; height: 40px;
+  border-radius: 2px;
+  cursor: pointer;
+  display: flex; align-items: center; justify-content: center;
+  transition: background 0.15s, border-color 0.15s, opacity 0.3s;
+  backdrop-filter: blur(6px);
+  box-shadow: 3px 3px 0 rgba(0,0,0,0.4);
+}
+.scroll-btn:hover {
+  background: rgba(200,184,152,0.12);
+  border-color: rgba(200,184,152,0.4);
+  color: rgba(200,184,152,1);
+}
+.scroll-btn.hidden { opacity: 0; pointer-events: none; }
+#btn-left  { left: 14px; }
+#btn-right { right: 14px; }
+
+/* ── EDGE FADES ── */
+#line-outer::before,
+#line-outer::after {
+  content: '';
+  position: absolute;
+  top: 0; bottom: 0;
+  width: 100px;
+  z-index: 10;
+  pointer-events: none;
+}
+#line-outer::before {
+  left: 0;
+  background: linear-gradient(to right, #0d0c0a 0%, transparent 100%);
+}
+#line-outer::after {
+  right: 0;
+  background: linear-gradient(to left, #0d0c0a 0%, transparent 100%);
+}
+
+/* ── ROTATE MESSAGE ── */
+#rotate-msg {
+  display: none;
+  position: fixed; inset: 0;
+  z-index: 9999;
+  background: var(--bg);
+  flex-direction: column;
+  align-items: center; justify-content: center;
+  gap: 20px;
+}
+
+.rotate-drips {
+  position: absolute;
+  top: 0; left: 0; right: 0;
+  display: flex;
+  justify-content: space-around;
+  pointer-events: none;
+}
+
+.rotate-drip {
+  width: var(--w,5px);
+  border-radius: 0 0 50% 50%;
+  background: #1a1a1a;
+  animation: dripFall var(--dur,4s) ease-in var(--delay,0s) infinite;
+}
+
+.rotate-icon {
+  font-size: 52px;
+  animation: rotateHint 1.8s ease-in-out infinite;
+  filter: grayscale(1);
+}
+
+.rotate-text {
+  font-family: var(--font-display);
+  font-size: 24px;
+  color: rgba(200,184,152,0.7);
+  letter-spacing: 0.08em;
+}
+
+.rotate-sub {
+  font-family: var(--font-mono);
+  font-size: 10px;
+  color: var(--muted);
+  letter-spacing: 0.15em;
+  text-transform: uppercase;
+}
+
+@keyframes rotateHint {
+  0%,40%,100% { transform: rotate(0deg); }
+  60%,80%     { transform: rotate(90deg); }
+}
+
+@media (max-width: 768px) and (orientation: portrait) {
+  #rotate-msg { display: flex; }
+}
+</style>
+</head>
+<body>
+
+<!-- DRIPS -->
+<div class="drips">
+  <div class="drip" style="--h:38px;--w:4px;--dur:4.2s;--delay:0s"></div>
+  <div class="drip" style="--h:60px;--w:6px;--dur:5.1s;--delay:0.6s"></div>
+  <div class="drip" style="--h:28px;--w:4px;--dur:3.8s;--delay:1.3s"></div>
+  <div class="drip" style="--h:72px;--w:7px;--dur:5.6s;--delay:0.2s"></div>
+  <div class="drip" style="--h:44px;--w:5px;--dur:4.6s;--delay:2s"></div>
+  <div class="drip" style="--h:55px;--w:6px;--dur:4.9s;--delay:0.8s"></div>
+  <div class="drip" style="--h:32px;--w:4px;--dur:4s;--delay:1.6s"></div>
+  <div class="drip" style="--h:65px;--w:7px;--dur:5.3s;--delay:0.4s"></div>
+  <div class="drip" style="--h:40px;--w:5px;--dur:4.3s;--delay:1s"></div>
+  <div class="drip" style="--h:50px;--w:5px;--dur:4.7s;--delay:2.4s"></div>
+  <div class="drip" style="--h:30px;--w:4px;--dur:3.7s;--delay:1.9s"></div>
+  <div class="drip" style="--h:80px;--w:8px;--dur:5.8s;--delay:0.3s"></div>
+</div>
+
+<!-- PETALS injected by JS -->
+<div id="petals"></div>
+
+<!-- BRAND WATERMARK -->
+<div class="brand-watermark">T R I P P I N G</div>
+
+<!-- ROTATE MESSAGE -->
+<div id="rotate-msg">
+  <div class="rotate-drips">
+    <div class="rotate-drip" style="--h:40px;--w:5px;--dur:4s;--delay:0s"></div>
+    <div class="rotate-drip" style="--h:60px;--w:7px;--dur:5s;--delay:0.5s"></div>
+    <div class="rotate-drip" style="--h:35px;--w:4px;--dur:3.8s;--delay:1s"></div>
+    <div class="rotate-drip" style="--h:75px;--w:8px;--dur:5.5s;--delay:0.2s"></div>
+    <div class="rotate-drip" style="--h:50px;--w:6px;--dur:4.5s;--delay:1.8s"></div>
+  </div>
+  <div class="rotate-icon">📱</div>
+  <div class="rotate-text">ROTATE TO VIEW</div>
+  <div class="rotate-sub">this experience is landscape only</div>
+</div>
+
+<!-- MAIN SCENE -->
+<div id="line-outer">
+  <div id="scene">
+    <svg id="wire-svg" preserveAspectRatio="none">
+      <defs>
+        <marker id="arrowhead" markerWidth="9" markerHeight="7"
+                refX="7" refY="3.5" orient="auto">
+          <path d="M0,0 L0,7 L9,3.5 z"
+                fill="none" stroke="#c8a87a" stroke-width="1.2"
+                stroke-linejoin="round"/>
+        </marker>
+        <!-- wire shadow filter -->
+        <filter id="wire-shadow" x="-5%" y="-50%" width="110%" height="200%">
+          <feDropShadow dx="0" dy="2" stdDeviation="2" flood-color="#000" flood-opacity=""/>
+        </filter>
+      </defs>
+      <!-- shadow wire -->
+      <path id="wire-shadow-path" fill="none" stroke="rgba(0,0,0,0.3)"
+            stroke-width="3" transform="translate(0,3)"/>
+      <!-- main wire -->
+      <path id="wire-path" fill="none" stroke="#c8b898"
+            stroke-width="1.4" opacity="1"/>
+      <g id="arrows"></g>
+    </svg>
+  </div>
+</div>
+
+<!-- SCROLL BUTTONS -->
+<button class="scroll-btn hidden" id="btn-left"  onclick="scrollLine(-1)">←</button>
+<button class="scroll-btn"        id="btn-right" onclick="scrollLine(1)">→</button>
+
+<script>
+// ═══════════════════════════════════════════
+// TRIPPING — polaroid_line.js
+// Vintage clothesline with petals + grain
+// ═══════════════════════════════════════════
+
+const WIRE_Y_RATIO = 0.20
+const PHOTO_W      = 115
+const PHOTO_H      = 115
+const PHOTO_W_P    = 86
+const PHOTO_H_P    = 112
+const CAPTION_H    = 30
+const SPACING      = 165
+const PAD_X        = 110
+
+let _assets    = []
+let _onOpen    = null
+let _scrollX   = 0
+let _maxScroll = 0
+
+// ── PETALS ──
+const PETAL_SVGS = [
+  // cherry blossom
+  `<svg width="18" height="18" viewBox="0 0 18 18" xmlns="http://www.w3.org/2000/svg">
+    <ellipse cx="9" cy="5" rx="4" ry="6" fill="rgba(210,170,150,VAR)" transform="rotate(0,9,9)"/>
+    <ellipse cx="9" cy="5" rx="4" ry="6" fill="rgba(210,170,150,VAR)" transform="rotate(72,9,9)"/>
+    <ellipse cx="9" cy="5" rx="4" ry="6" fill="rgba(210,170,150,VAR)" transform="rotate(144,9,9)"/>
+    <ellipse cx="9" cy="5" rx="4" ry="6" fill="rgba(210,170,150,VAR)" transform="rotate(216,9,9)"/>
+    <ellipse cx="9" cy="5" rx="4" ry="6" fill="rgba(210,170,150,VAR)" transform="rotate(288,9,9)"/>
+  </svg>`,
+  // single petal
+  `<svg width="14" height="20" viewBox="0 0 14 20" xmlns="http://www.w3.org/2000/svg">
+    <ellipse cx="7" cy="10" rx="5" ry="9" fill="rgba(190,155,130,VAR)"/>
+  </svg>`,
+  // leaf
+  `<svg width="16" height="12" viewBox="0 0 16 12" xmlns="http://www.w3.org/2000/svg">
+    <path d="M8,1 Q14,6 8,11 Q2,6 8,1Z" fill="rgba(120,100,70,VAR)"/>
+  </svg>`,
+]
+
+function _spawnPetals() {
+  const container = document.getElementById('petals')
+  for (let i = 0; i < 22; i++) {
+    const el    = document.createElement('div')
+    el.className = 'petal'
+    const left   = Math.random() * 100
+    const dur    = 5 + Math.random() * 8
+    const delay  = Math.random() * 12
+    const drift  = (Math.random() - 0.5) * 120
+    const rot    = Math.random() * 720 - 360
+    const op     = (0.1 + Math.random() * 0.15).toFixed(2)
+    const svg    = PETAL_SVGS[i % PETAL_SVGS.length].replace(/VAR/g, op)
+    el.innerHTML = svg
+    el.style.cssText = `
+      left: ${left}vw;
+      --pd: ${dur}s;
+      --pdelay: ${delay}s;
+      --px: ${drift}px;
+      --pr: ${rot}deg;
+      --po: ${op};
+    `
+    container.appendChild(el)
+  }
+}
+
+// ── RENDER ──
+function initPolaroidLine(assets, onOpen) {
+  _assets = assets
+  _onOpen = onOpen
+  _spawnPetals()
+  _render()
+}
+
+function _render() {
+  const scene  = document.getElementById('scene')
+  const H      = window.innerHeight
+  const count  = _assets.length
+  const totalW = PAD_X * 2 + (count - 1) * SPACING + PHOTO_W + 60
+
+  scene.style.width = totalW + 'px'
+  _maxScroll = Math.max(0, totalW - window.innerWidth)
+  _scrollX   = 0
+  scene.style.transform = 'translateX(0px)'
+
+  scene.querySelectorAll('.polaroid').forEach(e => e.remove())
+  document.getElementById('arrows').innerHTML = ''
+
+  const svg = document.getElementById('wire-svg')
+  svg.setAttribute('width',   totalW)
+  svg.setAttribute('viewBox', `0 0 ${totalW} ${H * 0.65}`)
+
+  const wireY = H * WIRE_Y_RATIO
+  let pts = []
+  for (let i = 0; i <= count + 2; i++) {
+    const x = (i / (count + 2)) * (totalW + 40) - 20
+    const y = wireY + Math.sin(i * 0.8) * 11 + Math.cos(i * 0.4) * 4
+    pts.push([x, y])
+  }
+
+  const wirePath = pts.map((p, i) => {
+    if (i === 0) return `M${p[0]},${p[1]}`
+    const px = pts[i-1]
+    return `Q${(px[0]+p[0])/2},${(px[1]+p[1])/2} ${p[0]},${p[1]}`
+  }).join(' ')
+
+  document.getElementById('wire-path').setAttribute('d', wirePath)
+  document.getElementById('wire-shadow-path').setAttribute('d', wirePath)
+
+  const clusterPts = []
+
+  _assets.forEach((asset, i) => {
+    const cx     = PAD_X + i * SPACING
+    const wireYi = wireY + Math.sin(i * 0.8) * 11 + Math.cos(i * 0.4) * 4
+    const port   = (i % 5 === 2) || (i % 7 === 4)
+    const pW     = port ? PHOTO_W_P : PHOTO_W
+    const pH     = port ? PHOTO_H_P : PHOTO_H
+    const rot    = _rot(i)
+    const drop   = _drop(i)
+    const tapeRot = (Math.random() * 6 - 3).toFixed(1)
+
+    const left = cx - pW / 2
+    const top  = wireYi + drop
+
+    const el = document.createElement('div')
+    el.className = 'polaroid swinging'
+    el.style.cssText = `
+      left: ${left}px;
+      top:  ${top}px;
+      width: ${pW}px;
+      height: ${pH + CAPTION_H}px;
+      --base-rot: rotate(${rot}deg);
+      --swing-dur: ${3.2 + (i % 4) * 0.85}s;
+      --drop-delay: ${i * 0.055}s;
+    `
+
+    const inner = document.createElement('div')
+    inner.style.cssText = `width:${pW-12}px;height:${pH}px;overflow:hidden;position:relative;`
+
+    if (asset.media_path) {
+      if (asset.media_type === 'video') {
+        const vid = document.createElement('video')
+        vid.src = asset.media_path
+        vid.muted = true; vid.preload = 'metadata'
+        vid.style.cssText = `width:100%;height:100%;object-fit:cover;`
+        inner.appendChild(vid)
+        const play = document.createElement('div')
+        play.className = 'polaroid-play'
+        el.appendChild(play)
+      } else {
+        const img = document.createElement('img')
+        img.src = asset.media_path
+        img.crossOrigin = 'anonymous'
+        img.style.cssText = `width:100%;height:100%;object-fit:cover;`
+        inner.appendChild(img)
+      }
+    } else {
+      const empty = document.createElement('div')
+      empty.className = 'polaroid-empty'
+      inner.appendChild(empty)
+    }
+
+    el.appendChild(inner)
+
+    const tape = document.createElement('div')
+    tape.className = 'tape'
+    tape.style.setProperty('--tape-rot', `${tapeRot}deg`)
+    el.appendChild(tape)
+
+    const label = document.createElement('div')
+    label.className = 'polaroid-label'
+    label.textContent = asset.title || ''
+    el.appendChild(label)
+
+    if (asset.members && asset.members.length > 1) {
+      const badge = document.createElement('div')
+      badge.className = 'polaroid-badge'
+      badge.textContent = asset.members.length
+      el.appendChild(badge)
+    }
+
+    el.addEventListener('click', () => {
+      if (_onOpen) _onOpen(asset.members || [asset], 0)
+    })
+
+    scene.appendChild(el)
+
+    clusterPts.push({
+      cx, cy: wireYi + drop + (pH + CAPTION_H) / 2,
+      members: asset.members?.length || 1
+    })
+  })
+
+  // arrows
+  const arrowG = document.getElementById('arrows')
+  for (let i = 0; i < clusterPts.length - 1; i++) {
+    const a = clusterPts[i], b = clusterPts[i+1]
+    if (a.members > 1 || b.members > 1) {
+      const mx = (a.cx + b.cx) / 2
+      const my = Math.min(a.cy, b.cy) - 50
+      const path = document.createElementNS('http://www.w3.org/2000/svg','path')
+      path.setAttribute('d', `M${a.cx},${a.cy} Q${mx},${my} ${b.cx},${b.cy}`)
+      path.setAttribute('fill','none')
+      path.setAttribute('stroke', '#6a5a40')       // ← darker
+      path.setAttribute('stroke-width','1.1')
+      path.setAttribute('opacity', '0.5') 
+      path.setAttribute('stroke-dasharray','4 3')
+      path.setAttribute('marker-end','url(#arrowhead)')
+      arrowG.appendChild(path)
+    }
+  }
+
+  _updateButtons()
+}
+
+// ── SCROLL ──
+const SCROLL_STEP = 340
+
+function scrollLine(dir) {
+  _scrollX = Math.max(0, Math.min(_maxScroll, _scrollX + dir * SCROLL_STEP))
+  document.getElementById('scene').style.transform = `translateX(${-_scrollX}px)`
+  _updateButtons()
+}
+
+function _updateButtons() {
+  document.getElementById('btn-left').classList.toggle('hidden',  _scrollX <= 0)
+  document.getElementById('btn-right').classList.toggle('hidden', _scrollX >= _maxScroll)
+}
+
+// ── DRAG ──
+let _drag = false, _dx0 = 0, _sx0 = 0
+
+document.getElementById('line-outer').addEventListener('mousedown', e => {
+  _drag = true; _dx0 = e.clientX; _sx0 = _scrollX
+  document.body.style.cursor = 'grabbing'
+})
+document.addEventListener('mousemove', e => {
+  if (!_drag) return
+  _scrollX = Math.max(0, Math.min(_maxScroll, _sx0 - (e.clientX - _dx0)))
+  document.getElementById('scene').style.transform = `translateX(${-_scrollX}px)`
+  _updateButtons()
+})
+document.addEventListener('mouseup', () => { _drag = false; document.body.style.cursor = '' })
+
+let _tx0 = 0, _tsc0 = 0
+document.getElementById('line-outer').addEventListener('touchstart', e => {
+  _tx0 = e.touches[0].clientX; _tsc0 = _scrollX
+}, { passive: true })
+document.getElementById('line-outer').addEventListener('touchmove', e => {
+  _scrollX = Math.max(0, Math.min(_maxScroll, _tsc0 - (e.touches[0].clientX - _tx0)))
+  document.getElementById('scene').style.transform = `translateX(${-_scrollX}px)`
+  _updateButtons()
+}, { passive: true })
+
+// ── HELPERS ──
+function _rot(i) {
+  return [-7, 3, -5, 8, -2, 11, -8, 4, -10, 6, -4, 9][i % 12]
+}
+function _drop(i) {
+  return [8, 5, 95, 10, 105, 6, 12, 98, 5, 88, 7, 102][i % 12]
+}
+
+window.addEventListener('resize', _render)
+
+// ── DEMO ──
+const imgs = (ids) => ids.map(id => ({
+  media_path: `https://picsum.photos/seed/${id}/400/400`,
+  media_type: 'image', title: ''
+}))
+
+const demoAssets = [
+  { media_path:'https://picsum.photos/seed/dalatmtn/400/500',     media_type:'image', title:'da lat',    members: imgs(['dalatmtn','dalatflower','dalatfall']) },
+  { media_path:'https://picsum.photos/seed/hoianlantern/400/400', media_type:'image', title:'hoi an',    members: imgs(['hoianlantern','hoianboat']) },
+  { media_path:'https://picsum.photos/seed/saigon99/400/400',     media_type:'image', title:'saigon',    members: imgs(['saigon99','saigonnight','saigonstreet','saigonfood','saigonroof']) },
+  { media_path:'https://picsum.photos/seed/mekong12/400/500',     media_type:'image', title:'mekong',    members: imgs(['mekong12']) },
+  { media_path:'https://picsum.photos/seed/halong88/400/400',     media_type:'image', title:'ha long',   members: imgs(['halong88','halongkayak','halongcave']) },
+  { media_path:'https://picsum.photos/seed/hanoiold/400/400',     media_type:'image', title:'hanoi',     members: imgs(['hanoiold','hanoilake','hanoifood','hanoitrain']) },
+  { media_path:'https://picsum.photos/seed/ninh55/400/500',       media_type:'image', title:'ninh binh', members: imgs(['ninh55','ninhboat']) },
+  { media_path:'https://picsum.photos/seed/hue2024/400/400',      media_type:'image', title:'hue',       members: imgs(['hue2024','huecitadel','hueriver']) },
+  { media_path:'https://picsum.photos/seed/danang77/400/400',     media_type:'image', title:'da nang',   members: imgs(['danang77','danangbridge','danangbeach','danangmkt']) },
+  { media_path:'https://picsum.photos/seed/muine33/400/500',      media_type:'image', title:'mui ne',    members: imgs(['muine33','muinesand']) },
+  { media_path:'https://picsum.photos/seed/phuquoc1/400/400',     media_type:'image', title:'phu quoc',  members: imgs(['phuquoc1','phuquocsunset','phuquocsnorkel','phuquocmarket','phuquocnight','phuquocbeach']) },
+  { media_path:'https://picsum.photos/seed/sapa44/400/500',       media_type:'image', title:'sapa',      members: imgs(['sapa44','saparice','sapamist']) },
+  { media_path:'https://picsum.photos/seed/catba22/400/400',      media_type:'image', title:'cat ba',    members: imgs(['catba22','catbajungle']) },
+  { media_path:'https://picsum.photos/seed/binhba55/400/400',     media_type:'image', title:'binh ba',   members: imgs(['binhba55','binhbabeach','binhbacoral']) },
+]
+
+initPolaroidLine(demoAssets, (members, idx) => {
+  console.log('open viewer', members, idx)
+  // openPolaroidViewer(members, idx)
+})
+</script>
+</body>
+</html>

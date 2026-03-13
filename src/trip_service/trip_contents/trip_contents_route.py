@@ -47,7 +47,7 @@ class TripContentsRoute(RouteBase):
         self.bp.route("/<token>/coordinates-by-token",methods =["GET"])(self.get_trip_coors_by_token)
         self.bp.route("/<token>/medias-by-token",methods =["GET"])(self.get_trip_medias_by_token)
         self.bp.route('/<trip_id>/medias',methods =['GET'])(self.get_trip_medias)
-
+        self.bp.route('/delete-media',methods=["DELETE"])(self.delete_media)   
     
     def add_coordinates(self,trip_id):
         """Add a batch of coordinates to a trip.
@@ -94,6 +94,8 @@ class TripContentsRoute(RouteBase):
         Accepts multipart form with 'image' or 'video' file + metadata JSON in 'data' field.
         """
         user_data, error = self._get_authenticated_user()
+        if error:
+            return (error),401
         user_id = user_data['user_id']
 
         # check trip ownership
@@ -132,6 +134,28 @@ class TripContentsRoute(RouteBase):
             return jsonify({'message':'Failed!'}),500
         
         return jsonify({'message':'Successfully'}),200
+    
+    def delete_media(self):
+        user_data, error =self._get_authenticated_user()
+        if error:
+            return (error),401
+        user_id = user_data['user_id']
+        trip_data = request.json
+        # get media path, if none return
+        version = smart_cast(trip_data['version'])
+        if not version or not isinstance(version,int): return ({'code':'no_version','message':'No version or invalid value type was send!'})
+
+        
+        trip_id=smart_cast(trip_data['trip_id'])
+        #check for permission
+        owner_validation = self.trip_data_base_service.trip_owner_validation(user_id=user_id,trip_id=trip_id)
+        if not owner_validation:
+            return jsonify({'code':'not authorize', 'message':'Your account are not authorize to modified this trip'}),401
+        # pocess delete
+        delete_media, error_delete = self.trip_contents_service.delete_media(version=version,trip_id=trip_id)
+        if not delete_media:
+            return (error_delete),500
+        return({'code':'successfully','message':'Media delete from server successfully!'}),200
     
     def request_current_location_condition(self):
         """Get geo/weather conditions for a given lng/lat.
@@ -261,7 +285,7 @@ class TripContentsRoute(RouteBase):
         trip_id = trip_data['trip_id']
         #check for etag if it match the time frame
         # due to link of image only valid 1 hour
-        client_etag = request.headers.get('If-None-Match')
+        client_etag = None
         etag =None
         hour_bucket = int(time.time()) // 3600
         etag_key = self.trip_etag_service.get_trip_medias_etag_key(trip_id,hour_bucket)
