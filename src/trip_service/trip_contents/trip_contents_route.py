@@ -94,6 +94,8 @@ class TripContentsRoute(RouteBase):
         Accepts multipart form with 'image' or 'video' file + metadata JSON in 'data' field.
         """
         user_data, error = self._get_authenticated_user()
+        if error:
+            return (error),401
         user_id = user_data['user_id']
 
         # check trip ownership
@@ -140,8 +142,8 @@ class TripContentsRoute(RouteBase):
         user_id = user_data['user_id']
         trip_data = request.json
         # get media path, if none return
-        image_path = trip_data['image_path']
-        if not image_path: return ({'code':'no_image_path','message':'No Image path was send!'})
+        version = smart_cast(trip_data['version'])
+        if not version or not isinstance(version,int): return ({'code':'no_version','message':'No version or invalid value type was send!'})
 
         
         trip_id=smart_cast(trip_data['trip_id'])
@@ -150,7 +152,7 @@ class TripContentsRoute(RouteBase):
         if not owner_validation:
             return jsonify({'code':'not authorize', 'message':'Your account are not authorize to modified this trip'}),401
         # pocess delete
-        delete_media, error_delete = self.trip_contents_service.delete_media(media_path=image_path,trip_id=trip_id)
+        delete_media, error_delete = self.trip_contents_service.delete_media(version=version,trip_id=trip_id)
         if not delete_media:
             return (error_delete),500
         return({'code':'successfully','message':'Media delete from server successfully!'}),200
