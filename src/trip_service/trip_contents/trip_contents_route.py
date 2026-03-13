@@ -54,16 +54,10 @@ class TripContentsRoute(RouteBase):
         Requires JWT auth and trip ownership.
         Validates client version to prevent out-of-order writes.
         """
-        # verify jwt 
-        Ptoken = request.headers.get("Authorization")
-        token=Ptoken.replace("Bearer ","")
-        valid_token, Tmessage,code= self.token_service.jwt_verify(token)
-        # return if jwt is invalid or expired
-        if not valid_token:
-            return jsonify({"message":Tmessage, "code":code}),401
+        user_data, error = self._get_authenticated_user()
+        if error:
+            return (error),401
         
-        # decode user data from token
-        user_data = self.token_service.decode_jwt(token=token)
         user_id = user_data['user_id']
 
         # check if user owns the trip 
