@@ -78,7 +78,7 @@ class Auth:
         
         #new tokens generated
         refresh_token = self.tokenService.generate_jwt(user_id=userid,role=role)
-        access_token = self.tokenService.generate_jwt(user_id=userid,role=role,exp_time={"minutes":1})
+        access_token = self.tokenService.generate_jwt(user_id=userid,role=role,exp_time={"minutes":15})
         token_data ={'access_token':access_token,'refresh_token':refresh_token}
         
         ##inserted token into database

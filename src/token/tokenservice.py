@@ -164,7 +164,7 @@ class TokenService:
         new_token = self.generate_jwt(
             user_id=data['user_id'],
             role=data['role'],
-            exp_time={'minutes': 1}
+            exp_time={'minutes': 15}
         )
 
         return True, new_token
