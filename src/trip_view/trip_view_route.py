@@ -78,6 +78,8 @@ class TripViewRoute(RouteBase):
         
     def request_trip_view(self,token):
         trip_data = self._get_data_using_token(token=token)
+        if not trip_data:
+            return jsonify({'code':'failed','message':'Failed!'}),500
         # check if the token still valid 
         current_date_in_ms = int(datetime.now(timezone.utc).timestamp())
         if current_date_in_ms > int(trip_data['expired_time']):
