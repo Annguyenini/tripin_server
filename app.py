@@ -19,6 +19,9 @@ from logging.handlers import RotatingFileHandler
 import sentry_sdk
 import dotenv
 import os 
+from src.server_config.discord_error_logs import discord_error_logs,discord_request_logs,start_server_status_thread
+import traceback
+import datetime
 mail =Mail()
 dotenv.load_dotenv('.env')
 
@@ -37,18 +40,26 @@ class Server:
         user_route = UserRoute()
         sync_route = ContentsSyncRoute()
         trip_view_route = TripViewRoute()
+
         self.app.register_blueprint(auth_route.bp,url_prefix="/auth")
         self.app.register_blueprint(trip_route.bp,url_prefix="/trip")
         self.app.register_blueprint(trip_contents_route.bp,url_prefix ="/trip-contents")
         self.app.register_blueprint(user_route.bp,url_prefix="/user")
         self.app.register_blueprint(sync_route.bp,url_prefix="/sync")
         self.app.register_blueprint(trip_view_route.bp,url_prefix ="/trip-view")
+        self.app.route('/test-error',methods=['GET'])(self.test_error)
         self.app.route("/health",methods=['GET'])(self.health)    
         self.app.route("/",methods =['GET'])(self.landing)
         # self.app.route("/trip-view",methods =['GET'])(self.trip_view)
         self.app.errorhandler(404)(self.error_404_site)
         self.app.errorhandler(500)(self.error_500_site)
+        self.app.errorhandler(Exception)(self.error_exception_log)
+        self.app.after_request(self.log_request)
 
+        
+        
+    def test_error(self):
+        1/0
     def health(self):
         return jsonify({'code':'success'}),200
     def landing(self):
@@ -59,7 +70,27 @@ class Server:
         return render_template('404.html'),404
     def error_500_site(self,e):
         return render_template('500.html'),500
+    def error_exception_log(self,e):
+        now = datetime.datetime.now()
+        timestamp = now.strftime("%Y-%m-%d %H:%M")
+        trace = traceback.format_exc()
+        route = request.path
+        method = request.method
+        ip = request.remote_addr
 
+        # build embed message
+        description = f"**Route:** {route}\n**Method:** {method}\n**IP:** {ip}\n**Time:** {timestamp}\n```{trace}```"
+        discord_error_logs( description )
+
+        # return JSON to client
+        return jsonify({"error": "internal server error"}), 500
+    
+        
+    def log_request(self,response):
+        now = datetime.datetime.now()
+        timestamp = now.strftime("%Y-%m-%d %H:%M")
+        discord_request_logs(f"[{timestamp}] \nMethod:{request.method} \nURI:{request.url} \nIP:{request.remote_addr} \nCode:{response.status_code}",response.status_code)
+        return response
 def run_sentry_log():
     sentry_dns = os.getenv('SENTRY_DNS')
     sentry_sdk.init(
@@ -78,7 +109,7 @@ def sentry():
     if os.getenv('ENABLE_SENTRY') == 'true':
         run_sentry_log()
 sentry()
-
+start_server_status_thread()
 app = server.app
 def create_app():
     return server.app
@@ -90,4 +121,6 @@ if __name__ =="__main__":
     # run_tasks()
     app.run( host ="0.0.0.0", port =8000,debug=True)
     # app.run( host ="0.0.0.0", port =8000,ssl_context=("src/assets/https/cert.pem", "src/assets/https/key.pem"))
+    
+    
     
