@@ -19,7 +19,7 @@ from logging.handlers import RotatingFileHandler
 import sentry_sdk
 import dotenv
 import os 
-from src.server_config.discord_error_logs import discord_error_logs,discord_request_logs
+from src.server_config.discord_error_logs import discord_error_logs,discord_request_logs,start_server_status_thread
 import traceback
 import datetime
 mail =Mail()
@@ -109,7 +109,7 @@ def sentry():
     if os.getenv('ENABLE_SENTRY') == 'true':
         run_sentry_log()
 sentry()
-
+start_server_status_thread()
 app = server.app
 def create_app():
     return server.app
