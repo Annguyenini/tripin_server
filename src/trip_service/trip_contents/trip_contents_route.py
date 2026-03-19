@@ -252,7 +252,7 @@ class TripContentsRoute(RouteBase):
             return jsonify({'code':'not_authorize','message':'You are not authorize to get this trip data!'}),403
         
         client_hash = request.headers.get('If-None-Match')
-        server_hash = self.trip_contents_service.get_trip_medias_hash(trip_id=trip_id)\
+        server_hash = self.trip_contents_service.get_trip_medias_hash(trip_id=trip_id)
         
         # return if both have same contents
         if client_hash==server_hash:

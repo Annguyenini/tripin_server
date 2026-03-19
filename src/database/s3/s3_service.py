@@ -2,6 +2,7 @@ from src.database.s3.s3_client import s3Resource,s3Client, ClientError
 
 from src.server_config.config import Config
 from queue import Queue
+from src.server_config.service.cache import Cache
 import time
 class S3Sevice:
     _instance = None
@@ -15,19 +16,27 @@ class S3Sevice:
             return
         self.config = Config()   
         self._queue = Queue()
+        self.cache_service = Cache()
         self._init = True
         
      
     def generate_temp_uri (self,key:str,expiration:int = 3600):
         # print(s3Client)
         try:
+            cache_key = f"presigned:{key}"
+            cache = self.cache_service.get(cache_key)
+            if cache:
+                return cache
+    
             respond = s3Client.generate_presigned_url('get_object',
             Params={'Bucket': self.config.aws_bucket, 'Key': key},
             ExpiresIn=expiration,)
+            
             # print(respond)
         except ClientError as e:
             print(e)
             return None
+        self.cache_service.set(cache_key,3600,respond)
         return respond
     
     def upload_media(self,path:str,data):
@@ -53,7 +62,7 @@ class S3Sevice:
             except Exception as e:
                 # Handles all other exceptions
                 print("Other error:", e)
-            self._queue.put((item_data,item_data))
+            self._queue.put((item_path,item_data))
             time.sleep(1)
             return False
     def delete_media(self,path:str)->bool:

@@ -14,6 +14,7 @@ from src.server_config.service.Etag.auth_etag_service import AuthEtagService
 from src.database.database_keys import DATABASEKEYS
 from src.server_config.service.input_validation import InputValidation
 from src.logger.logging import get_logger
+from src.error_code.error_code import INPUT_ERROR
 #userdata user_id|email|user_name|displayname|password
 #token keyid| userid| username|token|issue name | exp name | revok
 class Auth:
@@ -49,8 +50,8 @@ class Auth:
             tuple:
         """
         #verify user input 
-        if not self.inputValidationService.username_validation(username=username): return False,({'message':'Invalid Username, require 6 to 9 letters and start with a letter'})
-        if not self.inputValidationService.password_validation(password=password) :return False,({'message':'invalid password, require 8 to 15 letters and start with a letter'})
+        if not self.inputValidationService.username_validation(username=username): return False,({'message':INPUT_ERROR.USERNAME})
+        if not self.inputValidationService.password_validation(password=password) :return False,({'message':INPUT_ERROR.PASSWORD})
         ##find username in database
         
         userdata_row = self.db.find_item_in_sql(table="tripin_auth.userdata",item="user_name",value=username)
@@ -94,10 +95,10 @@ class Auth:
     #signup function
     def signup(self,email:str,display_name:str,username:str,password:str): 
         try :
-            if not self.inputValidationService.email_validation(email=email): return False, 'invalid email'
-            if not self.inputValidationService.username_validation(username=username): return False, 'invalid username'
-            if not self.inputValidationService.displayname_validation(display_name=display_name) :return False, 'invalid display name'
-            if not self.inputValidationService.password_validation(password=password):return False ,'invalid password'
+            if not self.inputValidationService.email_validation(email=email): return False, INPUT_ERROR.EMAIL
+            if not self.inputValidationService.username_validation(username=username): return False, INPUT_ERROR.USERNAME
+            if not self.inputValidationService.displayname_validation(display_name=display_name) :return False, INPUT_ERROR.DISPLAY_NAME
+            if not self.inputValidationService.password_validation(password=password):return False ,INPUT_ERROR.PASSWORD
             ##hash password, prepare to insert to database 
             
             hashed_passwords = generate_password_hash(password)
