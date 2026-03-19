@@ -202,31 +202,34 @@ class Database:
         Returns:
             _list_: list of tuple or tuple
         """
-        con,cur = self.connect_db()
+        try:
+            con,cur = self.connect_db()
 
-    
-        if not second_condition:
-            query = f'SELECT * FROM {table} WHERE {item}=%s'
-            if order_by :                  
-                if not order_type:
-                    raise('need to specify the order_type')
-                query =f'SELECT * FROM {table} WHERE {item}=%s ORDER BY {order_by} {order_type}'
-            cur.execute (query=query,vars=(value,))
-        else :
-            query =f'SELECT * FROM {table} WHERE {item}=%s AND {second_item} =%s'
-            if order_by :                  
-                if not order_type:
-                    raise('need to specify the order_type')
-                query =f'SELECT * FROM {table} WHERE {item}=%s AND {second_item} =%s ORDER BY {order_by} {order_type}'
-            cur.execute(query,(value,second_value,))
         
-        
-        if return_option =="fetchall":
-            item = cur.fetchall()
-        else:
-            item = cur.fetchone()
-        return item
-    
+            if not second_condition:
+                query = f'SELECT * FROM {table} WHERE {item}=%s'
+                if order_by :                  
+                    if not order_type:
+                        raise('need to specify the order_type')
+                    query =f'SELECT * FROM {table} WHERE {item}=%s ORDER BY {order_by} {order_type}'
+                cur.execute (query=query,vars=(value,))
+            else :
+                query =f'SELECT * FROM {table} WHERE {item}=%s AND {second_item} =%s'
+                if order_by :                  
+                    if not order_type:
+                        raise('need to specify the order_type')
+                    query =f'SELECT * FROM {table} WHERE {item}=%s AND {second_item} =%s ORDER BY {order_by} {order_type}'
+                cur.execute(query,(value,second_value,))
+            
+            item = None
+            if return_option =="fetchall":
+                item = cur.fetchall()
+            else:
+                item = cur.fetchone()
+            return item  
+        except Exception as e:
+            print('Error at find item ',e)
+            return None
     def update_db(self,table:str, item:str, value:str, item_to_update:str, value_to_update:str ):
         
         """update a specific value where  condition exist 

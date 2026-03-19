@@ -7,8 +7,10 @@ from src.database.trip_db_service import TripDatabaseService
 from src.database.trip_content_db_service  import TripContentsDatabaseService
 from src.base.route_base import RouteBase
 from src.server_config.service.Etag.trip_etag_service import TripEtagService
+from src.error_code.error_code import ERROR_KEYS,ERROR_MESSAGE
 import json
 import time
+from src.error_code.error_code import ERROR_KEYS ,ERROR_MESSAGE
 class TripContentsRoute(RouteBase):
     _instance = None
     _init = False
@@ -48,7 +50,8 @@ class TripContentsRoute(RouteBase):
         self.bp.route("/<token>/medias-by-token",methods =["GET"])(self.get_trip_medias_by_token)
         self.bp.route('/<trip_id>/medias',methods =['GET'])(self.get_trip_medias)
         self.bp.route('/delete-media',methods=["DELETE"])(self.delete_media)   
-    
+        self.bp.route('/trip-medias-hash',methods=['POST'])(self.get_trip_medias_hash)
+        self.bp.route('/trip-medias-metadata',methods=['POST'])(self.get_trip_media_metadata)
     def add_coordinates(self,trip_id):
         """Add a batch of coordinates to a trip.
         Requires JWT auth and trip ownership.
@@ -95,39 +98,32 @@ class TripContentsRoute(RouteBase):
         # check trip ownership
         validation = self.trip_data_base_service.trip_owner_validation(user_id=user_id,trip_id=trip_id)
         if not validation:
-            return jsonify({'code':'not authorize', 'message':'Your account are not authorize to modified this trip'}),401
-
-        # parse metadata from multipart form
-        data = json.loads(request.form.get('data'))
+            return jsonify({'code':'not authorize', 'message':'Your account are not authorize to modified this trip'}),403
+        try:
+            # parse metadata from multipart form
+            data = json.loads(request.form.get('data'))
+        except (json.JSONDecodeError, TypeError):
+            return jsonify({'message': 'Invalid metadata'}), 400
         longitude = data.get('longitude')
         latitude = data.get('latitude')
         time = data.get('time_stamp')  
 
-        image = request.files.get('image')
+        image = request.files.get('image') 
         upload_status =None
-        db_version =None
-
+        media_id = data.get('media_id')  
         if image:
             # handle image upload
             path = image.filename
-            image_version = data.get('version')
-            upload_status,db_version = self.trip_contents_service.upload_media('image',path=path,media=image,longitude=longitude,latitude=latitude, trip_id=int(trip_id),client_version=int(image_version),time=time)
+            upload_status,hash = self.trip_contents_service.upload_media('image',path=path,media=image,longitude=longitude,latitude=latitude, trip_id=int(trip_id),time=time,media_id=media_id)
         else:
             # handle video upload
             video = request.files.get('video')
             video_path = video.filename
-            video_version = data.get('video_version')
-            upload_status,db_version = self.trip_contents_service.upload_media('video',path=video_path,media=video,longitude=longitude,latitude=latitude, trip_id=int(trip_id),client_version=int(video_version),time=time)
+            upload_status,hash = self.trip_contents_service.upload_media('video',path=video_path,media=video,longitude=longitude,latitude=latitude, trip_id=int(trip_id),time=time,media_id=media_id)
             
-        print(upload_status,db_version)
-
         if not upload_status:
-            # version conflict
-            if db_version:
-                return jsonify({'message':'Missing verison','missing_versions':db_version}),409
-            return jsonify({'message':'Failed!'}),500
-        
-        return jsonify({'message':'Successfully'}),200
+            return jsonify({'code':ERROR_KEYS.FAILED,'message':ERROR_MESSAGE.SERVER_FAILED}),500
+        return jsonify({'message':'Successfully','hash':hash}),200
     
     def delete_media(self):
         user_data, error =self._get_authenticated_user()
@@ -136,8 +132,8 @@ class TripContentsRoute(RouteBase):
         user_id = user_data['user_id']
         trip_data = request.json
         # get media path, if none return
-        version = smart_cast(trip_data['version'])
-        if not version or not isinstance(version,int): return ({'code':'no_version','message':'No version or invalid value type was send!'})
+        media_id = trip_data['media_id']
+        if not media_id : return ({'code':'no_media_id','message':'No media_id or invalid value type was send!'})
 
         
         trip_id=smart_cast(trip_data['trip_id'])
@@ -146,10 +142,11 @@ class TripContentsRoute(RouteBase):
         if not owner_validation:
             return jsonify({'code':'not authorize', 'message':'Your account are not authorize to modified this trip'}),401
         # pocess delete
-        delete_media, error_delete = self.trip_contents_service.delete_media(version=version,trip_id=trip_id)
+        delete_media, error_delete = self.trip_contents_service.delete_media(media_id=media_id,trip_id=trip_id)
         if not delete_media:
             return (error_delete),500
-        return({'code':'successfully','message':'Media delete from server successfully!'}),200
+        hash = self.trip_contents_service.get_trip_medias_hash(trip_id=trip_id)
+        return({'code':'successfully','message':'Media delete from server successfully!','hash':hash}),200
     
     def request_current_location_condition(self):
         """Get geo/weather conditions for a given lng/lat.
@@ -252,15 +249,17 @@ class TripContentsRoute(RouteBase):
         user_id = user_data['user_id']
         authorize = self.trip_data_base_service.trip_owner_validation(user_id=user_id,trip_id=trip_id)
         if not authorize:
-            return jsonify({'code':'not authorize','message':'You are not authorize to get this trip data!'})
+            return jsonify({'code':'not_authorize','message':'You are not authorize to get this trip data!'}),403
+        
+        client_hash = request.headers.get('If-None-Match')
+        server_hash = self.trip_contents_service.get_trip_medias_hash(trip_id=trip_id)\
+        
+        # return if both have same contents
+        if client_hash==server_hash:
+            return jsonify({'message':"Match"}),304
         
         # get client version for cache comparison
-        client_version = smart_cast(request.headers.get('Version'))
-        medias,version = self.trip_contents_service.get_trip_media(trip_id=trip_id,client_version=client_version)
-
-        # cache hit — data unchanged
-        if not medias and not version:
-            return jsonify({'message':"Match"}),304
+        medias = self.trip_contents_service.get_trip_media(trip_id=trip_id)
 
         return jsonify({'message':"Successfully",'medias':medias}),200
     
@@ -303,3 +302,32 @@ class TripContentsRoute(RouteBase):
         if version:
             response.headers['ETag'] = etag
         return response,200
+    
+    def get_trip_medias_hash(self):
+        
+        user_data,error = self._get_authenticated_user()
+        if error:
+            return (error),401
+        user_id = user_data ['user_id']
+        trip_id = request.json['trip_id']
+        trip_validation =self.trip_data_base_service.trip_owner_validation(user_id=user_id,trip_id=trip_id)
+        if not trip_validation:
+            return jsonify({'code':ERROR_KEYS.NOPERMISSION,'message':ERROR_MESSAGE.NOPERMISSION}),403
+        media_hash = self.trip_contents_service.get_trip_medias_hash(trip_id=trip_id)
+        if not media_hash:
+            return jsonify({'code':ERROR_KEYS.FAILED,'message':ERROR_KEYS.SERVER_FAILED}) 
+        return jsonify({'hash':media_hash,'trip_id':trip_id})
+    
+    def get_trip_media_metadata(self):
+        user_data,error = self._get_authenticated_user()
+        if error:
+            return (error),401
+        user_id = user_data ['user_id']
+        trip_id = request.json['trip_id']
+        trip_validation =self.trip_data_base_service.trip_owner_validation(user_id=user_id,trip_id=trip_id)
+        if not trip_validation:
+            return jsonify({'code':ERROR_KEYS.NOPERMISSION,'message':ERROR_MESSAGE.NOPERMISSION}),403
+        metadata = self.trip_contents_service.get_trip_media_metadata(trip_id=trip_id)
+        if not metadata:
+            return jsonify({'code':ERROR_KEYS.FAILED,'message':ERROR_KEYS.SERVER_FAILED}) 
+        return jsonify({'metadata':metadata,'trip_id':trip_id})
