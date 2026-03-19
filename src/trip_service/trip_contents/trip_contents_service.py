@@ -3,6 +3,7 @@ from src.database.database import Database
 from src.database.s3.s3_service import S3Sevice
 from src.database.database_keys import DATABASEKEYS
 from src.database.trip_db_service import TripDatabaseService
+import hashlib
 import psycopg2
 from datetime import datetime
 import json
@@ -76,35 +77,39 @@ class TripContentService:
         status = self.database_service.update_db('tripin_trips.trips_table','id',trip_id,'image',image_path)
         return status
     
-    def upload_media(self,type:str,path:str,media,longitude:float,latitude:float,trip_id:int,client_version:int,time) -> bool | int:
-        current_version = self.trip_database_service.get_trip_contents_version(trip_id=trip_id,version_type=DATABASEKEYS.TRIPS.TRIPS_MEDIAS_VERSION)
+    def upload_media(self,type:str,path:str,media,longitude:float,latitude:float,trip_id:int,time:int,media_id:str) -> bool | int:
+        # current_version = self.trip_database_service.get_trip_contents_version(trip_id=trip_id,version_type=DATABASEKEYS.TRIPS.TRIPS_MEDIAS_VERSION)
         # print(client_version,type(client_version))
         # print(current_version+1,type(current_version))
         # print(client_version,current_version)
-        if client_version != current_version +1:
-            return False, current_version +1
-        insert_into_db = self.trip_database_service.insert_media_into_db(type=type,media_path=path,longitude=longitude,latitude=latitude,trip_id=trip_id,version=client_version,time=time)
+        # if client_version != current_version +1:
+        #     return False, current_version +1
+        
+        # insert into database (postgres)
+        insert_into_db = self.trip_database_service.insert_media_into_db(type=type,media_path=path,longitude=longitude,latitude=latitude,trip_id=trip_id,time=time,modified_time=time,media_id=media_id)
         if not insert_into_db:
             return False,None
         
+        # upload into cloud (s3)
         insert_into_s3 = self.s3_service.upload_media(f'trips/{trip_id}/{path}',media)
+        
         
         if not insert_into_s3:
             self.database_service.delete_from_table('tripin_trips.trip_medias','trip_id',trip_id,True,'key',path)
             return False,None
         # update media version of trip 
         
-        self.trip_database_service.update_trip_version(DATABASEKEYS.TRIPS.TRIPS_MEDIAS_VERSION,trip_id=trip_id,version=client_version)
-        
-        return True,None
+        # await self.trip_database_service.update_trip_version(DATABASEKEYS.TRIPS.TRIPS_MEDIAS_VERSION,trip_id=trip_id,version=client_version)
+        hash = self.get_trip_medias_hash(trip_id=trip_id)
+        return True,hash
     
-    def delete_media(self,version:int,trip_id:int) -> bool | str:
+    def delete_media(self,media_id:str,trip_id:int) -> bool | str:
         # remove from db,
         # get old data from database
         old_data = self.trip_database_service.find_item_in_sql(
             table=DATABASEKEYS.TABLES.TRIP_MEDIAS,
-            item= DATABASEKEYS.TRIP_MEDIAS.VERSION,
-            value=version,
+            item= DATABASEKEYS.TRIP_MEDIAS.MEDIA_ID,
+            value=media_id,
             second_condition=True,
             second_item=DATABASEKEYS.TRIP_MEDIAS.TRIP_ID,
             second_value=trip_id)
@@ -113,13 +118,13 @@ class TripContentService:
         media_path = old_data['media_path']
         remove_from_db = self.trip_database_service.delete_from_table(
             table= DATABASEKEYS.TABLES.TRIP_MEDIAS,
-            item= DATABASEKEYS.TRIP_MEDIAS.VERSION,
-            value=version,
+            item= DATABASEKEYS.TRIP_MEDIAS.MEDIA_ID,
+            value=media_id,
             second_condition= True,
             second_item=DATABASEKEYS.TRIP_MEDIAS.TRIP_ID,
             second_value=trip_id
         )
-        print(version,trip_id,media_path)
+        print(media_id,trip_id,media_path)
         if not remove_from_db:
             return False,{'code':'failed_database'}
         s3_path = f'trips/{trip_id}/{media_path}'
@@ -128,11 +133,6 @@ class TripContentService:
         if not remove_from_s3:
             if not remove_from_db:
                 return False,{'code':'failed_cloud'}
-        # update media version 
-        update_trip_media_version  = self.trip_database_service.update_trip_version(
-            type_of_version= DATABASEKEYS.TRIPS.TRIPS_MEDIAS_VERSION,
-            trip_id= trip_id
-        )
          
         return True,None
        
@@ -144,6 +144,8 @@ class TripContentService:
                 if int(client_version) == server_version:
                     return None,None
             coors = self.trip_database_service.get_trip_coordinates(trip_id=trip_id,client_version=client_version)
+            print(client_version,trip_id,coors)
+
             return [dict(r) for r in coors] if coors else None, server_version
 
         except Exception as e:
@@ -152,13 +154,13 @@ class TripContentService:
     def get_trip_belong_to(self,trip_id:int)->int:
         user_id = self.trip_database_service.get_user_id_from_trip_id(trip_id=trip_id)
         return user_id
-    def get_trip_media(self,trip_id:int,client_version:int):
+    def get_trip_media(self,trip_id:int):
       
-        server_version = self.trip_database_service.get_trip_contents_version(trip_id=trip_id,version_type=DATABASEKEYS.TRIPS.TRIPS_MEDIAS_VERSION)
-        # print('media versions ', client_version,server_version)
-        if client_version :
-            if int(client_version) == server_version:
-                return None,None
+        # server_version = self.trip_database_service.get_trip_contents_version(trip_id=trip_id,version_type=DATABASEKEYS.TRIPS.TRIPS_MEDIAS_VERSION)
+        # # print('media versions ', client_version,server_version)
+        # if client_version :
+        #     if int(client_version) == server_version:
+        #         return None,None
         medias = self.database_service.find_item_in_sql('tripin_trips.trip_medias','trip_id',trip_id,return_option='fetchall')
         for i in range( len(medias)):
             default_key = medias[i]['media_path']
@@ -166,4 +168,30 @@ class TripContentService:
             medias[i]['media_path'] = self.s3_service.generate_temp_uri(f'trips/{trip_id}/'+default_key)
             medias[i]=dict(medias[i])
         # print(medias)
-        return medias,server_version
+        return medias
+
+    def get_trip_medias_hash(self,trip_id:int):
+        """return a hash for all trip_id
+
+        Args:
+            trip_id (int): _description_
+
+        Returns:
+            _type_: _description_
+        """
+        all_trip_data = self.trip_database_service.get_trip_media_metadatas(trip_id=trip_id)
+        if not all_trip_data:
+            return None
+        sorted_data = sorted(all_trip_data, key=lambda row: row['media_id'])
+        ids_string = ','.join([str(row['media_id']) for row in sorted_data])
+        return hashlib.md5(ids_string.encode()).hexdigest()
+
+
+    def get_trip_media_metadata(self,trip_id:int):
+        """_summary_
+
+        Args:
+            trip_id (int): _description_
+        """
+        medias = self.database_service.find_item_in_sql('tripin_trips.trip_medias','trip_id',trip_id,return_option='fetchall')
+        return [dict(media) for media in medias]

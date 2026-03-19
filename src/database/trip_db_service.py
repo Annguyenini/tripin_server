@@ -37,9 +37,33 @@ class TripDatabaseService (Database):
             return True, trip_id
         return False,0 
     
-    def insert_media_into_db(self, type:str,media_path:str,longitude:float,latitude:float,trip_id:int,version:int,time) -> bool:
+    def insert_media_into_db(self, type:str,media_path:str,longitude:float,latitude:float,trip_id:int,time:int,modified_time:int,media_id:str) -> bool:
+        """insert in to trip medias table
+
+        Args:
+            type (str): _description_
+            media_path (str): _description_
+            longitude (float): _description_
+            latitude (float): _description_
+            trip_id (int): _description_
+            time (int): _description_
+            image_id (str): _description_
+
+        Returns:
+            bool: _description_
+        """
         con,cur = self.connect_db()
-        cur.execute(f'INSERT INTO {DATABASEKEYS.TABLES.TRIP_MEDIAS} (media_type,media_path,longitude,latitude,trip_id,version,time_stamp) VALUES (%s,%s,%s,%s,%s,%s,%s)',(type,media_path,longitude,latitude,trip_id,version,time))
+        cur.execute(f'''INSERT INTO {DATABASEKEYS.TABLES.TRIP_MEDIAS} (
+            {DATABASEKEYS.TRIP_MEDIAS.MEDIA_TYPE}, 
+            {DATABASEKEYS.TRIP_MEDIAS.MEDIA_PATH}, 
+            {DATABASEKEYS.TRIP_MEDIAS.LONGITUDE}, 
+            {DATABASEKEYS.TRIP_MEDIAS.LATITUDE}, 
+            {DATABASEKEYS.TRIP_MEDIAS.TRIP_ID}, 
+            {DATABASEKEYS.TRIP_MEDIAS.TIME_STAMP},
+            {DATABASEKEYS.TRIP_MEDIAS.MODIFIED_TIME},
+            {DATABASEKEYS.TRIP_MEDIAS.MEDIA_ID}) 
+            VALUES (%s,%s,%s,%s,%s,%s,%s,%s)''',
+            (type,media_path,longitude,latitude,trip_id,time,modified_time,media_id))
         con.commit()
         if cur.rowcount >=1:
             return True
@@ -116,6 +140,29 @@ class TripDatabaseService (Database):
                     WHERE {DATABASEKEYS.TRIP_SHARED_LINKS.TOKEN} = %s''', (token,))
         
         row = cur.fetchone()
+        con.commit()
+        con.close()
+        return row if row else None
+    
+    def get_trip_media_metadatas(self,trip_id:int):
+        """return all the metadatas for the trip 
+        include image_id, modified_time
+
+        Args:
+            trip_id (int): _description_
+
+        Returns:
+            _type_: _description_
+        """
+        con,cur = self.connect_db()
+        cur.execute(f'''
+                    SELECT {DATABASEKEYS.TRIP_MEDIAS.MEDIA_ID},
+                    {DATABASEKEYS.TRIP_MEDIAS.MODIFIED_TIME}
+                    FROM {DATABASEKEYS.TABLES.TRIP_MEDIAS}
+                    WHERE {DATABASEKEYS.TRIP_MEDIAS.TRIP_ID}
+                    = %s
+                    ''' ,(trip_id,))
+        row = cur.fetchall()
         con.commit()
         con.close()
         return row if row else None

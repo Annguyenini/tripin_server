@@ -45,7 +45,7 @@ DATABASEKEYS= SimpleNamespace(
         TRIPS_MEDIAS_VERSION='trip_medias_version'
     ),
     TRIP_MEDIAS = SimpleNamespace(
-        MEDIA_ID ='id',
+        # MEDIA_ID ='id',
         TRIP_ID='trip_id',
         MEDIA_TYPE='media_type',
         MEDIA_PATH='media_path',
@@ -53,7 +53,11 @@ DATABASEKEYS= SimpleNamespace(
         LONGITUDE='longitude',
         LATITUDE='latitude',
         TIME_STAMP='time_stamp',
-        VERSION = 'version'
+        VERSION = 'version',
+        MODIFIED_TIME ='modified_time',
+        IS_DELETED = 'is_deleted',
+        MEDIA_ID = 'media_id'
+        
     ),
     TRIP_COORDINATES =SimpleNamespace(
         COORDINATES_ID = 'id',
