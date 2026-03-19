@@ -63,7 +63,7 @@ class TripRoute(RouteBase):
         ##decode jwt to get userdatas
         user_id = user_data.get("user_id")
         trip_name = request.form.get("trip_name")
-                
+        
         #process new trip
         
         #get image, and image_path

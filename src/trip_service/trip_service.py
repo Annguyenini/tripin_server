@@ -9,6 +9,7 @@ from src.server_config.service.Etag.trip_etag_service import TripEtagService
 from src.database.database_keys import DATABASEKEYS
 from src.server_config.service.input_validation import InputValidation
 import psycopg2
+from src.error_code.error_code import INPUT_ERROR
 from datetime import datetime
 import json
 import time
@@ -36,6 +37,9 @@ class TripService:
         # trip_id | trip_name | user_id | start_time | end_time | active
 
         ##return if user are currently in another aactive 
+        trip_name_validation = self.input_validation.trip_name_validation(trip_name=trip_name)
+        if not trip_name_validation: return False, INPUT_ERROR.TRIP_NAME,None
+        
         exist_trip = self.database_service.find_item_in_sql(table="tripin_trips.trips_table",item="user_id",value=user_id,
                                                             second_condition=True,second_item="active",second_value=True )
 

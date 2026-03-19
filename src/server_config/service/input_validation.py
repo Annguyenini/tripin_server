@@ -14,11 +14,12 @@ class InputValidation:
 
 
     def username_validation(self,username:str)->bool:
+        #length between 3-20
         if not username:
             return False
-        if len(username)<5 or len(username) >10 :
+        if len(username)<3 or len(username) >15 :
             return False
-        # must contain upper case letter, no special char  and start with word 
+        # must contain upper case letter, no special char and start with word 
         check = re.match(r'^(?=.*[A-Z])[a-zA-Z]\w+$',username)
         return True if check else False
 
@@ -44,14 +45,13 @@ class InputValidation:
     def email_validation(self,email:str)->bool:
         if not email:return False
         # if doesnt have the @ dont bother care
-        check = re.match(r'^(?=.*[@])',email)
+        check = re.match(r'^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$', email)
         return True if check else False
     
-    def trip_name_validation(self,trip_name:str)->bool:
+    def trip_name_validation(self, trip_name: str) -> bool:
         if not trip_name:
             return False
-        if len(trip_name)<5 or len(trip_name) >10 :
+        if len(trip_name) < 5 or len(trip_name) > 10:
             return False
-        # no special char  and start with word 
-        check = re.match(r'^[a-zA-Z]\w+$',trip_name)
-        return True if check else False
+        check = re.match(r'^[a-zA-Z][a-zA-Z0-9_ ]+$', trip_name)
+        return bool(check)
