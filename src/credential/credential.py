@@ -99,12 +99,8 @@ class Auth:
             if not self.inputValidationService.username_validation(username=username): return False, INPUT_ERROR.USERNAME
             if not self.inputValidationService.displayname_validation(display_name=display_name) :return False, INPUT_ERROR.DISPLAY_NAME
             if not self.inputValidationService.password_validation(password=password):return False ,INPUT_ERROR.PASSWORD
-            ##hash password, prepare to insert to database 
             
-            hashed_passwords = generate_password_hash(password)
-            # print(email,display_name,username,hashed_passwords)
-            #check if email or username already exists
-            
+           
             ## if the Email already exists in database, return 
             if(self.db.find_item_in_sql(table="tripin_auth.userdata",item="email",value=email)):
                 return False, "Email already exists!"
@@ -115,6 +111,10 @@ class Auth:
             
             ## process to verify email
             respond = self.mail_service.send_confirmation_code(email)
+            
+            ##hash password, prepare to insert to database 
+            hashed_passwords = generate_password_hash(password)
+           
             
             if(respond):
                 data={
@@ -139,7 +139,7 @@ class Auth:
         # print(status,message,code
         # if token invalid or expried, return
         if not status:
-            return ({'status':False,"message": message,"code":code,"user_data": None,'trip_data':None,'all_trip_data':None})
+            return ({'status':False,"message": message,"code":code,"user_data": None})
         
         # get userdata from token
         userdata_from_jwt = self.tokenService.decode_jwt(token)  
@@ -165,10 +165,16 @@ class Auth:
             return False
         return True
     
-    def confirm_code(self, email:str, code:str):
+    def confirm_code(self, email:str, code:int):
+        # input validation 
+        if not self.inputValidationService.email_validation(email=email): return False, INPUT_ERROR.EMAIL
+        if not self.inputValidationService.verify_code_valiation(code=code):return False, INPUT_ERROR.VERIFY_CODE
+        # calling varify method
         respond = self.mail_service.verify_code(recipients=email,code=code)
+        
         if not respond:
             return False
+        
         process_new_user = self.process_new_user(email=email)
         if not process_new_user:
             return False

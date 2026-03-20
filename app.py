@@ -93,26 +93,22 @@ class Server:
         timestamp = now.strftime("%Y-%m-%d %H:%M")
         discord_request_logs(f"[{timestamp}] \nMethod:{request.method} \nURI:{request.url} \nIP:{request.remote_addr} \nCode:{response.status_code}",response.status_code)
         return response
-def run_sentry_log():
-    sentry_dns = os.getenv('SENTRY_DNS')
-    sentry_sdk.init(
-        dsn=sentry_dns,
-        send_default_pii=True,
-        enable_logs=True,
-    )
-    sentry_sdk.logger.info('This is an info log message')
+
+
+
 
 
 server_auth_service = ServerAuth()
 server_auth_service.skip_indentity()
 server = Server()
 
-def sentry():
-    if os.getenv('ENABLE_SENTRY') == 'true':
-        run_sentry_log()
-sentry()
+
 start_server_status_thread()
+
+
 app = server.app
+
+DEBUG = os.getenv('DEBUG') or False
 def create_app():
     return server.app
 if __name__ =="__main__":
@@ -121,7 +117,7 @@ if __name__ =="__main__":
     print('ver 5')
    
     # run_tasks()
-    app.run( host ="0.0.0.0", port =8000,debug=True)
+    app.run( host ="0.0.0.0", port =8000,debug=True if DEBUG else False)
     # app.run( host ="0.0.0.0", port =8000,ssl_context=("src/assets/https/cert.pem", "src/assets/https/key.pem"))
     
     
