@@ -7,5 +7,5 @@ def bootstrap_manager():
     credential = bootstrapping_credentials()
     postgres = bootstrap_postgres()
     redis = bootstrap_redis()
-    aws = bootstrap_aws()
+    # aws = bootstrap_aws()
     print('Bootstrap Pass!')

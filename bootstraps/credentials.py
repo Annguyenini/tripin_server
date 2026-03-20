@@ -12,9 +12,9 @@ def bootstrapping_credentials():
     DB_PASS= os.getenv('DB_PASS') or MISSING.append('DB_PASS')
     DB_NAME= os.getenv('DB_NAME') or MISSING.append('DB_NAME')
     
-    AWS_ACCESS_KEY_ID= os.getenv('AWS_ACCESS_KEY_ID') or MISSING.append('AWS_ACCESS_KEY_ID')
-    AWS_SECRET_ACCESS_KEY= os.getenv('AWS_SECRET_ACCESS_KEY') or MISSING.append('AWS_SECRET_ACCESS_KEY')
-    AWS_DEFAULT_REGION= os.getenv('AWS_DEFAULT_REGION') or MISSING.append('AWS_DEFAULT_REGION')
+    # AWS_ACCESS_KEY_ID= os.getenv('AWS_ACCESS_KEY_ID') or MISSING.append('AWS_ACCESS_KEY_ID')
+    # AWS_SECRET_ACCESS_KEY= os.getenv('AWS_SECRET_ACCESS_KEY') or MISSING.append('AWS_SECRET_ACCESS_KEY')
+    # AWS_DEFAULT_REGION= os.getenv('AWS_DEFAULT_REGION') or MISSING.append('AWS_DEFAULT_REGION')
 
     EMAIL_USERNAME= os.getenv('EMAIL_USERNAME') or MISSING.append('EMAIL_USERNAME')
     EMAIL_PASSWORD= os.getenv('EMAIL_PASSWORD') or MISSING.append('EMAIL_PASSWORD')
