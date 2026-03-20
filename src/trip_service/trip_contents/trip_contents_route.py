@@ -287,20 +287,14 @@ class TripContentsRoute(RouteBase):
         if client_etag == etag:
             return jsonify({'message':"Match"}),304
         # if not match
-        medias,version = self.trip_contents_service.get_trip_media(trip_id=trip_id,client_version=0)
+        medias = self.trip_contents_service.get_trip_media(trip_id=trip_id)
 
         # cache hit — data unchanged
-        if not medias and not version:
-            return jsonify({'message':"Match"}),304
-
         if not medias :
             return jsonify ({'code':'failed','message':'Failed to get medias'}),500
 
-
         # attach ETag to response so browser can cache it
         response = jsonify ({'medias':medias})
-        if version:
-            response.headers['ETag'] = etag
         return response,200
     
     def get_trip_medias_hash(self):
