@@ -73,7 +73,7 @@ class TripViewRoute(RouteBase):
             {DATABASEKEYS.TRIP_SHARED_LINKS.EXPIRED_TIME}
             ) VALUES (%s,%s,%s,%s,%s)''',(token,user_id,trip_id,current_date_in_ms,ex_date_in_ms))
         con.commit()
-        con.close()
+        self.TripDataBaseService.close_db(conn=con)
         return token if cur.rowcount>=1 else None
         
     def request_trip_view(self,token):
@@ -96,4 +96,5 @@ class TripViewRoute(RouteBase):
         cur.execute(f'''SELECT * FROM {DATABASEKEYS.TABLES.TRIP_SHARED_LINKS}
                     WHERE {DATABASEKEYS.TRIP_SHARED_LINKS.TOKEN} = %s''', (token,))
         row = cur.fetchone()
+        self.TripDataBaseService.close_db(conn=con)
         return row if row else None

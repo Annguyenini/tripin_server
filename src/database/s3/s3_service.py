@@ -22,8 +22,18 @@ class S3Sevice:
      
     def generate_temp_uri (self,key:str,expiration:int = 3600):
         # print(s3Client)
+        """generate presigned uri for media
+
+        Args:
+            key (str): _description_
+            expiration (int, optional): _description_. Defaults to 3600.
+
+        Returns:
+            _type_: _description_
+        """
         try:
             cache_key = f"presigned:{key}"
+            # cache using redis can replace it with simple dictionary
             cache = self.cache_service.get(cache_key)
             if cache:
                 return cache

@@ -30,6 +30,7 @@ class UserDataDataBaseService (Database):
 
             row = cur.fetchone()
             con.commit()
+            self.close_db(conn=con)
 
             if row:
                 return True, row[0]  # return new version
