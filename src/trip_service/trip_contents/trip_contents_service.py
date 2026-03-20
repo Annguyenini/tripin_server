@@ -182,7 +182,12 @@ class TripContentService:
         all_trip_data = self.trip_database_service.get_trip_media_metadatas(trip_id=trip_id)
         if not all_trip_data:
             return None
-        sorted_data = sorted(all_trip_data, key=lambda row: row['media_id'])
+        
+        sorted_data =[]
+        for row in all_trip_data:
+            if row['media_id'] is not None:
+                sorted_data.append(row)
+        sorted_data.sort(key=lambda row: row['media_id'])
         ids_string = ','.join([str(row['media_id']) for row in sorted_data])
         return hashlib.md5(ids_string.encode()).hexdigest()
 
