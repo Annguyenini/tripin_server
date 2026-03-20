@@ -22,6 +22,8 @@ import os
 from src.server_config.discord_error_logs import discord_error_logs,discord_request_logs,start_server_status_thread
 import traceback
 import datetime
+from bootstraps.bootstrap_manager import bootstrap_manager
+bootstrap_manager()
 mail =Mail()
 dotenv.load_dotenv('.env')
 
