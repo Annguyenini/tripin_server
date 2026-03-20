@@ -42,6 +42,7 @@ jobs:
       EXPIRED_ACCESS_JWT: ${{ secrets.EXPIRED_ACCESS_JWT }}
       EXPIRED_REFRESH_JWT: ${{ secrets.EXPIRED_REFRESH_JWT }}
       DATABASE_URL: postgresql://testuser:testpass@localhost:5432/tripin
+      FLASK_ENV: testing
     steps:
       - uses: actions/checkout@v3
 
