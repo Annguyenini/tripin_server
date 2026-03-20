@@ -47,6 +47,12 @@ class InputValidation:
         # if doesnt have the @ dont bother care
         check = re.match(r'^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$', email)
         return True if check else False
+    def verify_code_valiation(self,code:int)->bool:
+        if not code :return False    
+        #only digits, 6 digits 
+        check = re.match(r'^\d{6}$',code)
+        return True if check else False
+
     
     def trip_name_validation(self, trip_name: str) -> bool:
         if not trip_name:
