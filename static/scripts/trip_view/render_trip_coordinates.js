@@ -1,4 +1,5 @@
 const requestTripCoordiantes =async()=>{
+    console.log('request coordiante')
     const response = await fetch (TRIP_COORDINATES_URL(TOKEN),{
         method:'GET',
     })
@@ -7,57 +8,35 @@ const requestTripCoordiantes =async()=>{
 }
 
 const renderTripCoordinates = async (map) => {
-    const coordinates = await requestTripCoordiantes()
-    console.log(coordinates)
-    map.flyTo({
-        center: [coordinates[0].longitude, coordinates[0].latitude],
-        zoom: 13,
-        duration: 5000
-    })
+    console.log('render coord')
+    const coordinates = await requestTripCoordiantes();
+    console.log('coordinates',coordinates)
+    map.flyTo([coordinates[0].latitude, coordinates[0].longitude], 18, {
+        duration: 3.5,
+        easeLinearity: 0,  // closer to 0 = more ease in/out, smoother
+        animate: true,
+    });
+    // draw line
+    const latlngs = coordinates.map(c => [c.latitude, c.longitude]);
+    L.polyline(latlngs, {
+        color: '#1a1a1a',
+        weight: 2,
+        dashArray: '6, 6',
+    }).addTo(map);
 
-    // points
-    map.addSource('trip-coordinates', {
-        type: 'geojson',
-        data: {
-            type: 'FeatureCollection',
-            features: coordinates.map(e => ({
-                type: 'Feature',
-                geometry: { type: 'Point', coordinates: [e.longitude, e.latitude] },
-                properties: { name: e.time_stamp }
-            }))
-        }
-    })
-    map.addLayer({
-        id: 'trip-points-layer',
-        type: 'circle',
-        source: 'trip-coordinates',
-        paint: {
-            'circle-radius': 8,
-            'circle-color': '#1a1a1a',
-            'circle-stroke-width': 2,
-            'circle-stroke-color': '#f0f0ec',
-        }
-    })
+    // draw dots
+    coordinates.forEach(c => {
+        L.circleMarker([c.latitude, c.longitude], {
+            radius: 6,
+            color: '#f0f0ec',
+            fillColor: '#1a1a1a',
+            fillOpacity: 1,
+            weight: 2,
+        }).addTo(map);
+    });
 
-    // line
-    map.addSource('trip-line', {
-        type: 'geojson',
-        data: {
-            type: 'Feature',
-            geometry: {
-                type: 'LineString',
-                coordinates: coordinates.map(e => [e.longitude, e.latitude])
-            }
-        }
-    })
-    map.addLayer({
-        id: 'trip-line-layer',
-        type: 'line',
-        source: 'trip-line',
-        paint: {
-            'line-color': '#1a1a1a',
-            'line-width': 2,
-            'line-dasharray': [2, 2],
-        }
-    })
-}
+    // trigger first media render
+    const zoom = Math.floor(map.getZoom());
+    renderTripMedias(map, zoom);
+    hideLoading();
+};

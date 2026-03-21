@@ -16,7 +16,7 @@ const renderTripMedias= async (map,zoom) => {
     if (!_medias){
         _medias = await requestTripMedias()
         console.log('setup')
-        setUpPolaroidLine(_medias)
+        // setUpPolaroidLine(_medias)
         
     }
     
@@ -59,8 +59,9 @@ const clustersMap = (assetsArray) => {
     }
 }
 
-let _markers = []
-let _lastMedias =[]
+let _markers = [];
+let _lastMedias = [];
+
 const renderImageLabels = (medias, map) => {
     if (!medias) return;
     if (medias === _lastMedias) return;
@@ -69,10 +70,10 @@ const renderImageLabels = (medias, map) => {
     _markers.forEach(m => m.remove());
     _markers = [];
 
-    medias.forEach((media, index) => {
+    medias.forEach((media) => {
         const el = document.createElement('div');
         el.className = 'img-marker';
-        el.style.cssText = 'width:60px;height:60px;flex-shrink:0;position:relative;';
+        el.style.cssText = 'width:60px;height:60px;position:relative;';
 
         const isVideo = media.members[0].media_type === 'video';
         const hasBadge = media.members.length > 1;
@@ -81,30 +82,24 @@ const renderImageLabels = (medias, map) => {
             ${isVideo
                 ? `<video src="${media.members[0].media_path}" style="width:100%;height:100%;object-fit:cover;" muted preload="metadata"></video>
                    <div class="img-marker-play"></div>`
-                : `<img src="${media.members[0].media_path}" alt="trip photo" />`
+                : `<img src="${media.members[0].media_path}" alt="trip photo" style="width:100%;height:100%;object-fit:cover;display:block;"/>`
             }
             ${hasBadge ? `<div class="img-marker-badge">${media.members.length}</div>` : ''}
         `;
-        el.id = index;
 
         el.addEventListener('click', () => {
             _preMeidaArray = media.members;
             openPolaroidViewer(media.members, 0);
         });
 
-        const addMarker = () => {
-            const marker = new mapboxgl.Marker(el, { anchor: 'center' })
-                .setLngLat([media.center.lng, media.center.lat])
-                .addTo(map);
-            _markers.push(marker);
-        };
+        const icon = L.divIcon({
+            html: el,
+            className: '',
+            iconSize:   [60, 60],
+            iconAnchor: [30, 30],  // perfect center
+        });
 
-        if (isVideo) {
-            addMarker();
-        } else {
-            const img = el.querySelector('img');
-            img.onload  = addMarker;
-            img.onerror = addMarker;
-        }
+        const marker = L.marker([media.center.lat, media.center.lng], { icon }).addTo(map);
+        _markers.push(marker);
     });
 };

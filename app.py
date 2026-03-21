@@ -52,6 +52,8 @@ class Server:
         self.app.route('/test-error',methods=['GET'])(self.test_error)
         self.app.route("/health",methods=['GET'])(self.health)    
         self.app.route("/",methods =['GET'])(self.landing)
+        self.app.route("/testmap",methods =['GET'])(self.testmap)
+
         # self.app.route("/trip-view",methods =['GET'])(self.trip_view)
         self.app.errorhandler(404)(self.error_404_site)
         self.app.errorhandler(500)(self.error_500_site)
@@ -59,7 +61,9 @@ class Server:
         self.app.after_request(self.log_request)
 
         
-        
+    def testmap(self):
+        return render_template('testmap.html')
+
     def test_error(self):
         1/0
     def health(self):
