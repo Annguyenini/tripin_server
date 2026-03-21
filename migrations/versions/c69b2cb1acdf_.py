@@ -20,9 +20,18 @@ depends_on: Union[str, Sequence[str], None] = None
 
 def upgrade() -> None:
     """Upgrade schema."""
+    f'''
+    CREATE TYPE coordinates_events AS ENUM ('add','remove');
+    ALTER TABLE tripin_trips.trips_coordinates ADD COLUMN IF NOT EXISTS event_id BIGINT DEFAULT 0 NOT NULL;
+    ALTER TABLE tripin_trips.trips_coordinates ADD COLUMN IF NOT EXISTS event coordinates_events;    
+    '''
     pass
 
 
 def downgrade() -> None:
     """Downgrade schema."""
+    f'''
+    ALTER TABLE tripin_trips.trips_coordinates DROP COLUMN IF EXISTS event_id BIGINT DEFAULT 0 NOT NULL;
+    ALTER TABLE tripin_trips.trips_coordinates FROP COLUMN IF EXISTS event coordinates_events;
+    '''
     pass

@@ -527,16 +527,16 @@ body.viewer-open .style-switcher { right: calc(55% + 14px); }
   background: var(--polaroid-bg);
   border: 2px solid var(--black);
   border-radius: 4px;
-  box-shadow: 3px 3px 0 rgba(0,0,0,0.2);
-  overflow: hidden;
-  cursor: pointer;
-  padding: 0;
+  overflow: visible;        /* let badge show outside */
+  cursor: pointer;          /* was commented out */
   position: relative;
-  transition: transform 0.15s, box-shadow 0.15s;
+  box-sizing: border-box;
+
+  /* transition: transform 0.15s, box-shadow 0.15s; */
 }
 
 .img-marker:hover {
-  transform: rotate(4deg) scale(1.12);
+  /* transform: rotate(4deg) scale(1.12); */
   box-shadow: 5px 5px 0 rgba(0,0,0,0.25);
   z-index: 5;
 }
@@ -544,18 +544,24 @@ body.viewer-open .style-switcher { right: calc(55% + 14px); }
 .img-marker img {
   width: 100%; height: 100%;
   object-fit: cover;
+  border-radius: 4px;  /* keep rounded on img directly */
 }
 /* ════════════════════════════════
    badge
 ════════════════════════════════ */
-.img-marker {
-  position: relative; /* needed for badge positioning */
+
+
+.img-marker-inner {
+  width: 100%;
+  height: 100%;
+  position: relative;
 }
 
 .img-marker-badge {
   position: absolute;
-  top: -6px;
-  right: -6px;
+  top: 0;
+  right: 0;
+  /* transform: translate(50%, -50%); */
   width: 18px;
   height: 18px;
   background: var(--red);
@@ -570,7 +576,10 @@ body.viewer-open .style-switcher { right: calc(55% + 14px); }
   border: 1.5px solid var(--polaroid-bg);
   box-shadow: 1px 1px 0 rgba(0,0,0,0.2);
 }
-
+.img-marker-wrap {
+  padding: 6px 6px 0 0;  /* room for badge overflow */
+  position: relative;
+}
 @keyframes blink {
   0%,100% { opacity: 1; }
   50%      { opacity: 0.3; }

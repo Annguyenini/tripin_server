@@ -44,18 +44,25 @@ const toggleFullMediasMode=()=>{
 }
 const clustersMap = (assetsArray) => {
     return {
-        10: computeCluster(assetsArray, 1000),
-        13: computeCluster(assetsArray, 550),
-        15: computeCluster(assetsArray, 250),
-        20: computeCluster(assetsArray, 3),
-        21: computeCluster(assetsArray, 1),
-        22: computeCluster(assetsArray, 0.5)
+        7 :computeCluster(assetsArray,2500),
+        8 :computeCluster(assetsArray,2000),
+        9 :computeCluster(assetsArray,1500),
+        10 :computeCluster(assetsArray,700),
+        11 :computeCluster(assetsArray,400),
+        12 :computeCluster(assetsArray,200),
+        13 :computeCluster(assetsArray,150),
+        14 : computeCluster(assetsArray,50),
+        15 : computeCluster(assetsArray,10),
+        20 : computeCluster(assetsArray,3),
+        21 : computeCluster(assetsArray,2),
+        22 : computeCluster(assetsArray,0.5),
     }
 }
 
 let _markers = []
 let _lastMedias =[]
 const renderImageLabels = (medias, map) => {
+    console.log('medias',medias)
     if (!medias) return;
     if(medias ===_lastMedias) return
     _lastMedias = medias
@@ -64,9 +71,12 @@ const renderImageLabels = (medias, map) => {
     _markers = []
 
     medias.forEach((media, index) => {
+        
         const el = document.createElement('div');
         el.className = 'img-marker';
         el.innerHTML = `
+          <div class="img-marker-inner">
+
             ${media.members[0].media_type === 'video'
                 ? `<video src="${media.members[0].media_path}" style="width:100%; height:100%; object-fit:cover" muted preload="metadata"></video>
                 <div class="img-marker-play"></div>` 
@@ -75,12 +85,15 @@ const renderImageLabels = (medias, map) => {
             ${media.members.length > 1
                 ? `<div class="img-marker-badge">${media.members.length}</div>`
                 : ''}
-        `;
+          </div>
+
+                `;
         el.id = index
 
-        const marker = new mapboxgl.Marker(el)
-            .setLngLat([media.center.lng, media.center.lat])
-            .addTo(map);
+        const marker = new mapboxgl.Marker(el, { anchor: 'center' })
+    .setLngLat([media.center.lng, media.center.lat])
+    .addTo(map);
+
 
         // store marker so we can remove it later
         _markers.push(marker)
