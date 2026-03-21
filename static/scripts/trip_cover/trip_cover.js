@@ -1,21 +1,25 @@
 const setTripData=( tripName, coverImage )=> {
     console.log(tripName,coverImage)
-   if (coverImage) {
-        const img = document.getElementById('trip-cover')
-        
-        img.onload = () => {
-            img.style.display = 'block'
-            document.getElementById('cover-no-image').style.display = 'none'
-            // setDynamicBorder(img)  ← won't work without CORS headers on S3
-        }
-        img.onerror = () => console.error('failed:', coverImage)
-        img.src = coverImage  // ← no crossOrigin
-    } 
-    else {
-        document.getElementById('trip-cover').style.display = 'none'
-        document.getElementById('cover-no-image').style.display = 'flex'
-        document.getElementById('no-image-trip-name').textContent = tripName || 'TRIPPING'
+    if (coverImage) {
+        const img = document.getElementById('trip-cover');
 
+        img.onload = () => {
+            img.style.display = 'block';
+            document.getElementById('cover-no-image').style.display = 'none';
+        };
+        img.onerror = () => {
+            // fallback to no-image state
+            img.style.display = 'none';
+            document.getElementById('cover-no-image').style.display = 'flex';
+            document.getElementById('no-image-trip-name').textContent = tripName || 'TRIPPING';
+            console.error('failed to load cover:', coverImage);
+        };
+
+        img.src = coverImage;
+    } else {
+        document.getElementById('trip-cover').style.display = 'none';
+        document.getElementById('cover-no-image').style.display = 'flex';
+        document.getElementById('no-image-trip-name').textContent = tripName || 'TRIPPING';
     }
     if (tripName)    document.getElementById('trip-name').textContent = tripName
     document.getElementById('cover-qr').innerHTML = ''
@@ -27,8 +31,11 @@ const setTripData=( tripName, coverImage )=> {
         colorLight: '#f0f0ec',
         correctLevel: QRCode.CorrectLevel.M
     })
+            console.log('pass')
+
 }
 const setUpTripCover =async()=>{
+    console.log(TOKEN)
     const res = await requestTripData(TOKEN)
     
     const trip_data = res.trip_data

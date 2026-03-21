@@ -22,21 +22,23 @@ const _coorFromDistance=(lng,lat,distance_m, bearing_deg)=>{
 const finalizeDisplayCoordinate=(lng,lat,map)=>{
     let dis_latitude
     let dis_longitude
-
+    let DISTANCE_M_MOBILE = 60
+    let DISTANCE_M_DESKTOP = 80
+    let BEARING_DEGREE_MOBILE = 180 //
+    let BEARING_DEGREE_DESKTOP = 270
     if (!_isMobile()) {
-        const { latitude, longitude } = _coorFromDistance(lng,lat,100,270)
+        const { latitude, longitude } = _coorFromDistance(lng,lat,DISTANCE_M_DESKTOP,BEARING_DEGREE_DESKTOP)
             dis_latitude = latitude
             dis_longitude = longitude
     }
     else {
-        const { latitude, longitude } = _coorFromDistance(lng,lat,70,180)
+        const { latitude, longitude } = _coorFromDistance(lng,lat,DISTANCE_M_MOBILE,BEARING_DEGREE_MOBILE)
         dis_latitude = latitude
         dis_longitude = longitude
     }
     
-    map.flyTo({
-            center: [dis_longitude, dis_latitude],
-            zoom: 18,
-            duration: 2000
-    })
+    map.flyTo([dis_latitude, dis_longitude], 19, {
+        duration: 1,        // seconds
+        // easeLinearity: 0.25
+    });
 }
