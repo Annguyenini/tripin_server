@@ -68,7 +68,7 @@ class TripContentService:
         self.trip_database_service.update_trip_version(type_of_version=DATABASEKEYS.TRIPS.TRIP_COORDINATES_VERSION,trip_id=trip_id)
         con.commit()
         cur.close()
-        con.close()
+        self.database_service.close_db(conn=con)
         
         
         return True, None

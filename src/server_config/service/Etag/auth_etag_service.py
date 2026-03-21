@@ -41,6 +41,7 @@ class AuthEtagService (EtagService):
         con,cur = self.databaseService.connect_db()
         cur.execute(f'''SELECT {DATABASEKEYS.USERDATA.ETAG} FROM {DATABASEKEYS.TABLES.USERDATA} WHERE {DATABASEKEYS.USERDATA.USER_ID} = %s''',(user_id,))
         con.commit()
+        self.databaseService.close_db(conn=con)
         db_etag = cur.fetchone()
         return db_etag if db_etag else None
 

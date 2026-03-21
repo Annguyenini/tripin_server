@@ -31,7 +31,7 @@ class TripDatabaseService (Database):
         cur.execute(f'INSERT INTO {DATABASEKEYS.TABLES.TRIPS} (user_id,trip_name,created_time, active,image) VALUES (%s,%s,%s,%s,%s) RETURNING id',(user_id,trip_name,created_time,True,imageUri))
         trip_id = cur.fetchone()['id']
         con.commit()
-        con.close()
+        self.close_db(conn=con)
         if cur.rowcount >=1:
             print("insert successfully")
             return True, trip_id
@@ -65,6 +65,7 @@ class TripDatabaseService (Database):
             VALUES (%s,%s,%s,%s,%s,%s,%s,%s)''',
             (type,media_path,longitude,latitude,trip_id,time,modified_time,media_id))
         con.commit()
+        self.close_db(conn=con)
         if cur.rowcount >=1:
             return True
         else: return False
@@ -73,7 +74,7 @@ class TripDatabaseService (Database):
         con,cur =self.connect_db()
         cur.execute(f'UPDATE {DATABASEKEYS.TABLES.USERDATA} SET trips_data_version = trips_data_version+1 WHERE id = %s',(user_id,))
         con.commit()
-        con.close()
+        self.close_db(conn=con)
         return True if cur.rowcount>=1 else False
     
     def update_trip_version (self,type_of_version:str,trip_id:int,version:int = None):
@@ -82,6 +83,7 @@ class TripDatabaseService (Database):
             con,cur = self.connect_db()
             cur.execute(f'UPDATE {DATABASEKEYS.TABLES.TRIPS} SET {type_of_version} = {type_of_version}+1 WHERE id = %s',(trip_id,))
             con.commit()
+            self.close_db(conn=con)
             return True if cur.rowcount>=1 else False
         except Exception as e:
             logging.exception('Failed to update trip version:{e}')
@@ -91,6 +93,7 @@ class TripDatabaseService (Database):
         con,cur =self.connect_db()
         cur.execute(f'SELECT {data_type} FROM {DATABASEKEYS.TABLES.USERDATA} WHERE id = %s',(user_id,))
         con.commit()
+        self.close_db(conn=con)
         version = cur.fetchone()
         return version[0] if version else None
     
@@ -98,12 +101,15 @@ class TripDatabaseService (Database):
         con,cur = self.connect_db()
         cur.execute(f'SELECT {version_type} FROM {DATABASEKEYS.TABLES.TRIPS} WHERE {DATABASEKEYS.TRIPS.TRIP_ID} = %s',(trip_id,))
         con.commit()
+        self.close_db(conn=con)
         version = cur.fetchone()
         return version[0] if version else None
     def get_user_id_from_trip_id(self,trip_id:int)->int:
         con,cur = self.connect_db()
         cur.execute(f'SELECT {DATABASEKEYS.TRIPS.USER_ID} FROM {DATABASEKEYS.TABLES.TRIPS} WHERE {DATABASEKEYS.TRIPS.TRIP_ID} = %s',(trip_id,))
         con.commit()
+        self.close_db(conn=con)
+
         return cur.fetchone()[0]
     
     def get_trip_coordinates (self,trip_id:int,client_version:int = 0):
@@ -117,7 +123,8 @@ class TripDatabaseService (Database):
                         ORDER BY {DATABASEKEYS.TRIP_COORDINATES.COORDINATES_ID} ASC''',(trip_id,client_version,))
             con.commit()
             coors = cur.fetchall()
-            con.close()
+            self.close_db(conn=con)
+
             # print(coors)
             return coors if coors else None
         except Exception as e:
@@ -141,7 +148,7 @@ class TripDatabaseService (Database):
         
         row = cur.fetchone()
         con.commit()
-        con.close()
+        self.close_db(conn=con)
         return row if row else None
     
     def get_trip_media_metadatas(self,trip_id:int):
@@ -164,5 +171,5 @@ class TripDatabaseService (Database):
                     ''' ,(trip_id,))
         row = cur.fetchall()
         con.commit()
-        con.close()
+        self.close_db(conn=con)
         return row if row else None

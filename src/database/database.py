@@ -6,20 +6,20 @@
 
 
 
-
 import psycopg2
+from psycopg2 import pool
 from dotenv import set_key, load_dotenv
 import os
-from src.server_config.config import Config
-from src.server_config.encryption.encryption import Encryption
-from src.server_config.database_config import DatabaseConfig
 import inspect
 from datetime import datetime
 from psycopg2.extras import DictCursor,RealDictCursor
 from src.database.database_keys import DATABASEKEYS
-
+import os 
+import dotenv
+dotenv.load_dotenv()
 class Database:
     _instance = None
+    _initialized_credentials = False
     def __new__(cls,*args,**kwargs):
         if cls._instance is None:
             cls._instance = super().__new__(cls)
@@ -28,147 +28,55 @@ class Database:
     def __init__(self):
         if getattr(self, "_initialized", False):
             return
-        if getattr(self, "_initialized_credentials", False):
-            return
-        
-        self._initialized = True
-        self._initialized_credentials = False
-        self.config = Config()
-        self.encryption_Service = Encryption() 
-        self.database_config = DatabaseConfig()
+        self._initialized = True        
         self._initialized =False
         # database credentials
         self.database_host =None
         self.database_dbname =None
         self.database_username  =None
         self.database_password =None
-        self.database_port = None        
+        self.database_port = None 
+        
+        self._pool =None       
+    
+    def _init_connection_pool(self):
+        """create connection pool
+        """
+        if not self._initialized_credentials:
+            self._init_database_credentials()
             
+            
+        self._initialized_credentials = True
+        try:
+            self._pool = pool.ThreadedConnectionPool(
+                5, 20,  # min, max connections
+                host=self.database_host,
+                dbname=self.database_dbname,
+                user=self.database_username,
+                password=self.database_password,
+                port=self.database_port
+            )
+        except Exception as e:
+            print (f'Failed to init postgres pool: {e}')
+        
     # set database credentials(onlyfor server Auth class)
     def _init_database_credentials(self):
-        self.database_host = self.database_config.database_host
-        self.database_dbname = self.database_config.database_dbname
-        self.database_username = self.database_config.database_user
-        self.database_password = self.database_config.database_password
-        self.database_port = self.database_config.database_port
-        self._initialized_credentials = True
+        self.database_host =  os.getenv("DB_HOST")
+        self.database_dbname = os.getenv("DB_NAME")
+        self.database_username = os.getenv("DB_USER")
+        self.database_password = os.getenv("DB_PASS")
+        self.database_port = os.getenv("DB_PORT")
 
-    ## setup table if not exists (assuming exist)
-    def __init__authsetup(self):
-        if not self._initialized_credentials:
-            return
-        con,cur = self.connect_db()
-        cur.execute('''
-                    CREATE SCHEMA IF NOT EXISTS tripin_auth;
-                    CREATE TABLE IF NOT EXISTS tripin_auth.userdata (id SERIAL PRIMARY KEY, email TEXT,display_name TEXT, user_name TEXT, password TEXT,created_time TIMESTAMP NOT NULL,role TEXT NOT NULL DEFAULT user
-                    avatar TEXT, etag TEXT, trips_data_version BIGINT DEFAULT 1, trips_data_etag TEXT, userdata_version BIGINT DEFAULT 0)''')
-        con.commit()
-        cur.execute('''
-        CREATE TABLE IF NOT EXISTS tripin_auth.tokens (
-        id SERIAL PRIMARY KEY,
-        user_id INTEGER NOT NULL REFERENCES tripin_auth.userdata(id) ON DELETE CASCADE,
-        user_name TEXT NOT NULL,
-        token TEXT NOT NULL,
-        issued_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
-        expires_at TIMESTAMP NOT NULL,
-        revoked BOOLEAN NOT NULL DEFAULT FALSE
-        );
-
-        ''')
-        con.commit() 
-        # cur.execute(''' CREATE TABLE IF NOT EXISTS tripin_auth.session (id SERIAL PRIMARY KEY,
-        # user_id INTEGER NOT NULL REFERENCES tripin_auth.auth(id) ON DELETE CASCADE, login_time TIMESTAMP NOT NULL, last_activity TIMESTAMP NOT NULL);''')
-        con.commit()
-        con.close()
-    def __init__tripsetup(self):
-        if not self._initialized_credentials:
-            return
-        con,cur = self.connect_db()
-        cur.execute('''
-            CREATE SCHEMA IF NOT EXISTS tripin_trips;
-
-            CREATE TABLE IF NOT EXISTS tripin_trips.trips_table (
-            id INTEGER PRIMARY KEY
-                DEFAULT nextval('tripin_trips.trip_table_id_seq'),
-
-            user_id INTEGER NOT NULL
-                REFERENCES tripin_auth.userdata(id)
-                ON DELETE CASCADE,
-
-            trip_name TEXT NOT NULL,
-
-            created_time TIMESTAMPTZ NOT NULL,
-
-            ended_time TIMESTAMPTZ,
-
-            active BOOLEAN NOT NULL DEFAULT FALSE,
-
-            image TEXT,
-
-            etag TEXT,
-
-            trip_coordinates_version BIGINT DEFAULT 0,
-            trip_medias_version BIGINT DEFAULT 0,
-            trip_informations_version BIGINT DEFAULT 0
-        );
-
-        ''')
-        con.commit() 
-        cur.execute('''
-            CREATE TABLE tripin_trips.trip_coordinates (
-            id SERIAL PRIMARY KEY,
-
-            trip_id INTEGER NOT NULL
-                REFERENCES tripin_trips.trips_table(id)
-                ON DELETE CASCADE,
-
-            altitude REAL NOT NULL,
-            latitude REAL NOT NULL,
-            longitude REAL NOT NULL,
-            speed REAL NOT NULL,
-            heading REAL NOT NULL,
-
-            time_stamp TIMESTAMP NOT NULL,
-
-            batch_version BIGINT DEFAULT 0
-        );
-        ''')
-        con.commit() 
-
-        cur.execute('''
-            CREATE TABLE tripin_trips.trip_medias (
-            id SERIAL PRIMARY KEY,
-
-            trip_id INTEGER NOT NULL
-                REFERENCES tripin_trips.trips_table(id)
-                ON DELETE CASCADE,
-
-            media_type TEXT,
-
-            key TEXT NOT NULL,
-
-            longitude REAL NOT NULL,
-            latitude REAL NOT NULL,
-
-            time_stamp TIMESTAMPTZ
-        );''')
-        con.commit()
-        con.close() 
     def connect_db(self,cur_options:str = 'rowDict'):
         """connect to postgres
 
         Returns:
             _cursor_: con, cur  
         """
-        if not self._initialized:
-            self._init_database_credentials()
-        conn = psycopg2.connect(
-        host= self.database_host,
-        dbname= self.database_dbname,
-        user= self.database_username,
-        password= self.database_password,
-        port= self.database_port
-        )
+        if self._pool is None:
+            self._init_connection_pool()
+        
+        conn = self._pool.getconn() 
 
         # con = sqlite3.connect(path,check_same_thread=False,isolation_level=None)
         if cur_options =='realDict':
@@ -178,7 +86,13 @@ class Database:
 
         return conn, cur
 
+    def close_db (self,conn):
+        """return conection to pool
 
+        Args:
+            conn (_type_): _description_
+        """
+        self._pool.putconn(conn=conn)
     
                 
     def find_item_in_sql(self, table:str, 
@@ -221,11 +135,14 @@ class Database:
                     query =f'SELECT * FROM {table} WHERE {item}=%s AND {second_item} =%s ORDER BY {order_by} {order_type}'
                 cur.execute(query,(value,second_value,))
             
+            con.commit()
             item = None
             if return_option =="fetchall":
                 item = cur.fetchall()
             else:
                 item = cur.fetchone()
+                
+            self.close_db(conn=con)
             return item  
         except Exception as e:
             print('Error at find item ',e)
@@ -248,9 +165,10 @@ class Database:
             
             cur.execute(f'UPDATE {table} SET {item_to_update} =%s WHERE {item} = %s',(value_to_update,value,))
             con.commit()
-            con.close()
+            self.close_db(conn=con)
             if cur.rowcount <0:
                 return False
+            
             return True
         except Exception as e:
             print ('failed to update to database',e)
@@ -263,6 +181,7 @@ class Database:
         else:
             cur.execute(f'DELETE FROM {table} WHERE {item} = %s',(value))            
         con.commit()
+        self.close_db(conn=con)
         if cur.rowcount <= 0:
             return False
         else :return True
@@ -308,6 +227,7 @@ class Database:
         con,cur = self.connect_db()
         cur.execute(f'INSERT INTO {DATABASEKEYS.TABLES.TOKENS} (user_id,user_name,token,issued_at,expired_at) VALUES (%s, %s, %s, %s, %s)',(user_id,username,token,issued_at,expired_at,))
         con.commit()
+        self.close_db(conn=con)
         if(cur.rowcount>=1):
             return True
         return False
