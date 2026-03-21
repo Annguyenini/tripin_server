@@ -39,8 +39,8 @@ class S3Sevice:
                 return cache
     
             respond = s3Client.generate_presigned_url('get_object',
-            Params={'Bucket': self.config.aws_bucket, 'Key': key},
-            ExpiresIn=expiration,)
+            Params={'Bucket': self.config.aws_bucket, 'Key': key, 'ResponseContentType': 'image/jpeg',},
+            ExpiresIn=expiration, )
             
             # print(respond)
         except ClientError as e:
