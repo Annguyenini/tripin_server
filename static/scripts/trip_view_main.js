@@ -10,13 +10,14 @@ const STYLES = {
 
 showLoading('Loading Map')
 
-const map = L.map('map', { zoomControl: false, minZoom: 3,   // ← can't zoom out past this
+const map = L.map('map', { zoomControl: false, minZoom: 4,   // ← can't zoom out past this
     maxZoom: 22, }).setView([20, 0], 10);
 
 const tileLayer = L.tileLayer(STYLES.streets, {
     tileSize: 512,
     zoomOffset: -1,
     detectRetina: true,
+    minZoom:4,
     maxZoom: 23,         // map can zoom to 22
     maxNativeZoom: 18,   // but reuse z18 tiles beyond that (just scaled up)
     keepBuffer: 4,

@@ -15,7 +15,7 @@ const init = async () => {
   
   await requestTripData(TOKEN)
   await renderTripCoordinates(map)
-  await renderTripMedias(map, map.getZoom())
+  await renderTripMedias(map, 15)
 
   hideLoading()
 }
