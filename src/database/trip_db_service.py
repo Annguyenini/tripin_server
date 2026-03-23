@@ -141,9 +141,15 @@ class TripDatabaseService (Database):
     
     def get_trip_data_by_shared_token(self,token:str):
         con,cur = self.connect_db()
-        cur.execute(f'''SELECT * FROM {DATABASEKEYS.TABLES.TRIP_SHARED_LINKS}
+        cur.execute(f'''SELECT 
+                    {DATABASEKEYS.TABLES.TRIP_SHARED_LINKS}.*,
+                    {DATABASEKEYS.TABLES.TRIPS}.*,
+                    {DATABASEKEYS.TABLES.USERDATA}.display_name
+                    FROM {DATABASEKEYS.TABLES.TRIP_SHARED_LINKS}
                     INNER JOIN {DATABASEKEYS.TABLES.TRIPS}
                     ON {DATABASEKEYS.TRIP_SHARED_LINKS.TRIP_ID} = {DATABASEKEYS.TABLES.TRIPS}.id
+                    INNER JOIN {DATABASEKEYS.TABLES.USERDATA}
+                    ON {DATABASEKEYS.TABLES.TRIPS}.user_id = {DATABASEKEYS.TABLES.USERDATA}.id
                     WHERE {DATABASEKEYS.TRIP_SHARED_LINKS.TOKEN} = %s''', (token,))
         
         row = cur.fetchone()

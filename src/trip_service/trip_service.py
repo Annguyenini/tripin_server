@@ -145,7 +145,7 @@ class TripService:
     
     
         
-    def get_trip_data(self,trip_id,client_etag):
+    def get_trip_data(self,trip_id,client_etag,want_user_data=False):
         """_summary_
 
         Args:
@@ -194,6 +194,48 @@ class TripService:
     
         return trip_data, new_etag
     
+    def get_trip_data_from_token(self,client_etag,token:str):
+        """_summary_
+
+        Args:
+            user_id (_type_): _description_
+            etag (_type_): _description_
+        """
+        trip_data = self.trip_database_service.get_trip_data_by_shared_token(token=token)
+
+        if not trip_data :return None, None
+        
+        trip_id = trip_data['trip_id']
+        # etag key  
+        etag_key =self.trip_etag_service.get_trip_etag_key(trip_id=trip_id)
+        # fetch the etag from cache if match return        
+        etag_from_cache = self.cache_service.get(etag_key)
+        if client_etag == etag_from_cache and client_etag and etag_from_cache:
+            return None, etag_from_cache
+        
+       
+        
+        # checking for etag based on hour bucket and data version
+        trip_information_version = trip_data[DATABASEKEYS.TRIPS.TRIP_INFO_VERSION]
+
+        hour_bucket = int(time.time()//3600)
+        new_etag_data= self.trip_etag_service.get_trip_etag_data_string(trip_id=trip_id,version=trip_information_version,hour_bucket=hour_bucket)
+        new_etag = self.etag_service.generate_etag(new_etag_data)
+        if client_etag == new_etag:
+            return None, new_etag
+        # set etag to redis
+        self.cache_service.set(etag_key,3600,new_etag)
+
+
+        trip_image_default = trip_data['image']
+        trip_image = None
+        new_trip_data = dict(trip_data)
+        # generate url for image
+        if trip_image_default:
+            new_trip_data['image'] = self.s3_service.generate_temp_uri(trip_image_default)
+        
+
+        return new_trip_data, new_etag
     
     
     

@@ -10,8 +10,11 @@ const requestTripData=async(token)=>{
 }
 const populateBanner=(tripData)=> {
     const trip_name = tripData.trip_name
-    
+    const author = tripData.display_name
   document.getElementById('banner-title').textContent      = trip_name        || 'Unnamed Trip';
+  document.getElementById('trip-author').textContent      = author        || 'Unknown';
+  document.getElementById('banner-author').textContent      = author        || 'Unknown';
+
   document.getElementById('banner-dates').textContent      = formatDates(tripData.created_time, tripData.ended_time);
 }
 
