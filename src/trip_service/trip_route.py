@@ -147,15 +147,10 @@ class TripRoute(RouteBase):
         
         # validate token exists and is correct sha256 length (64 chars)
         if not token or len(token) != 64:
-            return jsonify({'code': 'invalid_token', 'message': 'Invalid token'})
+            return jsonify({'code': 'invalid_token', 'message': 'Invalid token'}),404
         
-        # look up token in share_links table to get trip info
-        trip_data_from_token = self.trip_database_service.get_trip_data_by_shared_token(token=token)
-        trip_id = trip_data_from_token['trip_id']
-        
-        # fetch trip data, returns None if etag matches (data unchanged)
-        trip_data, etag = self.trip_service.get_trip_data(trip_id=trip_id, client_etag=client_etag)
-        
+      
+        trip_data, etag = self.trip_service.get_trip_data_from_token(client_etag=client_etag,token=token)
         # data unchanged — tell browser to use its cache
         if not trip_data and etag is not None:
             return jsonify({'etag': etag}), 304
@@ -165,7 +160,6 @@ class TripRoute(RouteBase):
         # new data — return with etag so browser can cache it
         response = jsonify({'trip_data': trip_data})
         response.headers['ETag'] = etag
-        print(response)
         return response, 200
    
         

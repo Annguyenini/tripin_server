@@ -31,7 +31,8 @@ def upgrade() -> None:
 def downgrade() -> None:
     """Downgrade schema."""
     f'''
+    DROP TYPE coordinates_events AS ENUM ('add','remove');
     ALTER TABLE tripin_trips.trips_coordinates DROP COLUMN IF EXISTS event_id BIGINT DEFAULT 0 NOT NULL;
-    ALTER TABLE tripin_trips.trips_coordinates FROP COLUMN IF EXISTS event coordinates_events;
+    ALTER TABLE tripin_trips.trips_coordinates DROP COLUMN IF EXISTS event coordinates_events;
     '''
     pass
