@@ -23,7 +23,7 @@ def upgrade() -> None:
     op.execute('''
     CREATE TYPE tripin_trips.coordinates_events AS ENUM ('add','remove');
     ALTER TABLE tripin_trips.trip_coordinates ADD COLUMN IF NOT EXISTS event_id BIGINT DEFAULT 0 NOT NULL;
-    ALTER TABLE tripin_trips.trip_coordinates ADD COLUMN IF NOT EXISTS event tripin_trips.coordinates_events DEFAULT 'add' NOT NULLQQ;    
+    ALTER TABLE tripin_trips.trip_coordinates ADD COLUMN IF NOT EXISTS event tripin_trips.coordinates_events DEFAULT 'add' NOT NULL;    
     ''')
     pass
 
@@ -33,7 +33,7 @@ def downgrade() -> None:
     op.execute('''
     ALTER TABLE tripin_trips.trip_coordinates DROP COLUMN IF EXISTS event_id;
     ALTER TABLE tripin_trips.trip_coordinates DROP COLUMN IF EXISTS event;
-    DROP TYPEQ IF EXISTS tripin_trips.coordinates_events;
+    DROP TYPE IF EXISTS tripin_trips.coordinates_events;
 
     ''')
     pass
