@@ -37,7 +37,7 @@ class TripDatabaseService (Database):
             return True, trip_id
         return False,0 
     
-    def insert_media_into_db(self, type:str,media_path:str,longitude:float,latitude:float,trip_id:int,time:int,modified_time:int,media_id:str) -> bool:
+    def insert_media_into_db(self, type:str,media_path:str,longitude:float,latitude:float,trip_id:int,time:int,modified_time:int,media_id:str,coordinate_id:str) -> bool:
         """insert in to trip medias table
 
         Args:
@@ -61,9 +61,10 @@ class TripDatabaseService (Database):
             {DATABASEKEYS.TRIP_MEDIAS.TRIP_ID}, 
             {DATABASEKEYS.TRIP_MEDIAS.TIME_STAMP},
             {DATABASEKEYS.TRIP_MEDIAS.MODIFIED_TIME},
-            {DATABASEKEYS.TRIP_MEDIAS.MEDIA_ID}) 
-            VALUES (%s,%s,%s,%s,%s,%s,%s,%s)''',
-            (type,media_path,longitude,latitude,trip_id,time,modified_time,media_id))
+            {DATABASEKEYS.TRIP_MEDIAS.MEDIA_ID},
+            {DATABASEKEYS.TRIP_MEDIAS.COORDINATE_ID}) 
+            VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s)''',
+            (type,media_path,longitude,latitude,trip_id,time,modified_time,media_id,coordinate_id))
         con.commit()
         self.close_db(conn=con)
         if cur.rowcount >=1:
