@@ -39,37 +39,63 @@ class TripContentService:
         current_batch_version = self.trip_database_service.get_trip_contents_version(trip_id=trip_id,version_type=DATABASEKEYS.TRIPS.TRIP_COORDINATES_VERSION)
         # if new data version != to next batch version return false with the request batch version
         # print(client_version,current_batch_version+1)
+        print(current_batch_version,coordinates)
         if client_version != current_batch_version +1:
             # print(current_batch_version,type(current_batch_version))
             # print(client_version,type(client_version))
 
-            return False, current_batch_version +1
+            return False, current_batch_version
         batch =[]
         con,cur = self.database_service.connect_db()
         # insert into db
         
-        
+        print('pass')
+
         try:
-            query = "INSERT INTO tripin_trips.trip_coordinates (trip_id,batch_version,time_stamp,altitude,latitude,longitude,heading,speed) VALUES (%s,%s,%s,%s,%s,%s,%s,%s)"
+            query = f'''INSERT INTO tripin_trips.trip_coordinates (
+                {DATABASEKEYS.TRIP_COORDINATES.TRIP_ID},
+                {DATABASEKEYS.TRIP_COORDINATES.BATCH_VERSION},
+                {DATABASEKEYS.TRIP_COORDINATES.TIME_STAMP},
+                {DATABASEKEYS.TRIP_COORDINATES.ALTITUDE},
+                {DATABASEKEYS.TRIP_COORDINATES.LATITUDE},
+                {DATABASEKEYS.TRIP_COORDINATES.LONGITUDE},
+                {DATABASEKEYS.TRIP_COORDINATES.HEADING},
+                {DATABASEKEYS.TRIP_COORDINATES.SPEED},
+                {DATABASEKEYS.TRIP_COORDINATES.COORDINATE_ID},
+                {DATABASEKEYS.TRIP_COORDINATES.EVENT}) 
+                VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s,%s)'''
             for cor in coordinates:
                 # print(cor)
                 # print(cor['time_stamp'])
                 # time_s = cor['time_stamp']/1000
                 # dt = datetime.fromtimestamp(time_s)
                 # formatted = dt.strftime("%Y-%m-%d %H:%M:%S")
-                batch.append([trip_id,client_version,cor['time_stamp'],cor["coordinates"]["altitude"],cor["coordinates"]["latitude"],cor["coordinates"]['longitude'], cor["coordinates"]['heading'], cor["coordinates"]['speed']])
-            cur.executemany(query,batch)            
+                batch.append([trip_id,
+                              client_version,
+                              cor['time_stamp'],
+                              cor["coordinates"]["altitude"],
+                              cor["coordinates"]["latitude"],
+                              cor["coordinates"]['longitude'], 
+                              cor["coordinates"]['heading'], 
+                              cor["coordinates"]['speed'],
+                              cor["coordinates"]["coordinate_id"],
+                              cor["coordinates"]["event"],
+                              ],)
+            cur.executemany(query,batch)  
+            con.commit()
+          
             batch.clear()
         except psycopg2.Error as e:
             print("fail to insert into database",e)
             return False, None
-        
-        
-        self.trip_database_service.update_trip_version(type_of_version=DATABASEKEYS.TRIPS.TRIP_COORDINATES_VERSION,trip_id=trip_id)
-        con.commit()
-        cur.close()
-        self.database_service.close_db(conn=con)
-        
+        print('pass1')
+
+        try:
+            self.trip_database_service.update_trip_version(type_of_version=DATABASEKEYS.TRIPS.TRIP_COORDINATES_VERSION,trip_id=trip_id)
+            self.database_service.close_db(conn=con)
+        except Exception as e:
+            print("fail to update version",e)
+            return False, None
         
         return True, None
         
@@ -77,16 +103,20 @@ class TripContentService:
         status = self.database_service.update_db('tripin_trips.trips_table','id',trip_id,'image',image_path)
         return status
     
-    def upload_media(self,type:str,path:str,media,longitude:float,latitude:float,trip_id:int,time:int,media_id:str) -> bool | int:
+    def upload_media(self,type:str,path:str,media,trip_id:int,coordinate_data:object) -> bool | int:
         # current_version = self.trip_database_service.get_trip_contents_version(trip_id=trip_id,version_type=DATABASEKEYS.TRIPS.TRIPS_MEDIAS_VERSION)
         # print(client_version,type(client_version))
         # print(current_version+1,type(current_version))
         # print(client_version,current_version)
         # if client_version != current_version +1:
         #     return False, current_version +1
-        
+        longitude = coordinate_data.get('longitude')
+        latitude = coordinate_data.get('latitude')
+        time = coordinate_data.get('time_stamp')  
+        media_id = coordinate_data.get('media_id')  
+        coordinate_id =coordinate_data.get('coordinate_id')
         # insert into database (postgres)
-        insert_into_db = self.trip_database_service.insert_media_into_db(type=type,media_path=path,longitude=longitude,latitude=latitude,trip_id=trip_id,time=time,modified_time=time,media_id=media_id)
+        insert_into_db = self.trip_database_service.insert_media_into_db(type=type,media_path=path,longitude=longitude,latitude=latitude,trip_id=trip_id,time=time,modified_time=time,media_id=media_id,coordinate_id=coordinate_id)
         if not insert_into_db:
             return False,None
         
