@@ -1,7 +1,7 @@
 from flask import Flask, render_template, jsonify, request, send_file, abort,Blueprint
 from flask_cors import CORS
 from flask_mail import Mail, Message
-from flask_admin import Admin
+# from flask_admin import Admin
 from src.credential.credential_route import AuthServer
 from src.server_auth.server_auth import ServerAuth
 from src.mail.mail_config import MailConfig
@@ -31,8 +31,8 @@ dotenv.load_dotenv('.env')
 class Server:
     def __init__(self):
         self.app = Flask(__name__)
-        self.admin = Admin()
-        self.admin.init_app(self.app)
+        # self.admin = Admin()
+        # self.admin.init_app(self.app)
         CORS(self.app)
         self._register_blueprints()
         self.app.config.from_object(MailConfig)
