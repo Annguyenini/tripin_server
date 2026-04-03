@@ -7,7 +7,7 @@ gallery/
 # test/
 .env
 # /docs
-/logs
+logs/
 .env.test
 .__pycache__
 .pytest_cache

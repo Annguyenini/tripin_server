@@ -1,4 +1,6 @@
 from flask import Flask, render_template, jsonify, request, send_file, abort,Blueprint
+from werkzeug.exceptions import HTTPException
+
 from flask_cors import CORS
 from flask_mail import Mail, Message
 # from flask_admin import Admin
@@ -24,6 +26,7 @@ from src.server_config.discord_error_logs import discord_error_logs,discord_requ
 import traceback
 import datetime
 from bootstraps.bootstrap_manager import bootstrap_manager
+from src.error_handler.error_handler import ErrorHandler
 bootstrap_manager()
 mail =Mail()
 dotenv.load_dotenv('.env')
@@ -59,7 +62,8 @@ class Server:
 
         # self.app.route("/trip-view",methods =['GET'])(self.trip_view)
         self.app.errorhandler(404)(self.error_404_site)
-        self.app.errorhandler(500)(self.error_500_site)
+        # self.app.errorhandler(500)(self.error_500_site)
+        self.app.errorhandler(HTTPException)(self.error_exception_log)
         self.app.errorhandler(Exception)(self.error_exception_log)
         self.app.after_request(self.log_request)
 
@@ -68,6 +72,7 @@ class Server:
         return render_template('testmap.html')
 
     def test_error(self):
+        
         1/0
     def health(self):
         return jsonify({'code':'success'}),200
@@ -78,8 +83,11 @@ class Server:
     def error_404_site(self,e):
         return render_template('404.html'),404
     def error_500_site(self,e):
+        print('dsdsd')
         return render_template('500.html'),500
     def error_exception_log(self,e):
+        print('dsdsddsdsdsdsd')
+
         now = datetime.datetime.now()
         timestamp = now.strftime("%Y-%m-%d %H:%M")
         trace = traceback.format_exc()
@@ -109,6 +117,10 @@ server_auth_service = ServerAuth()
 server_auth_service.skip_indentity()
 server = Server()
 
+
+errorHandler=ErrorHandler()
+errorHandler.logger('auth')
+errorHandler.error('asdsdss',body={'dsdsd':'dsds'})
 
 start_server_status_thread()
 

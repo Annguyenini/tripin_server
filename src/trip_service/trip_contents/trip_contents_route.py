@@ -77,7 +77,7 @@ class TripContentsRoute(RouteBase):
        
         if not insert:
             # version conflict — client is behind, return current db version
-            if db_version :
+            if db_version is not None :
                 return jsonify({"code":"missing_versions","message":f"Current version: {db_version} make sure to have the version that higher than this!",'missing_versions':db_version}),409
             return jsonify({"code": "failed", "message":"Failed to save to database"}),500
 
@@ -255,7 +255,7 @@ class TripContentsRoute(RouteBase):
         # get client version for cache comparison
         medias = self.trip_contents_service.get_trip_media(trip_id=trip_id)
 
-        return jsonify({'message':"Successfully",'medias':medias}),200
+        return jsonify({'message':"Successfully",'medias':medias,'hash':server_hash}),200
     
     def get_trip_medias_by_token(self,token):
         """Get media for a trip via public share token (no JWT needed).
