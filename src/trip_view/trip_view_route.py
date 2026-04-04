@@ -4,6 +4,7 @@ from src.server_config.service.smart_cast import smart_cast
 from src.database.trip_db_service import TripDatabaseService
 from src.database.database_keys import DATABASEKEYS
 from src.server_config.config import Config
+from src.error_handler.error_handler import ErrorHandler
 import secrets
 import hashlib
 from dotenv import load_dotenv
@@ -79,7 +80,6 @@ class TripViewRoute(RouteBase):
     def request_trip_view(self,token):
         trip_data = self._get_data_using_token(token=token)
         if not trip_data:
-            
             return render_template('500.html'),500
         # check if the token still valid 
         current_date_in_ms = int(datetime.now(timezone.utc).timestamp())
