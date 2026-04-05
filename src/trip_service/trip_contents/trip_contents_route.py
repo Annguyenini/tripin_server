@@ -78,9 +78,10 @@ class TripContentsRoute(RouteBase):
         if not insert:
             # version conflict — client is behind, return current db version
             if db_version is not None :
+                
                 return jsonify({"code":"missing_versions","message":f"Current version: {db_version} make sure to have the version that higher than this!",'missing_versions':db_version}),409
             return jsonify({"code": "failed", "message":"Failed to save to database"}),500
-
+            
         return jsonify({"code": "successfully", "message":"Successfully store into database"}),200
        
     def media_upload(self,trip_id):

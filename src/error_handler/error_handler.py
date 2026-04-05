@@ -25,6 +25,8 @@ class JSONFormatter(logging.Formatter):
             "type": record.levelname,
             "message": record.getMessage(),
             "traceback": ''.join(traceback.format_exception(*record.exc_info)) if record.exc_info else getattr(record, 'body', None)        }
+        redis.Redis().publish('admin:error_log',json.dumps(log))
+
         return json.dumps(log)
 
 class Filter(logging.Filter):
@@ -35,19 +37,14 @@ class Filter(logging.Filter):
         logging (_type_): _description_
     """
     def filter(self, record):
-        print(record)
         id = str(uuid.uuid4())
         record.id = id
-        category =record.name
-        time    = datetime.fromtimestamp(record.created)
-        level   = record.levelname
-        message = record.getMessage()
-        traceback = record.__dict__.get('traceback')
-        redis.Redis().publish('admin:error_log',json.dumps({'id':id,'category':category,'time':str(time),'level':level,"message":message,'traceback':traceback}))
+       
+        # redis.Redis().publish('admin:error_log',json.dumps({'id':id,'category':category,'time':str(time),'level':level,"message":message,'traceback':traceback}))
         return True
     
-LOGDIR = './logs/errorlogs'
-LOGPATH = './logs/errorlogs/error.log'
+LOGDIR = os.environ.get('ERRORLOGDIR','./logs/errorlogs')
+LOGPATH = f'{LOGDIR}/error.log'
 ALLOWCATEGORY = ['auth','database','trip']
 
 class ErrorSSE:
@@ -80,7 +77,7 @@ class ErrorSSE:
             if token['role']!= 'admin' or token['revoked']:return jsonify({'code':ERROR_KEYS.NOPERMISSION}),401
            
 
-        self.bp.route('/error-sse')(self.errorSSEConnect)
+        # self.bp.route('/error-sse')(self.errorSSEConnect)
         self.bp.route('/request-logs', methods =['GET'])(self.getAllErrorLog)
     
     def getAllErrorLog(self):
@@ -99,6 +96,7 @@ class ErrorSSE:
             "Cache-Control": "no-cache",
             "X-Accel-Buffering": "no"
         })
+    
     
     def _liveErrorLogSource(self):
         pubsub = self.redis.pubsub()
