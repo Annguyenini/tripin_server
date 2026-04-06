@@ -82,7 +82,6 @@ class TokenService:
                 PUBLIC_KEY,
                 algorithms=["RS256"]
             )
-
             if self.get_current_time() > int(payload['exp']):
                 return False, "Token Expired!", "token_expired"
 

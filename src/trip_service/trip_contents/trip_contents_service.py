@@ -86,7 +86,6 @@ class TripContentService:
           
             batch.clear()
         except psycopg2.Error as e:
-            print("fail to insert into database",e)
             return False, None
         print('pass1')
 
