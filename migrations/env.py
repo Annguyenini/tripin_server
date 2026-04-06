@@ -37,7 +37,7 @@ def run_migrations_online() -> None:
     connectable = engine_from_config(
         configuration,
         prefix="sqlalchemy.",
-        poolclass=pQool.NullPool,
+        poolclass=pool.NullPool,
     )
 
     with connectable.connect() as connection:
