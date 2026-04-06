@@ -4,6 +4,8 @@ services:
   db:
     build: ./db
     container_name: tripin_db
+    networks:
+      - tripin_net
     environment:
       POSTGRES_USER: ${DB_USER}
       POSTGRES_PASSWORD: ${DB_PASS}
@@ -12,23 +14,27 @@ services:
       - "5433:5432"
     volumes:
       - pgdata:/var/lib/postgresql/data
-  
+    
   redis:
     image: redis
     container_name: tripin_redis
+    networks:
+      - tripin_net
     ports:
       - "8993:6379"
     volumes:
       - redisdata:/data
   flask:
     container_name: tripin_server
+    networks:
+      - tripin_net
     build: .
     ports:
       - "8992:8000"
       - "1514:1514"
     environment:
-      - LOGDIR=app/logs
-      - ERRORLOGDIR = app/logs/errorlogs
+      - LOGDIR=logs
+      - ERRORLOGDIR=logs/errorlogs
     env_file:
       - src/assets/configs/.env
       - .env
@@ -38,21 +44,23 @@ services:
     volumes:
       - ./src/assets:/app/src/assets    # ← add this
 
-  logs:
-    image: 2axxaxx/nginx_logs:latest
-    ports:
-      - '12345:12345/udp'
-    env_file:
-      - '.env'
-    environment:
-      - LOG_DIR=/app/logs
-    volumes:
-      - ./logs:/app/logs
+  # logs:
+  #   image: 2axxaxx/nginx_logs:latest
+  #   ports:
+  #     - '12345:12345/udp'
+  #   env_file:
+  #     - '.env'
+  #   environment:
+  #     - LOG_DIR=/app/logs
+  #   volumes:
+  #     - ./logs:/app/logs
 volumes:
   pgdata:
   redisdata: 
 
-
+networks:
+  tripin_net:
+    external: true
 # version: '3.8'
 
 

@@ -1,6 +1,6 @@
 from logging.config import fileConfig
 from sqlalchemy import engine_from_config
-from sqlalchemy import pool
+from sqlalchemy import pool,text
 from alembic import context
 import dotenv
 import os
@@ -41,6 +41,8 @@ def run_migrations_online() -> None:
     )
 
     with connectable.connect() as connection:
+        connection.execute(text("CREATE SCHEMA IF NOT EXISTS tripin_migrations"))
+        connection.commit()
         context.configure(
             connection=connection,
             target_metadata=target_metadata,
