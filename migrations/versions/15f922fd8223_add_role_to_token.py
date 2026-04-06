@@ -21,7 +21,7 @@ depends_on: Union[str, Sequence[str], None] = None
 def upgrade() -> None:
     """Upgrade schema."""
     op.execute(f'''
-               ALTER TABLE tripin_auth.tokens ADD COLUMN IF NOT EXISTS role TEXT NOT NULL DEFAULT 'use';
+               ALTER TABLE tripin_auth.tokens ADD COLUMN IF NOT EXISTS role TEXT NOT NULL DEFAULT 'user';
                ''')
     pass
 

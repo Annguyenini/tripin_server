@@ -1,7 +1,9 @@
 import os
 from redis import Redis
 import time
-redis = Redis()
+host = os.getenv('REDIS_HOST')
+port =os.getenv('REDIS_PORT')
+redis = Redis (host =host, port =port, decode_responses =True )
 LOGDIR = os.environ.get('LOGDIR','logs')
 bind = '0.0.0.0:8000'
 workers = 4
