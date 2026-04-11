@@ -77,8 +77,7 @@ class S3Sevice:
             return False
     def delete_media(self,path:str)->bool:
         try:
-            respond_obj = s3Resource.Object(self.config.aws_bucket, path).delete()
-            response = respond_obj.get()           # returns a dict
+            response = s3Resource.Object(self.config.aws_bucket, path).delete()      # returns a dict
             if(response['ResponseMetadata']['HTTPStatusCode']==204):
                 return True
         except ClientError as e:

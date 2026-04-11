@@ -7,6 +7,7 @@ from src.database.trip_db_service import TripDatabaseService
 from src.database.trip_content_db_service  import TripContentsDatabaseService
 from src.base.route_base import RouteBase
 from src.server_config.service.Etag.trip_etag_service import TripEtagService
+from src.database.database_keys import DATABASEKEYS
 import json
 import time
 from src.error_code.error_code import ERROR_KEYS ,ERROR_MESSAGE
@@ -49,7 +50,7 @@ class TripContentsRoute(RouteBase):
         self.bp.route("/<token>/medias-by-token",methods =["GET"])(self.get_trip_medias_by_token)
         self.bp.route('/<trip_id>/medias',methods =['GET'])(self.get_trip_medias)
         self.bp.route('/delete-media',methods=["DELETE"])(self.delete_media)   
-       
+        self.bp.route('/delete-coordinate',methods=["DELETE"])(self.delete_coordinate)   
     def add_coordinates(self,trip_id):
         """Add a batch of coordinates to a trip.
         Requires JWT auth and trip ownership.
@@ -72,7 +73,7 @@ class TripContentsRoute(RouteBase):
         client_version = data.get('version')
 
         # attempt to insert — returns (success, db_version)
-        insert, db_version = self.trip_contents_service.insert_coordinates_to_db(trip_id=trip_id,client_version=smart_cast(client_version),coordinates=coordinates)
+        insert, db_version = self.trip_contents_service.insert_coordinates_to_db(trip_id=trip_id,coordinates=coordinates)
         print(insert,db_version,client_version)
        
         if not insert:
@@ -109,7 +110,7 @@ class TripContentsRoute(RouteBase):
         if image:
             # handle image upload
             path = image.filename
-            upload_status,hash = self.trip_contents_service.upload_media('image',path=path,media=image, trip_id=int(trip_id),coordinate_data=data)
+            upload_status,hash = self.trip_contents_service.upload_media('photo',path=path,media=image, trip_id=int(trip_id),coordinate_data=data)
         else:
             # handle video upload
             video = request.files.get('video')
@@ -128,6 +129,7 @@ class TripContentsRoute(RouteBase):
         trip_data = request.json
         # get media path, if none return
         media_id = trip_data['media_id']
+        modified_time = trip_data['modified_time']
         if not media_id : return ({'code':'no_media_id','message':'No media_id or invalid value type was send!'})
 
         
@@ -137,12 +139,37 @@ class TripContentsRoute(RouteBase):
         if not owner_validation:
             return jsonify({'code':'not authorize', 'message':'Your account are not authorize to modified this trip'}),401
         # pocess delete
-        delete_media, error_delete = self.trip_contents_service.delete_media(media_id=media_id,trip_id=trip_id)
+        delete_media, error_delete = self.trip_contents_service.delete_media(media_id=media_id,trip_id=trip_id,modified_time=modified_time)
         if not delete_media:
+            print (error_delete)
             return (error_delete),500
-        hash = self.trip_contents_service.get_trip_medias_hash(trip_id=trip_id)
+        hash = self.trip_data_base_service.generate_trip_media_hash(trip_id=trip_id)
         return({'code':'successfully','message':'Media delete from server successfully!','hash':hash}),200
     
+    def delete_coordinate(self):
+        user_data, error =self._get_authenticated_user()
+        if error:
+            return (error),401
+        user_id = user_data['user_id']
+        trip_data = request.json
+        # get media path, if none return
+        coordinate_id = trip_data['coordinate_id']
+        if not coordinate_id : return ({'code':'no_coordinate_id','message':'No coordinate_id or invalid value type was send!'})
+
+        
+        trip_id=smart_cast(trip_data['trip_id'])
+        modified_time = trip_data['modified_time']
+        #check for permission
+        owner_validation = self.trip_data_base_service.trip_owner_validation(user_id=user_id,trip_id=trip_id)
+        if not owner_validation:
+            return jsonify({'code':'not authorize', 'message':'Your account are not authorize to modified this trip'}),401
+        # pocess delete
+        delete_coordinate, error_delete = self.trip_contents_service.delete_trip_coord(coordinate_id=coordinate_id,modified_time=modified_time)
+        if not delete_coordinate:
+            return (error_delete),500
+        hash = self.trip_data_base_service.generate_trip_coordinate_hash(trip_id=trip_id)
+        return({'code':'successfully','message':'Media delete from server successfully!','hash':hash}),200
+
     def request_current_location_condition(self):
         """Get geo/weather conditions for a given lng/lat.
         Requires JWT auth.
@@ -178,21 +205,22 @@ class TripContentsRoute(RouteBase):
         user_id = user_data['user_id']
         authorize = self.trip_data_base_service.trip_owner_validation(user_id=user_id,trip_id=trip_id)
         if not authorize:
-            return jsonify({'code':'not authorize','message':'You are not authorize to get this trip data!'})
+            return jsonify({'code':'not authorize','message':'You are not authorize to get this trip data!'}),403
 
         # get client version from header for cache comparison
-        client_version = smart_cast(request.headers.get('version'))
-        coors, version= self.trip_contents_service.get_trip_coors(client_version=client_version,trip_id=trip_id)
-        belong_to =self.trip_contents_service.get_trip_belong_to(trip_id=trip_id)
+        client_hash = request.headers.get('If-None-Match')
+        server_hash = self.trip_data_base_service.generate_trip_coordinate_hash(trip_id=trip_id)
 
         # cache hit — data unchanged
-        if not coors and not version:
+        print(client_hash,server_hash)
+        if client_hash ==server_hash and server_hash:
             return jsonify({'message':'match'}),304
+        coors, version= self.trip_contents_service.get_trip_coors(trip_id=trip_id)
 
         if not coors :
             return jsonify ({'message':'Failed'}),500
         
-        return jsonify({'message':"Successfully",'coordinates':coors,'user_id':belong_to,'newest_version':version}),200
+        return jsonify({'message':"Successfully",'coordinates':coors,'hash':server_hash}),200
     
     def get_trip_coors_by_token(self,token):
         """Get coordinates for a trip via public share token (no JWT needed).
@@ -215,7 +243,7 @@ class TripContentsRoute(RouteBase):
         if client_etag == etag:
             return jsonify({'message':"Match"}),304
         # if not match
-        coors, version= self.trip_contents_service.get_trip_coors(client_version=0,trip_id=trip_id)
+        coors, version= self.trip_contents_service.get_trip_coors(trip_id=trip_id)
 
         # cache hit — data unchanged
         if not coors and not version:
@@ -229,9 +257,9 @@ class TripContentsRoute(RouteBase):
         if version:
             response.headers['ETag'] = etag
         return response,200
-        
-        
+           
     def get_trip_medias(self,trip_id:int):
+        print()
         """Get all media (photos/videos) for a trip. JWT + ownership required.
         Supports version-based caching via 'Version' header.
         Returns 304 if client version matches, 200 with media list otherwise.
@@ -247,14 +275,18 @@ class TripContentsRoute(RouteBase):
             return jsonify({'code':'not_authorize','message':'You are not authorize to get this trip data!'}),403
         
         client_hash = request.headers.get('If-None-Match')
-        server_hash = self.trip_contents_service.get_trip_medias_hash(trip_id=trip_id)
-        
+        # print(client_hash)
+        server_hash = self.trip_data_base_service.generate_trip_media_hash(trip_id=trip_id)
         # return if both have same contents
+        print(client_hash,server_hash)
+
         if client_hash==server_hash:
             return jsonify({'message':"Match"}),304
         
         # get client version for cache comparison
         medias = self.trip_contents_service.get_trip_media(trip_id=trip_id)
+        if medias is None:
+            return jsonify({'message':"Failed",'medias':None}),500
 
         return jsonify({'message':"Successfully",'medias':medias,'hash':server_hash}),200
     

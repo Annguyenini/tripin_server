@@ -116,6 +116,7 @@ class Database:
         Returns:
             _list_: list of tuple or tuple
         """
+        con,cur = None,None
         try:
             con,cur = self.connect_db()
 
@@ -142,11 +143,13 @@ class Database:
             else:
                 item = cur.fetchone()
                 
-            self.close_db(conn=con)
             return item  
         except Exception as e:
             print('Error at find item ',e)
             return None
+        finally:
+            if con: self.close_db(conn=con)
+
     def update_db(self,table:str, item:str, value:str, item_to_update:str, value_to_update:str ):
         
         """update a specific value where  condition exist 
