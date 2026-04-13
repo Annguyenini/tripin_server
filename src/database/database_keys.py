@@ -57,7 +57,8 @@ DATABASEKEYS= SimpleNamespace(
         MODIFIED_TIME ='modified_time',
         IS_DELETED = 'is_deleted',
         MEDIA_ID = 'media_id',
-        COORDINATE_ID ='coordinate_id'
+        COORDINATE_ID ='coordinate_id',
+        EVENT = 'event',
         
     ),
     TRIP_COORDINATES =SimpleNamespace(
@@ -71,7 +72,9 @@ DATABASEKEYS= SimpleNamespace(
         HEADING='heading',
         TIME_STAMP='time_stamp',
         COORDINATE_ID ="coordinate_id",
-        EVENT ='event'
+        EVENT ='event',
+        MODIFIED_TIME ='modified_time',
+
     ),
     TRIP_SHARED_LINKS = SimpleNamespace(
         LINKS_ID='id',

@@ -174,9 +174,9 @@ class Auth:
         
         if not respond:
             return False
-        
+          
         process_new_user = self.process_new_user(email=email)
         if not process_new_user:
-            return False
+            return False 
         return True
     

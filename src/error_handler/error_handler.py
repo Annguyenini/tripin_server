@@ -43,7 +43,7 @@ class Filter(logging.Filter):
         # redis.Redis().publish('admin:error_log',json.dumps({'id':id,'category':category,'time':str(time),'level':level,"message":message,'traceback':traceback}))
         return True
     
-LOGDIR = os.environ.get('ERRORLOGDIR','./logs/errorlogs')
+LOGDIR = os.environ.get('ERRORLOGDIR','logs/errorlogs')
 LOGPATH = f'{LOGDIR}/error.log'
 ALLOWCATEGORY = ['auth','database','trip']
 

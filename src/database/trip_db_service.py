@@ -118,44 +118,46 @@ class TripDatabaseService (Database):
             con,cur = self.connect_db()
             cur.execute(f'SELECT {version_type} FROM {DATABASEKEYS.TABLES.TRIPS} WHERE {DATABASEKEYS.TRIPS.TRIP_ID} = %s',(trip_id,))
             con.commit()
-            self.close_db(conn=con)
             version = cur.fetchone()
             return version[0] if version else None
         except Exception as e:
             self.ErrorHandler.logger('TripDataBase').error('Failed to get trip content version',body=e)
             return False
+        finally:
+            self.close_db(conn=con)
 
     def get_user_id_from_trip_id(self,trip_id:int)->int:
         try:
             con,cur = self.connect_db()
             cur.execute(f'SELECT {DATABASEKEYS.TRIPS.USER_ID} FROM {DATABASEKEYS.TABLES.TRIPS} WHERE {DATABASEKEYS.TRIPS.TRIP_ID} = %s',(trip_id,))
             con.commit()
-            self.close_db(conn=con)
-
             return cur.fetchone()[0]
         except Exception as e:
             self.ErrorHandler.logger('TripDataBase').error('Failed to get user id from trip id',body=e)
             return False
-
-    def get_trip_coordinates (self,trip_id:int,client_version:int = 0):
-        if not client_version: client_version =0
-        # print(trip_id,client_version)
-        try:
-            con,cur = self.connect_db()
-            cur.execute(f'''SELECT * FROM {DATABASEKEYS.TABLES.TRIP_COORDINATES} 
-                        WHERE {DATABASEKEYS.TRIP_COORDINATES.TRIP_ID} = %s 
-                        AND {DATABASEKEYS.TRIP_COORDINATES.BATCH_VERSION} > %s 
-                        ORDER BY {DATABASEKEYS.TRIP_COORDINATES.COORDINATES_ID} ASC''',(trip_id,client_version,))
-            con.commit()
-            coors = cur.fetchall()
+        finally:
             self.close_db(conn=con)
 
+    def get_trip_coordinates (self,trip_id:int):
+        # print(trip_id,client_version)
+        con,cur = None,None
+
+        try:
+            con,cur = self.connect_db()
+
+            cur.execute(f'''SELECT * FROM {DATABASEKEYS.TABLES.TRIP_COORDINATES} 
+                        WHERE {DATABASEKEYS.TRIP_COORDINATES.TRIP_ID} = %s 
+                        ORDER BY {DATABASEKEYS.TRIP_COORDINATES.COORDINATES_ID} ASC''',(trip_id,))
+            con.commit()
+            coors = cur.fetchall()
             # print(coors)
             return coors if coors else None
         except Exception as e:
             self.ErrorHandler.logger('TripDataBase').error('Failed to get trip coordinate',body=e)
             return False
-            
+        finally:
+            if con :self.close_db(conn=con)
+
     def trip_owner_validation(self,user_id:int,trip_id:int)->bool:
         try:
             result = self.find_item_in_sql(DATABASEKEYS.TABLES.TRIPS,
@@ -204,11 +206,10 @@ class TripDatabaseService (Database):
         try:
             con,cur = self.connect_db()
             cur.execute(f'''
-                        SELECT {DATABASEKEYS.TRIP_MEDIAS.MEDIA_ID},
+                        SELECT {DATABASEKEYS.TRIP_MEDIAS.MEDIA_ID} ,{DATABASEKEYS.TRIP_MEDIAS.EVENT},
                         {DATABASEKEYS.TRIP_MEDIAS.MODIFIED_TIME}
                         FROM {DATABASEKEYS.TABLES.TRIP_MEDIAS}
-                        WHERE {DATABASEKEYS.TRIP_MEDIAS.TRIP_ID}
-                        = %s
+                        WHERE {DATABASEKEYS.TRIP_MEDIAS.TRIP_ID} = %s
                         ''' ,(trip_id,))
             row = cur.fetchall()
             con.commit()
@@ -217,3 +218,43 @@ class TripDatabaseService (Database):
         except Exception as e:
             self.ErrorHandler.logger('TripDataBase').error('Failed to get trip metadata',body=e)
             return False
+
+    def generate_trip_media_hash(self,trip_id:int):
+        con,cur = None,None
+        try:
+            con,cur = self.connect_db()
+            cur.execute(f'''
+                        SELECT COUNT(*), MAX({DATABASEKEYS.TRIP_MEDIAS.MODIFIED_TIME})
+                        FROM {DATABASEKEYS.TABLES.TRIP_MEDIAS}
+                        WHERE {DATABASEKEYS.TRIP_MEDIAS.TRIP_ID} = %s
+                        ''' ,(trip_id,))
+            count,max = cur.fetchone()
+            con.commit()
+            return f'{count}:{max}' if count and max else None
+        except Exception as e:
+            self.ErrorHandler.logger('TripDataBase').error('Failed to get trip meida max',body=e)
+            return None
+        finally:
+            if con: self.close_db(conn=con)
+
+    def generate_trip_coordinate_hash(self,trip_id:int):
+        con,cur = None,None
+
+        try:
+            con,cur = self.connect_db()
+            cur.execute(f'''
+                        SELECT COUNT(*) , MAX({DATABASEKEYS.TRIP_COORDINATES.MODIFIED_TIME})
+                        FROM {DATABASEKEYS.TABLES.TRIP_COORDINATES}
+                        WHERE {DATABASEKEYS.TRIP_COORDINATES.TRIP_ID} = %s
+                        ''' ,(trip_id,))
+            count , max = cur.fetchone()
+            con.commit()
+            print(count,max)
+            return f'{count}:{max}'
+        except Exception as e:
+            self.ErrorHandler.logger('TripDataBase').error('Failed to get trip coordinate max',body=e)
+            return None
+        finally:
+            if con :self.close_db(conn=con)
+
+    

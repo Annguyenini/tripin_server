@@ -61,7 +61,7 @@ class Server:
 
         # self.app.route("/trip-view",methods =['GET'])(self.trip_view)
         self.app.errorhandler(404)(self.error_404_site)
-        self.app.errorhandler(500)(self.error_500_site)
+        # self.app.errorhandler(500)(self.error_500_site)
         self.app.errorhandler(HTTPException)(self.error_exception_log)
         self.app.errorhandler(Exception)(self.error_exception_log)
         self.app.after_request(self.log_request)
@@ -98,7 +98,7 @@ class Server:
         discord_error_logs( description )
 
         # return JSON to client
-        return jsonify({"error": "internal server error"}), 500
+        return jsonify({"error": f"internal server error: {e}"}), 500
     
         
     def log_request(self,response):

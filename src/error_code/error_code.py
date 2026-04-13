@@ -1,7 +1,10 @@
 from types import SimpleNamespace
 ERROR_KEYS=SimpleNamespace(
     NOPERMISSION='not_authorize',
-    FAILED='failed'
+    FAILED='failed',
+    CLOUD_FAILED ='failed_cloud',
+    DATABASE_FAILED = 'database_failed'
+
 )
 
 
