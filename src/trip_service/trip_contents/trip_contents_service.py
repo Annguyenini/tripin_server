@@ -41,7 +41,7 @@ class TripContentService:
         batch =[]
         con,cur = self.database_service.connect_db()
         # insert into db
-        
+        print(type(coordinates),coordinates)
         
 
         try:
@@ -67,14 +67,14 @@ class TripContentService:
                 batch.append([trip_id,
                               0,
                               cor['time_stamp'],
-                              cor["coordinates"]["altitude"],
-                              cor["coordinates"]["latitude"],
-                              cor["coordinates"]['longitude'], 
-                              cor["coordinates"]['heading'], 
-                              cor["coordinates"]['speed'],
-                              cor["coordinates"]["coordinate_id"],
-                              cor["coordinates"]["event"],
-                              cor["time_stamp"]
+                              cor["altitude"],
+                              cor["latitude"],
+                              cor['longitude'], 
+                              cor['heading'], 
+                              cor['speed'],
+                              cor["coordinate_id"],
+                              cor["event"],
+                              cor['modified_time']
                               ],)
             cur.executemany(query,batch)  
             con.commit()
@@ -160,6 +160,7 @@ class TripContentService:
        
     def delete_trip_coord(self,coordinate_id:str,modified_time):
         con,cur =None,None
+        print(coordinate_id,modified_time)
         try:
             con,cur = self.database_service.connect_db()
             cur.execute(f'''
