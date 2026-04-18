@@ -2,7 +2,7 @@ import pytest
 import dotenv
 import os
 from app import create_app
-dotenv.load_dotenv('.env.test')
+
 @pytest.fixture(scope="session")
 def client():
     app = create_app()

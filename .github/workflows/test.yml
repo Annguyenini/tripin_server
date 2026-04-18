@@ -73,13 +73,14 @@ jobs:
       
       - name: Set Up and Run Tests
         run: |
-          docker image prune -f
-          docker compose -p test -f docker-compose.test.yml down -v --remove-orphans
-          docker compose -p test -f docker-compose.test.yml --env-file .env.test up \
+          docker rm -f test_tripin_db test_tripin_redis test_tripin_server_test 2>/dev/null || true
+          docker compose -f docker-compose.test.yml down -v --remove-orphans
+          sleep 3
+          docker compose -f docker-compose.test.yml --env-file .env.test up \
           --build \
           --abort-on-container-exit \
           --exit-code-from test_server
 
       - name: Clean Up
         if: always()
-        run: docker compose -p test -f docker-compose.test.yml down -v
+        run: docker compose -f docker-compose.test.yml down -v --remove-orphans

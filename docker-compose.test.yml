@@ -3,7 +3,7 @@ services:
 
   test_db:
     image: postgres:15
-    container_name: tripin_db
+    container_name: test_tripin_db
     environment:
       POSTGRES_USER: testuser
       POSTGRES_PASSWORD: testpass
@@ -21,13 +21,13 @@ services:
 
   test_redis:
     image: redis
-    container_name: tripin_redis
+    container_name: test_tripin_redis
     ports:
       - "8995:6379"
     tmpfs:
       - /data
   test_server:
-    container_name: tripin_server_test
+    container_name: test_tripin_server_test
     build: .
     ports:
       - "8985:8000"
