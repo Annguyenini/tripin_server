@@ -35,6 +35,8 @@ services:
     environment:
       - LOGDIR=logs
       - ERRORLOGDIR=logs/errorlogs
+      - DATABASE_URL= postgresql://testuser:testpass@test_db:5432/tripin
+
     env_file:
       - .env.test
     depends_on:
