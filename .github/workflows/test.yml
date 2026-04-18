@@ -12,7 +12,20 @@ jobs:
   test:
     runs-on: ubuntu-latest
     env:
-      DATABASE_URL: ${{ secrets.DATABASE_URL }}
+      PRIVATE_KEY: ${{ secrets.PRIVATE_KEY }}
+      PUBLIC_KEY: ${{ secrets.PUBLIC_KEY }}
+      DB_HOST: localhost
+      DB_PORT: 5432
+      DB_USER: testuser
+      DB_PASS: testpass
+      DB_NAME: tripin
+      TEST_USER: Testuser
+      TEST_PASS: Testpass11234@
+      INVALID_ACCESS_JWT: ${{ secrets.INVALID_ACCESS_JWT }}
+      INVALID_REFRESH_JWT: ${{ secrets.INVALID_REFRESH_JWT }}
+      EXPIRED_ACCESS_JWT: ${{ secrets.EXPIRED_ACCESS_JWT }}
+      EXPIRED_REFRESH_JWT: ${{ secrets.EXPIRED_REFRESH_JWT }}
+      DATABASE_URL: postgresql://testuser:testpass@localhost:5432/tripin
     steps:
       - name: Checkout
         uses: actions/checkout@v3
