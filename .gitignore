@@ -11,3 +11,5 @@ logs/
 .env.test
 .__pycache__
 .pytest_cache
+.secrets
+.env.act

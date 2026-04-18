@@ -4,11 +4,9 @@ from sqlalchemy import pool,text
 from alembic import context
 import dotenv
 import os
-
-dotenv.load_dotenv('.env')
+dotenv.load_dotenv()
 
 config = context.config
-
 if config.config_file_name is not None:
     fileConfig(config.config_file_name)
 
@@ -28,7 +26,13 @@ def run_migrations_offline() -> None:
 
 def run_migrations_online() -> None:
     # build URL from env vars
-    url = os.getenv('DATABASE_URL')
+        # Retrieve URL from environment or settings
+    url = os.environ.get('DATABASE_URL') 
+    print(url)
+    
+    if not url:
+        raise ValueError('Database url is none')
+    config.set_main_option("sqlalchemy.url", url)
 
     # use sqlalchemy engine like the original
     configuration = config.get_section(config.config_ini_section, {})

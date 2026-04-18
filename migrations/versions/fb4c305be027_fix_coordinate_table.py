@@ -21,10 +21,11 @@ depends_on: Union[str, Sequence[str], None] = None
 def upgrade() -> None:
     """Upgrade schema."""
     op.execute('''
-    ALTER TABLE tripin_trips.trip_coordinates 
+    ALTER TABLE tripin_trips.trip_medias 
     ALTER COLUMN time_stamp TYPE BIGINT 
-    USING (extract(epoch from time_stamp) * 1000)::BIGINT;
-''')
+    USING time_stamp;
+
+        ''')
     pass
 
 
@@ -33,6 +34,6 @@ def downgrade() -> None:
     op.execute('''
     ALTER TABLE tripin_trips.trip_coordinates 
     ALTER COLUMN time_stamp TYPE TIMESTAMP 
-    USING to_timestamp(time_stamp / 1000.0);
+    USING BIGINT;
 ''')
     pass

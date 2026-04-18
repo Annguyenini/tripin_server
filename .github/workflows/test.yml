@@ -9,20 +9,74 @@ on:
         required: true
 
 jobs:
-  
   test:
     runs-on: ubuntu-latest
+    env:
+      DATABASE_URL: postgresql://testuser:testpass@test_db:5432/tripin
+      FLASK_ENV: testing
     steps:
-      - name: Set Up Container
+      - name: Checkout
+        uses: actions/checkout@v3
 
-      - uses: actions/checkout@v3
 
+      - name: Set Up keys
         run: |
-          docker compose -f docker-compose.test.yml --env-file .evn.test up \
+          mkdir -p src/assets/keys 
+          echo "${{ secrets.PRIVATE_KEY }}" > src/assets/keys/private.pem
+          echo "${{ secrets.PUBLIC_KEY }}" > src/assets/keys/public.pem
+
+      - name: Set up env
+        run: |
+          echo "TEST_USER=TestUser" >> .env.test
+          echo "TEST_PASS=Testpass11234@" >> .env.test
+          echo "INVALID_ACCESS_JWT=${{ secrets.INVALID_ACCESS_JWT }}" >> .env.test
+          echo "AQI_API_KEY=${{ secrets.AQI_API_KEY }}" >> .env.test
+          echo "AWS_ACCESS_KEY_ID=${{ secrets.AWS_ACCESS_KEY_ID }}" >> .env.test
+          echo "AWS_DEFAULT_REGION=${{ secrets.AWS_DEFAULT_REGION }}" >> .env.test
+          echo "AWS_LOG_BUCKET=${{ secrets.AWS_LOG_BUCKET }}" >> .env.test
+          echo "AWS_MEDIA_BUCKET=${{ secrets.AWS_MEDIA_BUCKET }}" >> .env.test
+          echo "AWS_S3_BUCKET=${{ secrets.AWS_S3_BUCKET }}" >> .env.test
+          echo "AWS_S3_LOGS_BUCKET=${{ secrets.AWS_S3_LOGS_BUCKET }}" >> .env.test
+          echo "AWS_SECRET_ACCESS_KEY=${{ secrets.AWS_SECRET_ACCESS_KEY }}" >> .env.test
+          echo "BASE_URL=${{ secrets.BASE_URL }}" >> .env.test
+          echo "DATABASE_URL=postgresql://testuser:testpass@test_db:5432/tripin" >> .env.test
+          echo "DB_HOST=test_db" >> .env.test
+          echo "DB_NAME=tripin" >> .env.test
+          echo "DB_PASS=testpass" >> .env.test
+          echo "DB_PORT=5432" >> .env.test
+          echo "DB_USER=testuser" >> .env.test
+          echo "EMAIL_PASSWORD=${{ secrets.EMAIL_PASSWORD }}" >> .env.test
+          echo "EMAIL_USERNAME=${{ secrets.EMAIL_USERNAME }}" >> .env.test
+          echo "ENV_PATH=${{ secrets.ENV_PATH }}" >> .env.test
+          echo "EXPIRED_ACCESS_JWT=${{ secrets.EXPIRED_ACCESS_JWT }}" >> .env.test
+          echo "EXPIRED_REFRESH_JWT=${{ secrets.EXPIRED_REFRESH_JWT }}" >> .env.test
+          echo "INVALID_REFRESH_JWT=${{ secrets.INVALID_REFRESH_JWT }}" >> .env.test
+          echo "MAIL_DEFAULT_SENDER=${{ secrets.MAIL_DEFAULT_SENDER }}" >> .env.test
+          echo "MAPBOX_PUBLIC_KEY=${{ secrets.MAPBOX_PUBLIC_KEY }}" >> .env.test
+          echo "PRIVATE_KEY_PATH=src/assets/keys/private.pem" >> .env.test
+          echo "PUBLIC_KEY_PATH=src/assets/keys/public.pem" >> .env.test
+          echo "REDIS_HOST=test_redis" >> .env.test
+          echo "REDIS_PORT=6379" >> .env.test
+          echo "REDIS_URL=redis://test_redis" >> .env.test
+          echo "SOCKET_HOST=127.0.0.1" >> .env.test
+          echo "SOCKET_PORT=12345" >> .env.test
+          echo "TEST_TRIP_NAME=Tedddd2s32" >> .env.test
+          echo "VPS_HOST=${{ secrets.VPS_HOST }}" >> .env.test
+          echo "VPS_SSH_KEY=${{ secrets.VPS_SSH_KEY }}" >> .env.test
+          echo "VPS_USERNAME=${{ secrets.VPS_USERNAME }}" >> .env.test
+  
+
+      
+      - name: Set Up and Run Tests
+        run: |
+          docker rm -f test_tripin_db test_tripin_redis test_tripin_server_test 2>/dev/null || true
+          docker compose -f docker-compose.test.yml down -v --remove-orphans
+          sleep 3
+          docker compose -f docker-compose.test.yml --env-file .env.test up \
           --build \
-          --abort-on-container-exit\
-          --exit-code-from server_test
-    
-      - name: clean up
-        if: alway()
-        run: docker compose -f docker-compose.test.yml down -v
+          --abort-on-container-exit \
+          --exit-code-from test_server
+
+      - name: Clean Up
+        if: always()
+        run: docker compose -f docker-compose.test.yml down -v --remove-orphans
