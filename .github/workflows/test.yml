@@ -27,49 +27,46 @@ jobs:
 
       - name: Set up env
         run: |
-          cat > .env.test << end
-            TEST_USER=${{ secrets.TEST_USER }}
-            TEST_PASS=${{ secrets.TEST_PASS }}
-            INVALID_ACCESS_JWT=${{ secrets.INVALID_ACCESS_JWT }}
-            AQI_API_KEY=${{ secrets.AQI_API_KEY }}
-            AWS_ACCESS_KEY_ID=${{ secrets.AWS_ACCESS_KEY_ID }}
-            AWS_DEFAULT_REGION=${{ secrets.AWS_DEFAULT_REGION }}
-            AWS_LOG_BUCKET=${{ secrets.AWS_LOG_BUCKET }}
-            AWS_MEDIA_BUCKET=${{ secrets.AWS_MEDIA_BUCKET }}
-            AWS_S3_BUCKET=${{ secrets.AWS_S3_BUCKET }}
-            AWS_S3_LOGS_BUCKET=${{ secrets.AWS_S3_LOGS_BUCKET }}
-            AWS_SECRET_ACCESS_KEY=${{ secrets.AWS_SECRET_ACCESS_KEY }}
-            BASE_URL=${{ secrets.BASE_URL }}
-            DATABASE_URL=${{ secrets.DATABASE_URL }}
-            DB_HOST=test_db
-            DB_NAME=tripin
-            DB_PASS=testpass
-            DB_PORT=5432
-            DB_USER=testuser
-            EMAIL_PASSWORD=${{ secrets.EMAIL_PASSWORD }}
-            EMAIL_USERNAME=${{ secrets.EMAIL_USERNAME }}
-            ENV_PATH=${{ secrets.ENV_PATH }}
-            EXPIRED_ACCESS_JWT=${{ secrets.EXPIRED_ACCESS_JWT }}
-            EXPIRED_REFRESH_JWT=${{ secrets.EXPIRED_REFRESH_JWT }}
-            INVALID_ACCESS_JWT=${{ secrets.INVALID_ACCESS_JWT }}
-            INVALID_REFRESH_JWT=${{ secrets.INVALID_REFRESH_JWT }}
-            MAIL_DEFAULT_SENDER=${{ secrets.MAIL_DEFAULT_SENDER }}
-            MAPBOX_PUBLIC_KEY=${{ secrets.MAPBOX_PUBLIC_KEY }}
-            PRIVATE_KEY_PATH=${{ secrets.PRIVATE_KEY_PATH }}
-            PUBLIC_KEY_PATH=${{ secrets.PUBLIC_KEY_PATH }}
-            REDIS_HOST=${{ secrets.REDIS_HOST }}
-            REDIS_PORT=${{ secrets.REDIS_PORT }}
-            REDIS_URL=${{ secrets.REDIS_URL }}
-            SOCKET_HOST=${{ secrets.SOCKET_HOST }}
-            SOCKET_PORT=${{ secrets.SOCKET_PORT }}
-            TEST_PASS=${{ secrets.TEST_PASS }}
-            TEST_TRIP_NAME=${{ secrets.TEST_TRIP_NAME }}
-            TEST_USER=${{ secrets.TEST_USER }}
-            VPS_HOST=${{ secrets.VPS_HOST }}
-            VPS_SSH_KEY=${{ secrets.VPS_SSH_KEY }}
-            VPS_USERNAME=${{ secrets.VPS_USERNAME }}
-            end
-    
+          echo "TEST_USER=TestUser" >> .env.test
+          echo "TEST_PASS=Testpass11234@" >> .env.test
+          echo "INVALID_ACCESS_JWT=${{ secrets.INVALID_ACCESS_JWT }}" >> .env.test
+          echo "AQI_API_KEY=${{ secrets.AQI_API_KEY }}" >> .env.test
+          echo "AWS_ACCESS_KEY_ID=${{ secrets.AWS_ACCESS_KEY_ID }}" >> .env.test
+          echo "AWS_DEFAULT_REGION=${{ secrets.AWS_DEFAULT_REGION }}" >> .env.test
+          echo "AWS_LOG_BUCKET=${{ secrets.AWS_LOG_BUCKET }}" >> .env.test
+          echo "AWS_MEDIA_BUCKET=${{ secrets.AWS_MEDIA_BUCKET }}" >> .env.test
+          echo "AWS_S3_BUCKET=${{ secrets.AWS_S3_BUCKET }}" >> .env.test
+          echo "AWS_S3_LOGS_BUCKET=${{ secrets.AWS_S3_LOGS_BUCKET }}" >> .env.test
+          echo "AWS_SECRET_ACCESS_KEY=${{ secrets.AWS_SECRET_ACCESS_KEY }}" >> .env.test
+          echo "BASE_URL=${{ secrets.BASE_URL }}" >> .env.test
+          echo "DATABASE_URL=postgresql://testuser:testpass@test_db:5432/tripin" >> .env.test
+          echo "DB_HOST=test_db" >> .env.test
+          echo "DB_NAME=tripin" >> .env.test
+          echo "DB_PASS=testpass" >> .env.test
+          echo "DB_PORT=5432" >> .env.test
+          echo "DB_USER=testuser" >> .env.test
+          echo "EMAIL_PASSWORD=${{ secrets.EMAIL_PASSWORD }}" >> .env.test
+          echo "EMAIL_USERNAME=${{ secrets.EMAIL_USERNAME }}" >> .env.test
+          echo "ENV_PATH=${{ secrets.ENV_PATH }}" >> .env.test
+          echo "EXPIRED_ACCESS_JWT=${{ secrets.EXPIRED_ACCESS_JWT }}" >> .env.test
+          echo "EXPIRED_REFRESH_JWT=${{ secrets.EXPIRED_REFRESH_JWT }}" >> .env.test
+          echo "INVALID_REFRESH_JWT=${{ secrets.INVALID_REFRESH_JWT }}" >> .env.test
+          echo "MAIL_DEFAULT_SENDER=${{ secrets.MAIL_DEFAULT_SENDER }}" >> .env.test
+          echo "MAPBOX_PUBLIC_KEY=${{ secrets.MAPBOX_PUBLIC_KEY }}" >> .env.test
+          echo "PRIVATE_KEY_PATH=${{ secrets.PRIVATE_KEY_PATH }}" >> .env.test
+          echo "PUBLIC_KEY_PATH=${{ secrets.PUBLIC_KEY_PATH }}" >> .env.test
+          echo "REDIS_HOST=${{ secrets.REDIS_HOST }}" >> .env.test
+          echo "REDIS_PORT=${{ secrets.REDIS_PORT }}" >> .env.test
+          echo "REDIS_URL=${{ secrets.REDIS_URL }}" >> .env.test
+          echo "SOCKET_HOST=${{ secrets.SOCKET_HOST }}" >> .env.test
+          echo "SOCKET_PORT=${{ secrets.SOCKET_PORT }}" >> .env.test
+          echo "TEST_PASS=${{ secrets.TEST_PASS }}" >> .env.test
+          echo "TEST_TRIP_NAME=${{ secrets.TEST_TRIP_NAME }}" >> .env.test
+          echo "TEST_USER=${{ secrets.TEST_USER }}" >> .env.test
+          echo "VPS_HOST=${{ secrets.VPS_HOST }}" >> .env.test
+          echo "VPS_SSH_KEY=${{ secrets.VPS_SSH_KEY }}" >> .env.test
+          echo "VPS_USERNAME=${{ secrets.VPS_USERNAME }}" >> .env.test
+  
 
       
       - name: Set Up and Run Tests
