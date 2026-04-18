@@ -15,12 +15,65 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v3
 
+
+      - name: Set Up keys
+        run: |
+          mkdir -p src/assets/keys 
+          echo "${{ secrets.PRIVATE_KEY }}" > src/assets/keys/private.pem
+          echo "${{ secrets.PUBLIC_KEY }}" > src/assets/keys/public.pem
+
+      - name: Set up env
+        run: |
+          cat > .env.test << end
+            TEST_USER = ${{ secrets.TEST_USER }}
+            TEST_PASS = ${{ secrets.TEST_PASS }}
+            INVALID_ACCESS_JWT = ${{ secrets.INVALID_ACCESS_JWT }}
+            AQI_API_KEY=${{ secrets.AQI_API_KEY }}
+            AWS_ACCESS_KEY_ID=${{ secrets.AWS_ACCESS_KEY_ID }}
+            AWS_DEFAULT_REGION=${{ secrets.AWS_DEFAULT_REGION }}
+            AWS_LOG_BUCKET=${{ secrets.AWS_LOG_BUCKET }}
+            AWS_MEDIA_BUCKET=${{ secrets.AWS_MEDIA_BUCKET }}
+            AWS_S3_BUCKET=${{ secrets.AWS_S3_BUCKET }}
+            AWS_S3_LOGS_BUCKET=${{ secrets.AWS_S3_LOGS_BUCKET }}
+            AWS_SECRET_ACCESS_KEY=${{ secrets.AWS_SECRET_ACCESS_KEY }}
+            BASE_URL=${{ secrets.BASE_URL }}
+            DATABASE_URL=${{ secrets.DATABASE_URL }}
+            DB_HOST=${{ secrets.DB_HOST }}
+            DB_NAME=${{ secrets.DB_NAME }}
+            DB_PASS=${{ secrets.DB_PASS }}
+            DB_PORT=${{ secrets.DB_PORT }}
+            DB_USER=${{ secrets.DB_USER }}
+            EMAIL_PASSWORD=${{ secrets.EMAIL_PASSWORD }}
+            EMAIL_USERNAME=${{ secrets.EMAIL_USERNAME }}
+            ENV_PATH=${{ secrets.ENV_PATH }}
+            EXPIRED_ACCESS_JWT=${{ secrets.EXPIRED_ACCESS_JWT }}
+            EXPIRED_REFRESH_JWT=${{ secrets.EXPIRED_REFRESH_JWT }}
+            INVALID_ACCESS_JWT=${{ secrets.INVALID_ACCESS_JWT }}
+            INVALID_REFRESH_JWT=${{ secrets.INVALID_REFRESH_JWT }}
+            MAIL_DEFAULT_SENDER=${{ secrets.MAIL_DEFAULT_SENDER }}
+            MAPBOX_PUBLIC_KEY=${{ secrets.MAPBOX_PUBLIC_KEY }}
+            PRIVATE_KEY_PATH=${{ secrets.PRIVATE_KEY_PATH }}
+            PUBLIC_KEY_PATH=${{ secrets.PUBLIC_KEY_PATH }}
+            REDIS_HOST=${{ secrets.REDIS_HOST }}
+            REDIS_PORT=${{ secrets.REDIS_PORT }}
+            REDIS_URL=${{ secrets.REDIS_URL }}
+            SOCKET_HOST=${{ secrets.SOCKET_HOST }}
+            SOCKET_PORT=${{ secrets.SOCKET_PORT }}
+            TEST_PASS=${{ secrets.TEST_PASS }}
+            TEST_TRIP_NAME=${{ secrets.TEST_TRIP_NAME }}
+            TEST_USER=${{ secrets.TEST_USER }}
+            VPS_HOST=${{ secrets.VPS_HOST }}
+            VPS_SSH_KEY=${{ secrets.VPS_SSH_KEY }}
+            VPS_USERNAME=${{ secrets.VPS_USERNAME }}
+            end
       - name: Set Up and Run Tests
         run: |
+          docker image prune -f
+          docker compose -f docker-compose.test.yml down -v --remove-orphans
           docker compose -f docker-compose.test.yml --env-file .env.test up \
           --build \
           --abort-on-container-exit \
-          --exit-code-from server_test
+          --exit-code-from test_server
 
       - name: Clean Up
         if: always()
