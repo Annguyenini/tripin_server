@@ -230,7 +230,7 @@ class TripDatabaseService (Database):
                         ''' ,(trip_id,))
             count,max = cur.fetchone()
             con.commit()
-            return f'{count}:{max}' if count and max else None
+            return f'{count}:{max}' 
         except Exception as e:
             self.ErrorHandler.logger('TripDataBase').error('Failed to get trip meida max',body=e)
             return None

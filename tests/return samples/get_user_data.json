@@ -1,0 +1,12 @@
+
+{
+    "etag": "...",
+    "message": "Successfully",
+    "user_data": {
+        "avatar": "https://tripin-trips-media.s3.amazonaws...",
+        "display_name": "...",
+        "role": "...",
+        "user_id": 1,
+        "user_name": "..."
+    }
+}

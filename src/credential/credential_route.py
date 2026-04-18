@@ -8,7 +8,6 @@ from src.database.database import Database
 from src.credential.credential import Auth
 from src.token.tokenservice import TokenService
 from src.server_config.encryption.encryption import Encryption
-from src.server_auth.server_auth import ServerAuth
 from src.server_config.service.cache import Cache
 from src.base.route_base import RouteBase
 class AuthServer(RouteBase):

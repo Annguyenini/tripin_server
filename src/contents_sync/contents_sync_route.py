@@ -51,6 +51,7 @@ class ContentsSyncRoute (RouteBase):
         if not coordinate_hash:
             return jsonify({'code':ERROR_KEYS.FAILED,'message':ERROR_MESSAGE.SERVER_FAILED}) ,500
         return jsonify({'hash':coordinate_hash,'trip_id':trip_id})
+    
     def get_trip_medias_hash(self):
         
         user_data,error = self._get_authenticated_user()
@@ -76,6 +77,7 @@ class ContentsSyncRoute (RouteBase):
         if not trip_validation:
             return jsonify({'code':ERROR_KEYS.NOPERMISSION,'message':ERROR_MESSAGE.NOPERMISSION}),403
         metadata = self.trip_contents_service.get_trip_media_metadata(trip_id=trip_id)
-        if not metadata:
-            return jsonify({'code':ERROR_KEYS.FAILED,'message':ERROR_MESSAGE.SERVER_FAILED}) 
-        return jsonify({'metadata':metadata,'trip_id':trip_id})
+        print(metadata)
+        if metadata is None:
+            return jsonify({'code':ERROR_KEYS.FAILED,'message':ERROR_MESSAGE.SERVER_FAILED}) ,500
+        return jsonify({'metadata':metadata,'trip_id':trip_id}),200

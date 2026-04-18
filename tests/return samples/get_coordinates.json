@@ -1,0 +1,21 @@
+{
+  "coordinates": [
+    {
+      "altitude": 111,
+      "batch_version": 1,
+      "coordinate_id": null,
+      "event": "add",
+      "heading": -1.0,
+      "id": 11201,
+      "latitude": 111,
+      "longitude": 111,
+      "modified_time": 0,
+      "speed": 0.017492056,
+      "time_stamp": 1773266138702,
+      "time_stamp_old": null,
+      "trip_id": 200
+    }
+  ],
+  "hash": "1:0",
+  "message": "Successfully"
+}

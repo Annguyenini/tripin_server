@@ -37,8 +37,8 @@ class TripService:
         # trip_id | trip_name | user_id | start_time | end_time | active
 
         ##return if user are currently in another aactive 
-        trip_name_validation = self.input_validation.trip_name_validation(trip_name=trip_name)
-        if not trip_name_validation: return False, INPUT_ERROR.TRIP_NAME,None
+        # trip_name_validation = self.input_validation.trip_name_validation(trip_name=trip_name)
+        # if not trip_name_validation: return False, INPUT_ERROR.TRIP_NAME,None
         
         exist_trip = self.database_service.find_item_in_sql(table="tripin_trips.trips_table",item="user_id",value=user_id,
                                                             second_condition=True,second_item="active",second_value=True )
@@ -300,7 +300,7 @@ class TripService:
                     # input validation for trip name 
                     trip_name_validation = self.input_validation.trip_name_validation(trip_name=trip_name)
                     if not trip_name_validation:
-                        return False, {'code':'invalid_trip_name','message': 'Trip name is invalid make sure to have between 5-10 words and not secial character'}
+                        return False, {'code':'invalid_trip_name','message': 'Trip name is invalid make sure to have between 5-40 words'}
                     # update to database
                     update_trip_name = self.trip_database_service.update_db(
                         DATABASEKEYS.TABLES.TRIPS,

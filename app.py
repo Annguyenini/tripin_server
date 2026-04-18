@@ -5,7 +5,6 @@ from flask_cors import CORS
 from flask_mail import Mail, Message
 # from flask_admin import Admin
 from src.credential.credential_route import AuthServer
-from src.server_auth.server_auth import ServerAuth
 from src.mail.mail_config import MailConfig
 from src.trip_service.trip_route import TripRoute
 from src.trip_service.trip_contents.trip_contents_route import TripContentsRoute
@@ -111,8 +110,7 @@ class Server:
 
 
 
-server_auth_service = ServerAuth()
-server_auth_service.skip_indentity()
+
 server = Server()
 
 
