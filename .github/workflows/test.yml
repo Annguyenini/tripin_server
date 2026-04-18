@@ -28,9 +28,9 @@ jobs:
       - name: Set up env
         run: |
           cat > .env.test << end
-            TEST_USER = ${{ secrets.TEST_USER }}
-            TEST_PASS = ${{ secrets.TEST_PASS }}
-            INVALID_ACCESS_JWT = ${{ secrets.INVALID_ACCESS_JWT }}
+            TEST_USER=${{ secrets.TEST_USER }}
+            TEST_PASS=${{ secrets.TEST_PASS }}
+            INVALID_ACCESS_JWT=${{ secrets.INVALID_ACCESS_JWT }}
             AQI_API_KEY=${{ secrets.AQI_API_KEY }}
             AWS_ACCESS_KEY_ID=${{ secrets.AWS_ACCESS_KEY_ID }}
             AWS_DEFAULT_REGION=${{ secrets.AWS_DEFAULT_REGION }}

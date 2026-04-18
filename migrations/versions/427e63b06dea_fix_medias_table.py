@@ -23,7 +23,7 @@ def upgrade() -> None:
     op.execute('''
     ALTER TABLE tripin_trips.trip_medias 
     ALTER COLUMN time_stamp TYPE BIGINT 
-    USING (extract(epoch from time_stamp) * 1000)::BIGINT;
+    USING time_stamp;
 ''')
     pass
 
