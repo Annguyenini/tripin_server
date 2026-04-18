@@ -13,16 +13,16 @@ jobs:
   test:
     runs-on: ubuntu-latest
     steps:
-      - name: Set Up Container
-
+      - name: checkout
       - uses: actions/checkout@v3
-
+      
+      - name: Set Up and Run Tests
         run: |
           docker compose -f docker-compose.test.yml --env-file .evn.test up \
           --build \
-          --abort-on-container-exit\
+          --abort-on-container-exit \
           --exit-code-from server_test
     
       - name: clean up
-        if: alway()
+        if: always()
         run: docker compose -f docker-compose.test.yml down -v
