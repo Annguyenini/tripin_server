@@ -9,20 +9,19 @@ on:
         required: true
 
 jobs:
-  
   test:
     runs-on: ubuntu-latest
     steps:
-      - name: checkout
-      - uses: actions/checkout@v3
-      
+      - name: Checkout
+        uses: actions/checkout@v3
+
       - name: Set Up and Run Tests
         run: |
-          docker compose -f docker-compose.test.yml --env-file .evn.test up \
+          docker compose -f docker-compose.test.yml --env-file .env.test up \
           --build \
           --abort-on-container-exit \
           --exit-code-from server_test
-    
-      - name: clean up
+
+      - name: Clean Up
         if: always()
         run: docker compose -f docker-compose.test.yml down -v
