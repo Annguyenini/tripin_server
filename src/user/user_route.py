@@ -73,4 +73,3 @@ class UserRoute (RouteBase):
             return jsonify(upload),500  
         return jsonify(upload),200       
         
- 

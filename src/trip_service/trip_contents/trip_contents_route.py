@@ -74,7 +74,6 @@ class TripContentsRoute(RouteBase):
 
         # attempt to insert — returns (success, db_version)
         insert, db_version = self.trip_contents_service.insert_coordinates_to_db(trip_id=trip_id,coordinates=coordinates)
-        print(insert,db_version,client_version)
        
         if not insert:
             # version conflict — client is behind, return current db version

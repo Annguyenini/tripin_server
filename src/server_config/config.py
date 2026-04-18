@@ -1,5 +1,5 @@
 import configparser, os
-
+import dotenv
 class Config:
     _instance = None
     _init = False
@@ -17,15 +17,15 @@ class Config:
         self.config.read('Confignure.ini')
 
         # paths
-        self._private_key_path = self.config.get('paths','private_key',fallback=None)
-        self._public_key_path = self.config.get('paths','public_key',fallback=None)
+        self._private_key_path = os.getenv('PRIVATE_KEY_PATH') or None
+        self._public_key_path = os.getenv('PUBLIC_KEY_PATH') or None
         self._access_key_path = self.config.get('paths','access_key', fallback=None)
         self._access_salt_path = self.config.get('paths','access_salt', fallback=None)
         self._encrypt_salt_path = self.config.get('paths','encrypt_salt', fallback=None)
         self._database_salt_path = self.config.get('paths','database_salt', fallback=None)
         self._env_path = self.config.get('paths','env_path', fallback=None)
-        self._aws_s3_bucket_name = self.config.get('aws','aws_s3_bucket',fallback= None)
-        self._aws_s3_log_bucket =self.config.get('aws','aws_s3_logs_bucket',fallback=None)
+        self._aws_s3_bucket_name = os.getenv('AWS_MEDIA_BUCKET') or None
+        self._aws_s3_log_bucket =os.getenv('AWS_LOG_BUCKET') or None
         # read keys
         if os.path.exists(self._private_key_path):
             with open(self._private_key_path,'r') as f:

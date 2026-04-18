@@ -1,0 +1,60 @@
+# version: '3.8'
+services:
+
+  db:
+    image: postgres:15
+    container_name: tripin_db
+    environment:
+      POSTGRES_USER: ${DB_USER}
+      POSTGRES_PASSWORD: ${DB_PASS}
+      POSTGRES_DB: ${DB_NAME}
+    ports:
+      - "5435:5432"
+    tmpfs:
+      - /var/lib/postgresql/data
+    healthcheck:
+      test: [ "CMD-SHELL", "pg_isready -U postgres" ]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  redis:
+    image: redis
+    container_name: tripin_redis
+    ports:
+      - "8995:6379"
+    tmpfs:
+      - /data
+  server_test:
+    container_name: tripin_server_test
+    build: .
+    ports:
+      - "8985:8000"
+      - "1515:1514"
+    environment:
+      - LOGDIR=logs
+      - ERRORLOGDIR=logs/errorlogs
+    env_file:
+      - src/assets/configs/.env
+      - .env.test
+    depends_on:
+      db:
+        condition: service_healthy
+    volumes:
+      - ./src/assets/keys:/app/src/assets/keys
+    command: >
+      sh -c " alembic upgrade head &&  python scripts/create_test_user.py &&  python -m pytest tests/ -v"
+    restart: "no"
+    # sh -c " alembic upgrade head"
+    # logs:
+    #   image: 2axxaxx/nginx_logs:latest
+    #   ports:
+    #     - '12345:12345/udp'
+    #   env_file:
+    #     - '.env'
+    #   environment:
+    #     - LOG_DIR=/app/logs
+    #   volumes:
+    #     - ./logs:/app/logs
+
+    # version: '3.8'

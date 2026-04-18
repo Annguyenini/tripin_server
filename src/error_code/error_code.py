@@ -4,7 +4,6 @@ ERROR_KEYS=SimpleNamespace(
     FAILED='failed',
     CLOUD_FAILED ='failed_cloud',
     DATABASE_FAILED = 'database_failed'
-
 )
 
 

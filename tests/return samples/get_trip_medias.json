@@ -1,0 +1,32 @@
+{
+  "hash": "2:11",
+  "medias": [
+    {
+      "coordinate_id": "11",
+      "event": "add",
+      "id": 926,
+      "latitude": 11.0,
+      "longitude": 11.0,
+      "media_id": "11",
+      "media_path": "https://tripin-trips-media.s3",
+      "media_type": "photo",
+      "modified_time": 11,
+      "time_stamp": 11,
+      "trip_id": 306
+    },
+    {
+      "coordinate_id": "11",
+      "event": "add",
+      "id": 927,
+      "latitude": 11.0,
+      "longitude": 11.0,
+      "media_id": "11",
+      "media_path": "https://tripin-trips-media.s3",
+      "media_type": "video",
+      "modified_time": 11,
+      "time_stamp": 11,
+      "trip_id": 306
+    }
+  ],
+  "message": "Successfully"
+}

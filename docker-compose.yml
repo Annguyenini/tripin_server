@@ -14,7 +14,7 @@ services:
       - "5433:5432"
     volumes:
       - pgdata:/var/lib/postgresql/data
-    
+
   redis:
     image: redis
     container_name: tripin_redis
@@ -42,8 +42,7 @@ services:
       - db
       - redis
     volumes:
-      - ./src/assets:/app/src/assets    
-
+      - ./src/assets:/app/src/assets
   # logs:
   #   image: 2axxaxx/nginx_logs:latest
   #   ports:
@@ -56,20 +55,11 @@ services:
   #     - ./logs:/app/logs
 volumes:
   pgdata:
-  redisdata: 
+  redisdata:
+
 
 networks:
   tripin_net:
     external: true
+
 # version: '3.8'
-
-
-
-
-
-
-
-
-
-
-

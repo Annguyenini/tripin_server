@@ -1,0 +1,71 @@
+name: Tripping Server Test
+
+on:
+  workflow_call:
+    secrets:
+      PRIVATE_KEY:
+        required: true
+      PUBLIC_KEY:
+        required: true
+
+jobs:
+  
+  test:
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:15
+        env:
+          POSTGRES_USER: testuser
+          POSTGRES_PASSWORD: testpass
+          POSTGRES_DB: tripin
+        ports:
+          - 5435:5432
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+
+    env:
+      PRIVATE_KEY: ${{ secrets.PRIVATE_KEY }}
+      PUBLIC_KEY: ${{ secrets.PUBLIC_KEY }}
+      DB_HOST: localhost
+      DB_PORT: 5435
+      DB_USER: testuser
+      DB_PASS: testpass
+      DB_NAME: tripin
+      TEST_USER: Testuser
+      TEST_PASS: Testpass11234@
+      INVALID_ACCESS_JWT: ${{ secrets.INVALID_ACCESS_JWT }}
+      INVALID_REFRESH_JWT: ${{ secrets.INVALID_REFRESH_JWT }}
+      EXPIRED_ACCESS_JWT: ${{ secrets.EXPIRED_ACCESS_JWT }}
+      EXPIRED_REFRESH_JWT: ${{ secrets.EXPIRED_REFRESH_JWT }}
+      DATABASE_URL: postgresql://testuser:testpass@localhost:5435/tripin
+      FLASK_ENV: testing
+    steps:
+      - uses: actions/checkout@v3
+
+      - name: Set Up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.12.3'
+          cache: 'pip'
+
+      - name: Install requirements
+        run: pip install -r requirements.txt
+    
+      - name: Migration
+        run: |
+          psql postgresql://testuser:testpass@localhost:5432/tripin -c "
+          CREATE SCHEMA IF NOT EXISTS tripin_migrations"
+          alembic upgrade head
+          echo "Migration complete!"
+    
+      - name: Created Test User
+        run: python scripts/create_test_user.py
+
+      # - name: DEBUG
+      #   run: python scripts/debugdb.py
+      - name: Run tests
+        run: pytest tests/ -v

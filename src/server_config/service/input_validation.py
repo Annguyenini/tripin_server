@@ -57,7 +57,7 @@ class InputValidation:
     def trip_name_validation(self, trip_name: str) -> bool:
         if not trip_name:
             return False
-        if len(trip_name) < 5 or len(trip_name) > 10:
+        if len(trip_name) < 5 or len(trip_name) > 40:
             return False
-        check = re.match(r'^[a-zA-Z][a-zA-Z0-9_ ]+$', trip_name)
-        return bool(check)
+        # check = re.match(r'^[a-zA-Z][a-zA-Z0-9_ ]+$', trip_name)
+        return True
