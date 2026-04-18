@@ -11,6 +11,8 @@ on:
 jobs:
   test:
     runs-on: ubuntu-latest
+    env:
+      DATABASE_URL: ${{ secrets.DATABASE_URL }}
     steps:
       - name: Checkout
         uses: actions/checkout@v3
@@ -66,6 +68,9 @@ jobs:
             VPS_SSH_KEY=${{ secrets.VPS_SSH_KEY }}
             VPS_USERNAME=${{ secrets.VPS_USERNAME }}
             end
+    
+
+      
       - name: Set Up and Run Tests
         run: |
           docker image prune -f
