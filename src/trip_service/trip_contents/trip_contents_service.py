@@ -108,8 +108,12 @@ class TripContentService:
         time = coordinate_data.get('time_stamp')  
         media_id = coordinate_data.get('media_id')  
         coordinate_id =coordinate_data.get('coordinate_id')
+        city = coordinate_data.get('city')
+        region = coordinate_data.get('region')
+        country = coordinate_data.get('country')
+        iso_country_code = coordinate_data.get('iso_country_code')
         # insert into database (postgres)
-        insert_into_db = self.trip_database_service.insert_media_into_db(type=type,media_path=path,longitude=longitude,latitude=latitude,trip_id=trip_id,time=time,modified_time=time,media_id=media_id,coordinate_id=coordinate_id)
+        insert_into_db = self.trip_database_service.insert_media_into_db(type=type,media_path=path,longitude=longitude,latitude=latitude,trip_id=trip_id,time=time,modified_time=time,media_id=media_id,coordinate_id=coordinate_id,city=city,region=region,country=country,iso_country_code=iso_country_code)
         if not insert_into_db:
             return False,None
         

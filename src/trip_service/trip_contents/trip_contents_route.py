@@ -101,6 +101,7 @@ class TripContentsRoute(RouteBase):
         try:
             # parse metadata from multipart form
             data = json.loads(request.form.get('data'))
+            print(data)
         except (json.JSONDecodeError, TypeError):
             return jsonify({'message': 'Invalid metadata'}), 400
 

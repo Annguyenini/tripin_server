@@ -42,7 +42,8 @@ DATABASEKEYS= SimpleNamespace(
         TRIP_ETAG='etag',
         TRIP_INFO_VERSION='trip_informations_version',
         TRIP_COORDINATES_VERSION='trip_coordinates_version',
-        TRIPS_MEDIAS_VERSION='trip_medias_version'
+        TRIPS_MEDIAS_VERSION='trip_medias_version',
+        
     ),
     TRIP_MEDIAS = SimpleNamespace(
         # MEDIA_ID ='id',
@@ -59,7 +60,10 @@ DATABASEKEYS= SimpleNamespace(
         MEDIA_ID = 'media_id',
         COORDINATE_ID ='coordinate_id',
         EVENT = 'event',
-        
+        CITY ='city',
+        REGION ='region',
+        COUNTRY = 'country',
+        ISO_COUNTRY_CODE ='iso_country_code',
     ),
     TRIP_COORDINATES =SimpleNamespace(
         COORDINATES_ID = 'id',

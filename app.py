@@ -128,7 +128,7 @@ if __name__ =="__main__":
     print('ver 5')
    
     # run_tasks()
-    app.run( host ="0.0.0.0", port =8000,debug=True if DEBUG else False)
+    app.run( host ="0.0.0.0", port =8000,debug=True)
     # app.run( host ="0.0.0.0", port =8000,ssl_context=("src/assets/https/cert.pem", "src/assets/https/key.pem"))
     
     
