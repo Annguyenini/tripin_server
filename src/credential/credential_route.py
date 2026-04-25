@@ -47,7 +47,7 @@ class AuthServer(RouteBase):
         self.bp.route("/signup", methods=["POST"])(self.signup)
         self.bp.route("/request-access-token", methods=["POST"])(self.request_new_access_token)
         self.bp.route("/verify-code", methods=["POST"])(self.verify_code)
-
+        self.bp.route("/signup-provider/google",methods=['POST'])
     def verify_code(self):
         """User verify code, get user data and pass to a function to check the code
 
@@ -120,3 +120,30 @@ class AuthServer(RouteBase):
         if not status:
             return jsonify({"message": "Could not finish the request!"}), 401
         return jsonify({"message": "Successfully", "token": new_token}), 200
+
+
+    def reset_password(self):
+        data = request.json
+        username = data.get('username')
+    
+    def singup_provider_verify (self):
+        user_data = request.json
+        provider ='google'
+        email = user_data['email']
+        email_exist,code = self.auth._email_verify(email=email)
+        if not email_exist:
+            return jsonify({'code':code}),400
+        return jsonify({'code':'successfully'}),200
+    
+    def singup_provider (self):
+        user_data = request.get_json() or {}
+        provider ='google'
+        email = user_data['email']
+        provider = user_data['provider']
+        email_exist,code = self.auth._email_verify(email=email)
+        if not email_exist:
+            return jsonify({'code':code}),400
+        return jsonify({'code':'successfully'}),200
+        provider_signup
+    def signup_provider_verify(self):
+        pass

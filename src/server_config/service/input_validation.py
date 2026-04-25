@@ -53,7 +53,19 @@ class InputValidation:
         check = re.match(r'^\d{6}$',code)
         return True if check else False
 
-    
+    def validate_provider(provider: str):
+        ALLOWED_PROVIDERS = {"google"}
+        if not provider or not provider.strip():
+            return False
+        if provider.strip() not in ALLOWED_PROVIDERS:
+            return False
+        return True
+
+    def validate_provider_id(provider_id: str):
+        if not provider_id or not provider_id.strip():
+            return False
+        return True
+
     def trip_name_validation(self, trip_name: str) -> bool:
         if not trip_name:
             return False

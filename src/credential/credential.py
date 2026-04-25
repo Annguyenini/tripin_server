@@ -180,3 +180,30 @@ class Auth:
             return False 
         return True
     
+    def provider_signup(self,provider:str,provider_id:str,email:str, display_name:str,username:str):
+        if not self.inputValidationService.email_validation(email=email): return False, INPUT_ERROR.EMAIL
+        if not self.inputValidationService.username_validation(username=username): return False, INPUT_ERROR.USERNAME
+        if not self.inputValidationService.displayname_validation(display_name=display_name) :return False, INPUT_ERROR.DISPLAY_NAME
+        if not self.inputValidationService.validate_provider(provider=provider) :return False,INPUT_ERROR.PROVIDER 
+        if not self.inputValidationService.validate_provider_id(provider_id=provider_id) :return False,INPUT_ERROR.PROVIDER_ID 
+
+         ## if the Email already exists in database, return 
+        if(self.db.find_item_in_sql(table="tripin_auth.userdata",item="email",value=email)):
+            return False, "Email already exists!"
+    
+        ## if the username already exists in database, return  
+        if(self.db.find_item_in_sql(table="tripin_auth.userdata",item="user_name",value=username)):
+            return False, "Username already exists!"   
+
+        res = self.db.insert_to_database_singup_provider(email=email,display_name=display_name,username=username,provider=provider,provider_id=provider_id)
+        return res
+
+        pass
+
+    
+    def _email_verify (self, email:str):
+        if not self.inputValidationService.email_validation(email=email): return False, INPUT_ERROR.EMAIL
+        exists = self.db.find_item_in_sql(DATABASEKEYS.TABLES.USERDATA,
+                                 DATABASEKEYS.USERDATA.EMAIL,
+                                 email)
+        if exists :return False,'email_exists'

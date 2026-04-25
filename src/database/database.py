@@ -5,7 +5,7 @@
 ## all functions that contain query must use parameter (EX: UPDATE table SET user =%s, (value))
 
 
-
+from src.error_handler.error_handler import ErrorHandler
 import psycopg2
 from psycopg2 import pool
 from dotenv import set_key, load_dotenv
@@ -36,7 +36,7 @@ class Database:
         self.database_username  =None
         self.database_password =None
         self.database_port = None 
-        
+        self.ErrorHandler = ErrorHandler()
         self._pool =None       
     
     def _init_connection_pool(self):
@@ -212,7 +212,39 @@ class Database:
             return True
         return False
 
+    def insert_to_database_singup_provider(self, email:str, display_name:str, username:str, provider:str,provider_id:str):
+        """insert to database, credential table
 
+        Args:
+            email (str): _email_
+            display_name (str): _display name_
+            username (str): _username_
+            password (str): _dpassword (hashed)_
+
+        Returns:
+            _bool_: _status_
+        """
+        try:
+            con,cur= self.connect_db()
+            current_time = datetime.now()
+            cur.execute(f'''INSERT INTO {DATABASEKEYS.TABLES.USERDATA} (
+                        {DATABASEKEYS.USERDATA.EMAIL},
+                        {DATABASEKEYS.USERDATA.DISPLAY_NAME},
+                        {DATABASEKEYS.USERDATA.USER_NAME},
+                        {DATABASEKEYS.USERDATA.PROVIDER},
+                        {DATABASEKEYS.USERDATA.PROVIDER_ID},
+                        {DATABASEKEYS.USERDATA.CREATED_TIME}) 
+                        VALUES(%s,%s,%s,%s,%s,%s)''',
+                        (email,display_name,username,provider,provider_id,current_time))
+            con.commit()
+            con.close()
+            if cur.rowcount >=1:
+                return True
+            return False
+        
+        except Exception as e:
+            self.ErrorHandler.logger('Database').error('Failed at insert to userdata to database',e)
+            return False
     def insert_token_into_db(self, user_id :int, username:str, token:str, issued_at, expired_at): 
         """insert into database, token table 
 
