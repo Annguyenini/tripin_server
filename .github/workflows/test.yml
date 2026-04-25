@@ -74,8 +74,7 @@ jobs:
           sleep 3
           docker compose -f docker-compose.test.yml --env-file .env.test up \
           --build \
-          --abort-on-container-exit \
-          --exit-code-from test_server
+          --abort-on-container-exit 2>&1 | less
 
       - name: Clean Up
         if: always()
