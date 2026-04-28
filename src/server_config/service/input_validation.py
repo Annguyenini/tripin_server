@@ -1,4 +1,6 @@
 import re
+import unicodedata
+
 class InputValidation:
     _instance =None
     _init = False
@@ -33,27 +35,29 @@ class InputValidation:
         check = re.match(r'^(?=.*[A-Z])(?=.*\d)(?=.*[!@#$%^&*])[a-zA-Z]',password)
         return True if check else False
     
-    def displayname_validation(self,display_name:str)->bool:
-        if not display_name:
+
+    def displayname_validation(self, display_name: str) -> bool:
+        s = display_name.strip()
+        if not (2 <= len(s) <= 32):
             return False
-        if len(display_name)<5 or len(display_name) >10 :
-            return False
-        # must contain upper case letter, no special char
-        check = re.match(r'^(?=.*[A-Z])[a-zA-Z]\w+$',display_name)
-        return True if check else False
-    
+        return all(
+            unicodedata.category(c) in ('Ll', 'Lu', 'Lt', 'Lm', 'Lo', 'Nd', 'Zs')
+            or c == ' '
+            for c in s
+        )
+        
     def email_validation(self,email:str)->bool:
         if not email:return False
         # if doesnt have the @ dont bother care
         check = re.match(r'^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$', email)
         return True if check else False
-    def verify_code_valiation(self,code:int)->bool:
+    def verify_code_valiation(self,code:str)->bool:
         if not code :return False    
         #only digits, 6 digits 
-        check = re.match(r'^\d{6}$',code)
+        check = re.match(r'^\d{6}$',str(code))
         return True if check else False
 
-    def validate_provider(provider: str):
+    def validate_provider(self,provider: str):
         ALLOWED_PROVIDERS = {"google"}
         if not provider or not provider.strip():
             return False
@@ -61,7 +65,7 @@ class InputValidation:
             return False
         return True
 
-    def validate_provider_id(provider_id: str):
+    def validate_provider_id(self,provider_id: str):
         if not provider_id or not provider_id.strip():
             return False
         return True

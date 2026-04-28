@@ -1,3 +1,7 @@
+import requests
+import os 
+from google.oauth2 import id_token
+from google.auth.transport import requests
 from werkzeug.security import generate_password_hash, check_password_hash
 from datetime import datetime,timedelta,timezone
 from src.database.database import Database
@@ -15,6 +19,7 @@ from src.database.database_keys import DATABASEKEYS
 from src.server_config.service.input_validation import InputValidation
 from src.logger.logging import get_logger
 from src.error_code.error_code import INPUT_ERROR
+from src.error_handler.error_handler import ErrorHandler
 #userdata user_id|email|user_name|displayname|password
 #token keyid| userid| username|token|issue name | exp name | revok
 class Auth:
@@ -36,6 +41,7 @@ class Auth:
             self.etagService = EtagService()
             self.authEtagService = AuthEtagService()
             self.inputValidationService = InputValidation()
+            self.errorHandler = ErrorHandler()
             self.user_queue = {}
             self.logger = get_logger(__name__)
 
@@ -72,26 +78,38 @@ class Auth:
 
         # user data 
         user_data = {'user_id':userid,'role':role}
-                
-        # old token got revoked
-        self.tokenService.revoke_refresh_token(user_id=userid)
-        
-        
-        #new tokens generated
-        refresh_token = self.tokenService.generate_jwt(user_id=userid,role=role)
-        access_token = self.tokenService.generate_jwt(user_id=userid,role=role,exp_time={"minutes":15})
-        token_data ={'access_token':access_token,'refresh_token':refresh_token}
-        
-        ##inserted token into database
-        self.db.insert_token_into_db(
-            user_id=userdata_row["id"],
-            username=username,
-            token=refresh_token,
-            issued_at=datetime.now(timezone.utc),
-            expired_at=datetime.now(timezone.utc) + timedelta(days=30),
-        )
+    
+        token_data = self._jwt_cycle_handler(user_id=userid,role=role)
        
         return (True,{'message':"Successfully",'user_data':user_data,'tokens':token_data})
+    
+    # def login_via_provider(self,provider_id:str):
+    #     if not self.inputValidationService.validate_provider_id(provider_id=provider_id) :return False,INPUT_ERROR.PROVIDER_ID 
+    #     data = self.db.find_item_in_sql(table =DATABASEKEYS.TABLES.USERDATA,
+    #                                       item=DATABASEKEYS.USERDATA.PROVIDER_ID,
+    #                                       value= provider_id)
+    #     if not data:
+    #         return False ,{'code':'not_found','Message':'Account not found'}
+    #     user_id = data ['user_id']
+    #     role = data['role']
+    #     self.tokenService.revoke_refresh_token(user_id=user_id)
+
+    #     # generate refresh token
+    #     refresh_token = self.tokenService.generate_jwt(user_id=user_id,role=role,exp_time={'days':30})
+    #     # generate access token 
+    #     access_token = self.tokenService.generate_jwt(user_id=user_id,role=role,exp_time={'minutes':15})
+    #     token_data ={'access_token':access_token,'refresh_token':refresh_token}
+        
+    #     ##inserted token into database
+    #     self.db.insert_token_into_db(
+    #         user_id=data["id"],
+    #         token=refresh_token,
+    #         issued_at=datetime.now(timezone.utc),
+    #         expired_at=datetime.now(timezone.utc) + timedelta(days=30),
+    #     )
+       
+    #     return (True,{'message':"Successfully",'user_data':data,'tokens':token_data})
+
     #signup function
     def signup(self,email:str,display_name:str,username:str,password:str): 
         try :
@@ -180,30 +198,127 @@ class Auth:
             return False 
         return True
     
-    def provider_signup(self,provider:str,provider_id:str,email:str, display_name:str,username:str):
-        if not self.inputValidationService.email_validation(email=email): return False, INPUT_ERROR.EMAIL
-        if not self.inputValidationService.username_validation(username=username): return False, INPUT_ERROR.USERNAME
-        if not self.inputValidationService.displayname_validation(display_name=display_name) :return False, INPUT_ERROR.DISPLAY_NAME
-        if not self.inputValidationService.validate_provider(provider=provider) :return False,INPUT_ERROR.PROVIDER 
-        if not self.inputValidationService.validate_provider_id(provider_id=provider_id) :return False,INPUT_ERROR.PROVIDER_ID 
+    def provider_signup_complete(self,token:str, display_name:str,username:str,password:str):
+        try:
+            if not self.inputValidationService.username_validation(username=username): return False, INPUT_ERROR.USERNAME
+            if not self.inputValidationService.displayname_validation(display_name=display_name) :return False, INPUT_ERROR.DISPLAY_NAME
+            if not self.inputValidationService.password_validation(password=password) :return False,INPUT_ERROR.PASSWORD
 
-         ## if the Email already exists in database, return 
-        if(self.db.find_item_in_sql(table="tripin_auth.userdata",item="email",value=email)):
-            return False, "Email already exists!"
-    
-        ## if the username already exists in database, return  
-        if(self.db.find_item_in_sql(table="tripin_auth.userdata",item="user_name",value=username)):
-            return False, "Username already exists!"   
+            data_from_token = self.tokenService.decode_jwt_provider(token=token)
+            email = data_from_token['email']
+            provider = data_from_token['provider']
+            provider_id =data_from_token['provider_id']
 
-        res = self.db.insert_to_database_singup_provider(email=email,display_name=display_name,username=username,provider=provider,provider_id=provider_id)
-        return res
+            if(self.db.find_item_in_sql(table="tripin_auth.userdata",item="email",value=email)):
+                return False, {'code':'email_exists','message':'Email aldready associate with an account!'}
+        
+            ## if the username already exists in database, return  
+            if(self.db.find_item_in_sql(table="tripin_auth.userdata",item="user_name",value=username)):
+                return False, {'code':'username_exists','message':'Username aldready exists'}   
+            hashed_password = generate_password_hash(password=password)
+            # put inside the database 
+            res = self.db.insert_to_database_singup_provider(email=email,display_name=display_name,username=username,provider=provider,provider_id=provider_id,password=hashed_password)
+            if not res:
+                return False,{'code':'failed','message':'Server Failed'}   
+            
+            return True,{'code':'successfully','message':'Successfully'}   
+        except Exception as e:
+            
+            self.errorHandler.logger('Auth').error('failed to handler provider request',{e})
+            return False,{'code':'failed','message':'Server Failed'}   
 
-        pass
+    def provider_verify(self,provider:str,token:str):
+        # input validation
+        try:
+            if not self.inputValidationService.validate_provider(provider=provider) :return False,INPUT_ERROR.PROVIDER 
+            if not self.inputValidationService.validate_provider_id(provider_id=token) :return False,INPUT_ERROR.PROVIDER_ID 
+            data_from_provider = None
+            # verify id token based on provider
+            if provider == 'google':
+                data_from_provider = self._provider_verification_google(token=token)
+                if not data_from_provider :return False,{'code':'notfound'}
+                # data extract from provider
+                email = data_from_provider['email']
+                name = data_from_provider['name']
+                provider_id = data_from_provider['provider_id']
+                user_data = self.db.find_item_in_sql(table=DATABASEKEYS.TABLES.USERDATA,
+                                                            item=DATABASEKEYS.USERDATA.EMAIL,
+                                                            value=email)
+            else:
+                return ({'code':'failed','message':'Unkown Provider'})
+            # verified that email is active
 
-    
+            if not user_data:
+                # if user doesnt exists,
+                # return request Sign up
+                email_verify, code = self._email_verify(email=email)
+                if not email_verify :return False,{'code':code}
+            # token containt email,sub(provider_id),name,provider
+            # token will been use for complete sign up form
+                pending_token = self.tokenService.generate_jwt_provider(email=email,provider_id=provider_id,provider=provider,name=name)
+                return True,{'code':'pending','pending_token':pending_token}
+            
+            
+            # treat as signin, if it linked 
+            # if an account doesnt associate with the id provided by provider
+            # we treated it at false even if there are account associate with the email
+            if provider_id != user_data['provider_id'] : return False,({'code':'failed','message':'Account Not Linked'})
+            
+            user_id = user_data['id']        
+            role = user_data['role']
+            user_data={'role':role,'user_id':user_id}
+            # generate tokens
+            token_data = self._jwt_cycle_handler(user_id=user_id,role=role)
+            return True,{'code':'successfully','tokens':token_data,'user_data':user_data}
+        except Exception as e:
+            self.errorHandler.logger('Auth').error('failed to handler provider request',{e})
+            return False,{'code':'failed','message':'Server Failed'}   
+
     def _email_verify (self, email:str):
         if not self.inputValidationService.email_validation(email=email): return False, INPUT_ERROR.EMAIL
         exists = self.db.find_item_in_sql(DATABASEKEYS.TABLES.USERDATA,
                                  DATABASEKEYS.USERDATA.EMAIL,
                                  email)
         if exists :return False,'email_exists'
+        return True,'successfully'
+    def _provider_verification_google (self,token:str):
+        WEB_CLIENT_ID = os.environ.get('GOOGLE_CLIENT_ID')
+        IOS_CLIENT_ID = os.environ.get('IOS_CLIENT_ID')
+        CLIENT_ID = [WEB_CLIENT_ID,IOS_CLIENT_ID]
+        id_info =None
+        for client in CLIENT_ID:
+            try:
+                id_info = id_token.verify_oauth2_token(
+                    token,
+                    requests.Request(),
+                    client
+                )
+                break
+            except Exception as e:
+                continue
+        if not id_info :return None
+        email = id_info['email']
+        name = id_info['name']
+        provider_id = id_info['sub']
+        
+        return{'email':email,'name':name,'provider_id':provider_id}
+    
+    def _jwt_cycle_handler(self,user_id:int,role:str):
+        # old token got revoked
+        self.tokenService.revoke_refresh_token(user_id=user_id)
+        
+        
+        #new tokens generated
+        refresh_token = self.tokenService.generate_jwt(user_id=user_id,role=role)
+        access_token = self.tokenService.generate_jwt(user_id=user_id,role=role,exp_time={"minutes":15})
+        token_data ={'access_token':access_token,'refresh_token':refresh_token}
+        
+        ##inserted token into database
+        self.db.insert_token_into_db(
+            user_id=user_id,
+            token=refresh_token,
+            issued_at=datetime.now(timezone.utc),
+            expired_at=datetime.now(timezone.utc) + timedelta(days=30),
+        )
+        return token_data
+       

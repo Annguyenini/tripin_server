@@ -11,7 +11,47 @@ class TokenService:
 
     def get_current_time(self) -> int:
         return int(datetime.now(timezone.utc).timestamp())
+    def generate_jwt_provider(self, provider_id: str, provider: str, email:str,name:str) -> str:
+            
+            exp_time = {'minutes': 10}
+            SECRET_KEY = self.config.private_key
 
+            token = jwt.encode(
+                {
+                    'email':email,
+                    "name": name,
+                    'provider':provider,
+                    'provider_id':provider_id,
+                    "issue": self.get_current_time(),
+                    "exp": int((datetime.now(timezone.utc) + timedelta(**exp_time)).timestamp())
+                },
+                SECRET_KEY,
+                algorithm='RS256'
+            )
+
+            assert token is not None, "Token is undefined!"
+            return token
+    def decode_jwt_provider(self, token: str) -> dict:
+        """
+        Decode a JWT token and extract payload data.
+
+        Args:
+            token (str): The access token.
+
+        Returns:
+            dict: Extracted user_id and role from the token payload.
+        """
+        assert token is not None, "Token is None!"
+
+        PUBLIC_KEY = self.config.public_key
+        payload = jwt.decode(token, PUBLIC_KEY, algorithms=["RS256"])
+
+        return {
+            'email':payload['email'],
+            "name": payload['name'],
+            'provider':payload['provider'],
+            'provider_id':payload['provider_id'],
+        }
     def generate_jwt(self, user_id: int, role: str = 'user', exp_time: dict = None) -> str:
         """
         Generate a JWT token.

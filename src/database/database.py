@@ -5,7 +5,7 @@
 ## all functions that contain query must use parameter (EX: UPDATE table SET user =%s, (value))
 
 
-from src.error_handler.error_handler import ErrorHandler
+# from src.error_handler.error_handler import ErrorHandler
 import psycopg2
 from psycopg2 import pool
 from dotenv import set_key, load_dotenv
@@ -36,7 +36,7 @@ class Database:
         self.database_username  =None
         self.database_password =None
         self.database_port = None 
-        self.ErrorHandler = ErrorHandler()
+        # self.ErrorHandler = ErrorHandler()
         self._pool =None       
     
     def _init_connection_pool(self):
@@ -212,7 +212,7 @@ class Database:
             return True
         return False
 
-    def insert_to_database_singup_provider(self, email:str, display_name:str, username:str, provider:str,provider_id:str):
+    def insert_to_database_singup_provider(self, email:str, display_name:str, username:str,password:str, provider:str,provider_id:str):
         """insert to database, credential table
 
         Args:
@@ -233,9 +233,10 @@ class Database:
                         {DATABASEKEYS.USERDATA.USER_NAME},
                         {DATABASEKEYS.USERDATA.PROVIDER},
                         {DATABASEKEYS.USERDATA.PROVIDER_ID},
+                        {DATABASEKEYS.USERDATA.PASSWORD},
                         {DATABASEKEYS.USERDATA.CREATED_TIME}) 
-                        VALUES(%s,%s,%s,%s,%s,%s)''',
-                        (email,display_name,username,provider,provider_id,current_time))
+                        VALUES(%s,%s,%s,%s,%s,%s,%s)''',
+                        (email,display_name,username,provider,provider_id,password,current_time))
             con.commit()
             con.close()
             if cur.rowcount >=1:
@@ -243,9 +244,9 @@ class Database:
             return False
         
         except Exception as e:
-            self.ErrorHandler.logger('Database').error('Failed at insert to userdata to database',e)
+            # self.ErrorHandler.logger('Database').error('Failed at insert to userdata to database',e)
             return False
-    def insert_token_into_db(self, user_id :int, username:str, token:str, issued_at, expired_at): 
+    def insert_token_into_db(self, user_id :int, token:str, issued_at, expired_at): 
         """insert into database, token table 
 
         Args:
@@ -260,7 +261,10 @@ class Database:
         """
 
         con,cur = self.connect_db()
-        cur.execute(f'INSERT INTO {DATABASEKEYS.TABLES.TOKENS} (user_id,user_name,token,issued_at,expired_at) VALUES (%s, %s, %s, %s, %s)',(user_id,username,token,issued_at,expired_at,))
+        cur.execute(f'''INSERT INTO {DATABASEKEYS.TABLES.TOKENS} ({DATABASEKEYS.TOKENS.USER_ID},
+                    {DATABASEKEYS.TOKENS.TOKEN},
+                    {DATABASEKEYS.TOKENS.ISSUE_TIME},
+                    {DATABASEKEYS.TOKENS.EXPIRED_TIME}) VALUES ( %s, %s, %s, %s)''',(user_id,token,issued_at,expired_at,))
         con.commit()
         self.close_db(conn=con)
         if(cur.rowcount>=1):

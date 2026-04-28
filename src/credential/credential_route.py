@@ -1,7 +1,7 @@
 ##before pass into service fucntions, this help filter info and verify jwt token for unnesscary function call
 ##rate limit are set as 5 requests total per min
 
-
+import requests
 from flask import Blueprint, jsonify, request
 from src.server_config.config import Config
 from src.database.database import Database
@@ -47,7 +47,8 @@ class AuthServer(RouteBase):
         self.bp.route("/signup", methods=["POST"])(self.signup)
         self.bp.route("/request-access-token", methods=["POST"])(self.request_new_access_token)
         self.bp.route("/verify-code", methods=["POST"])(self.verify_code)
-        self.bp.route("/signup-provider/google",methods=['POST'])
+        self.bp.route("/provider/<provider>",methods=['POST'])(self.provider_verify)
+        self.bp.route('/provider/complete-signup',methods=['POST'])(self.singup_provider)    
     def verify_code(self):
         """User verify code, get user data and pass to a function to check the code
 
@@ -126,24 +127,37 @@ class AuthServer(RouteBase):
         data = request.json
         username = data.get('username')
     
-    def singup_provider_verify (self):
+    def provider_verify (self,provider):
         user_data = request.json
-        provider ='google'
-        email = user_data['email']
-        email_exist,code = self.auth._email_verify(email=email)
-        if not email_exist:
-            return jsonify({'code':code}),400
-        return jsonify({'code':'successfully'}),200
+        id_token=user_data['id_token']
+        verify, data = self.auth.provider_verify(provider=provider,token=id_token)
+        if not verify:
+            return jsonify(data),400
+        if data.get('code') =='pending':
+            return jsonify(data),202
+        return jsonify(data),200
     
     def singup_provider (self):
-        user_data = request.get_json() or {}
-        provider ='google'
-        email = user_data['email']
-        provider = user_data['provider']
-        email_exist,code = self.auth._email_verify(email=email)
-        if not email_exist:
-            return jsonify({'code':code}),400
-        return jsonify({'code':'successfully'}),200
-        provider_signup
-    def signup_provider_verify(self):
-        pass
+        try:
+            user_data = request.json
+            token = user_data['pending_token']
+            username=user_data['username']
+            display_name = user_data['display_name']
+            password =user_data['password']
+            status, code =self.auth.provider_signup_complete(token=token,
+                                    username=username,
+                                    display_name=display_name,
+                                    password=password)
+            if not status:
+                return jsonify(code),500
+            return jsonify(code),200
+        except Exception as e:
+            print (e)
+            return ('failed'),500
+
+        
+    # def signin_provider_verify(self):
+    #     user_data = request.json
+    #     provider_id = user_data['provider_id']
+    #     pass
+    
