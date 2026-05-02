@@ -20,4 +20,6 @@ INPUT_ERROR =SimpleNamespace(
     EMAIL ='Email invalid',
     TRIP_NAME ='Trip name must have no special char and start with word. Between 5-10 words ',
     VERIFY_CODE ='Only containt 6 digits',
+    PROVIDER = 'Provider must be one of: google',
+    PROVIDER_ID ='Provider ID is required'
 )

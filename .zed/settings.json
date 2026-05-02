@@ -1,0 +1,11 @@
+{
+  "lsp": {
+    "basedpyright": {
+      "settings": {
+        "basedpyright": {
+          "exclude": ["venv", ".venv", "__pycache__"],
+        },
+      },
+    },
+  },
+}

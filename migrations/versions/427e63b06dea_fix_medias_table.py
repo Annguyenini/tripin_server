@@ -33,6 +33,6 @@ def downgrade() -> None:
     op.execute('''
     ALTER TABLE tripin_trips.trip_medias 
     ALTER COLUMN time_stamp TYPE TIMESTAMP 
-    USING to_timestamp(time_stamp / 1000.0);
+    USING BIGINT;
 ''')
     pass

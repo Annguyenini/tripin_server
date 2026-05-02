@@ -5,103 +5,110 @@
 ## all functions that contain query must use parameter (EX: UPDATE table SET user =%s, (value))
 
 
-
-import psycopg2
-from psycopg2 import pool
-from dotenv import set_key, load_dotenv
-import os
+# from src.error_handler.error_handler import ErrorHandler
 import inspect
+import os
 from datetime import datetime
-from psycopg2.extras import DictCursor,RealDictCursor
-from src.database.database_keys import DATABASEKEYS
-import os 
+
 import dotenv
+from dotenv import load_dotenv, set_key
+from psycopg2 import pool
+from psycopg2.extras import DictCursor, RealDictCursor
+
+from src.database.database_keys import DATABASEKEYS
+
 dotenv.load_dotenv()
+
+
 class Database:
     _instance = None
     _initialized_credentials = False
-    def __new__(cls,*args,**kwargs):
+
+    def __new__(cls, *args, **kwargs):
         if cls._instance is None:
             cls._instance = super().__new__(cls)
         return cls._instance
-    
+
     def __init__(self):
         if getattr(self, "_initialized", False):
             return
-        self._initialized = True        
-        self._initialized =False
+        self._initialized = True
+        self._initialized = False
         # database credentials
-        self.database_host =None
-        self.database_dbname =None
-        self.database_username  =None
-        self.database_password =None
-        self.database_port = None 
-        
-        self._pool =None       
-    
+        self.database_host = None
+        self.database_dbname = None
+        self.database_username = None
+        self.database_password = None
+        self.database_port = None
+        # self.ErrorHandler = ErrorHandler()
+        self._pool = None
+
     def _init_connection_pool(self):
-        """create connection pool
-        """
+        """create connection pool"""
         if not self._initialized_credentials:
             self._init_database_credentials()
-            
-            
+
         self._initialized_credentials = True
         try:
             self._pool = pool.ThreadedConnectionPool(
-                5, 20,  # min, max connections
+                5,
+                20,  # min, max connections
                 host=self.database_host,
                 dbname=self.database_dbname,
                 user=self.database_username,
                 password=self.database_password,
-                port=self.database_port
+                port=self.database_port,
             )
         except Exception as e:
-            print (f'Failed to init postgres pool: {e}')
-        
+            print(f"Failed to init postgres pool: {e}")
+
     # set database credentials(onlyfor server Auth class)
     def _init_database_credentials(self):
-        self.database_host =  os.getenv("DB_HOST")
+        self.database_host = os.getenv("DB_HOST")
         self.database_dbname = os.getenv("DB_NAME")
         self.database_username = os.getenv("DB_USER")
         self.database_password = os.getenv("DB_PASS")
         self.database_port = os.getenv("DB_PORT")
 
-    def connect_db(self,cur_options:str = 'rowDict'):
+    def connect_db(self, cur_options: str = "rowDict"):
         """connect to postgres
 
         Returns:
-            _cursor_: con, cur  
+            _cursor_: con, cur
         """
         if self._pool is None:
             self._init_connection_pool()
-        
-        conn = self._pool.getconn() 
+
+        conn = self._pool.getconn()
 
         # con = sqlite3.connect(path,check_same_thread=False,isolation_level=None)
-        if cur_options =='realDict':
-            cur= conn.cursor(cursor_factory=RealDictCursor)
+        if cur_options == "realDict":
+            cur = conn.cursor(cursor_factory=RealDictCursor)
         else:
-            cur= conn.cursor(cursor_factory=DictCursor)
+            cur = conn.cursor(cursor_factory=DictCursor)
 
         return conn, cur
 
-    def close_db (self,conn):
+    def close_db(self, conn):
         """return conection to pool
 
         Args:
             conn (_type_): _description_
         """
         self._pool.putconn(conn=conn)
-    
-                
-    def find_item_in_sql(self, table:str, 
-                         item:str, value, 
-                         second_condition:bool | None=None, 
-                         second_item:str |None = None, second_value: str| None=None, 
-                         order_by:str | None=None, 
-                         order_type:str |None = None,
-                         return_option:str |None="fetchone",):
+
+    def find_item_in_sql(
+        self,
+        table: str,
+        item: str,
+        value,
+        second_condition: bool | None = None,
+        second_item: str | None = None,
+        second_value: str | None = None,
+        order_by: str | None = None,
+        order_type: str | None = None,
+        return_option: str | None = "fetchone",
+    ) -> dict:
         """return value base on table and item in postgress
 
         Args:
@@ -116,43 +123,55 @@ class Database:
         Returns:
             _list_: list of tuple or tuple
         """
-        con,cur = None,None
+        con, cur = None, None
         try:
-            con,cur = self.connect_db()
+            con, cur = self.connect_db()
 
-        
             if not second_condition:
-                query = f'SELECT * FROM {table} WHERE {item}=%s'
-                if order_by :                  
+                query = f"SELECT * FROM {table} WHERE {item}=%s"
+                if order_by:
                     if not order_type:
-                        raise('need to specify the order_type')
-                    query =f'SELECT * FROM {table} WHERE {item}=%s ORDER BY {order_by} {order_type}'
-                cur.execute (query=query,vars=(value,))
-            else :
-                query =f'SELECT * FROM {table} WHERE {item}=%s AND {second_item} =%s'
-                if order_by :                  
+                        raise ("need to specify the order_type")
+                    query = f"SELECT * FROM {table} WHERE {item}=%s ORDER BY {order_by} {order_type}"
+                cur.execute(query=query, vars=(value,))
+            else:
+                query = f"SELECT * FROM {table} WHERE {item}=%s AND {second_item} =%s"
+                if order_by:
                     if not order_type:
-                        raise('need to specify the order_type')
-                    query =f'SELECT * FROM {table} WHERE {item}=%s AND {second_item} =%s ORDER BY {order_by} {order_type}'
-                cur.execute(query,(value,second_value,))
-            
+                        raise ("need to specify the order_type")
+                    query = f"SELECT * FROM {table} WHERE {item}=%s AND {second_item} =%s ORDER BY {order_by} {order_type}"
+                cur.execute(
+                    query,
+                    (
+                        value,
+                        second_value,
+                    ),
+                )
+
             con.commit()
             item = None
-            if return_option =="fetchall":
+            if return_option == "fetchall":
                 item = cur.fetchall()
             else:
                 item = cur.fetchone()
-                
-            return item  
+
+            return item
         except Exception as e:
-            print('Error at find item ',e)
+            print("Error at find item ", e)
             return None
         finally:
-            if con: self.close_db(conn=con)
+            if con:
+                self.close_db(conn=con)
 
-    def update_db(self,table:str, item:str, value:str, item_to_update:str, value_to_update:str ):
-        
-        """update a specific value where  condition exist 
+    def update_db(
+        self,
+        table: str,
+        item: str,
+        value: str,
+        item_to_update: str,
+        value_to_update: str,
+    ):
+        """update a specific value where  condition exist
         Args:
             table: table name
             item: column name of codition
@@ -163,35 +182,53 @@ class Database:
             bool: status
         """
         try:
-            con,cur = self.connect_db()
+            con, cur = self.connect_db()
 
-            
-            cur.execute(f'UPDATE {table} SET {item_to_update} =%s WHERE {item} = %s',(value_to_update,value,))
+            cur.execute(
+                f"UPDATE {table} SET {item_to_update} =%s WHERE {item} = %s",
+                (
+                    value_to_update,
+                    value,
+                ),
+            )
             con.commit()
             self.close_db(conn=con)
-            if cur.rowcount <0:
+            if cur.rowcount < 0:
                 return False
-            
+
             return True
         except Exception as e:
-            print ('failed to update to database',e)
+            print("failed to update to database", e)
             return False
-    def delete_from_table(self,table:str, item:str,value:str, second_condition:bool | None=None, second_item:str | None=None , second_value:str | None=None):
-        con,cur = self.connect_db()
+
+    def delete_from_table(
+        self,
+        table: str,
+        item: str,
+        value: str,
+        second_condition: bool | None = None,
+        second_item: str | None = None,
+        second_value: str | None = None,
+    ):
+        con, cur = self.connect_db()
 
         if second_condition:
-            cur.execute(f'DELETE FROM {table} WHERE {item} = %s AND {second_item} = %s',(value,second_value))
+            cur.execute(
+                f"DELETE FROM {table} WHERE {item} = %s AND {second_item} = %s",
+                (value, second_value),
+            )
         else:
-            cur.execute(f'DELETE FROM {table} WHERE {item} = %s',(value))            
+            cur.execute(f"DELETE FROM {table} WHERE {item} = %s", (value))
         con.commit()
         self.close_db(conn=con)
         if cur.rowcount <= 0:
             return False
-        else :return True
-        
-   
-        
-    def insert_to_database_singup(self, email:str, display_name:str, username:str, password:str):
+        else:
+            return True
+
+    def insert_to_database_singup(
+        self, email: str, display_name: str, username: str, password: str
+    ):
         """insert to database, credential table
 
         Args:
@@ -203,18 +240,73 @@ class Database:
         Returns:
             _bool_: _status_
         """
-        con,cur= self.connect_db()
+        con, cur = self.connect_db()
         current_time = datetime.now()
-        cur.execute(f'INSERT INTO {DATABASEKEYS.TABLES.USERDATA} (email,display_name,user_name,password,created_time) VALUES(%s,%s,%s,%s,%s)',(email,display_name,username,password,current_time))
+        cur.execute(
+            f"INSERT INTO {DATABASEKEYS.TABLES.USERDATA} (email,display_name,user_name,password,created_time) VALUES(%s,%s,%s,%s,%s)",
+            (email, display_name, username, password, current_time),
+        )
         con.commit()
         con.close()
-        if cur.rowcount >=1:
+        if cur.rowcount >= 1:
             return True
         return False
 
+    def insert_to_database_singup_provider(
+        self,
+        email: str,
+        display_name: str,
+        username: str,
+        password: str,
+        provider: str,
+        provider_id: str,
+    ):
+        """insert to database, credential table
 
-    def insert_token_into_db(self, user_id :int, username:str, token:str, issued_at, expired_at): 
-        """insert into database, token table 
+        Args:
+            email (str): _email_
+            display_name (str): _display name_
+            username (str): _username_
+            password (str): _dpassword (hashed)_
+
+        Returns:
+            _bool_: _status_
+        """
+        try:
+            con, cur = self.connect_db()
+            current_time = datetime.now()
+            cur.execute(
+                f"""INSERT INTO {DATABASEKEYS.TABLES.USERDATA} (
+                        {DATABASEKEYS.USERDATA.EMAIL},
+                        {DATABASEKEYS.USERDATA.DISPLAY_NAME},
+                        {DATABASEKEYS.USERDATA.USER_NAME},
+                        {DATABASEKEYS.USERDATA.PROVIDER},
+                        {DATABASEKEYS.USERDATA.PROVIDER_ID},
+                        {DATABASEKEYS.USERDATA.PASSWORD},
+                        {DATABASEKEYS.USERDATA.CREATED_TIME})
+                        VALUES(%s,%s,%s,%s,%s,%s,%s)""",
+                (
+                    email,
+                    display_name,
+                    username,
+                    provider,
+                    provider_id,
+                    password,
+                    current_time,
+                ),
+            )
+            con.commit()
+            con.close()
+            if cur.rowcount >= 1:
+                return True
+            return False
+
+        except Exception as e:
+            # self.ErrorHandler.logger('Database').error('Failed at insert to userdata to database',e)
+            return False
+
+    def insert_token_into_db(self, user_id: int, token: str, issued_at, expired_at):
+        """insert into database, token table
 
         Args:
             user_id (int): _username_
@@ -227,11 +319,21 @@ class Database:
             _bool_: _status_
         """
 
-        con,cur = self.connect_db()
-        cur.execute(f'INSERT INTO {DATABASEKEYS.TABLES.TOKENS} (user_id,user_name,token,issued_at,expired_at) VALUES (%s, %s, %s, %s, %s)',(user_id,username,token,issued_at,expired_at,))
+        con, cur = self.connect_db()
+        cur.execute(
+            f"""INSERT INTO {DATABASEKEYS.TABLES.TOKENS} ({DATABASEKEYS.TOKENS.USER_ID},
+                    {DATABASEKEYS.TOKENS.TOKEN},
+                    {DATABASEKEYS.TOKENS.ISSUE_TIME},
+                    {DATABASEKEYS.TOKENS.EXPIRED_TIME}) VALUES ( %s, %s, %s, %s)""",
+            (
+                user_id,
+                token,
+                issued_at,
+                expired_at,
+            ),
+        )
         con.commit()
         self.close_db(conn=con)
-        if(cur.rowcount>=1):
+        if cur.rowcount >= 1:
             return True
         return False
-    

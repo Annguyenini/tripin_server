@@ -1,7 +1,11 @@
-import jwt
-from src.server_config.config import Config
+from dataclasses import field
 from datetime import datetime, timedelta, timezone
+from tkinter.constants import N
+
+import jwt
+
 from src.database.database import Database
+from src.server_config.config import Config
 
 
 class TokenService:
@@ -12,39 +16,99 @@ class TokenService:
     def get_current_time(self) -> int:
         return int(datetime.now(timezone.utc).timestamp())
 
-    def generate_jwt(self, user_id: int, role: str = 'user', exp_time: dict = None) -> str:
-        """
-        Generate a JWT token.
+    def generate_jwt_provider(
+        self, provider_id: str, provider: str, email: str, name: str
+    ) -> str:
 
-        Args:
-            user_id (int): The user's ID.
-            role (str): The user's role. Defaults to 'user'.
-            exp_time (dict): Expiration duration as timedelta kwargs e.g. {'days': 30}.
-                             Defaults to {'days': 30}.
-
-        Returns:
-            str: Encoded JWT token.
-        """
-        if exp_time is None:
-            exp_time = {'days': 30}
-
+        exp_time = {"minutes": 10}
         SECRET_KEY = self.config.private_key
 
         token = jwt.encode(
             {
-                "user_id": user_id,
-                "role": role,
+                "email": email,
+                "name": name,
+                "provider": provider,
+                "provider_id": provider_id,
                 "issue": self.get_current_time(),
-                "exp": int((datetime.now(timezone.utc) + timedelta(**exp_time)).timestamp())
+                "exp": int(
+                    (datetime.now(timezone.utc) + timedelta(**exp_time)).timestamp()
+                ),
             },
             SECRET_KEY,
-            algorithm='RS256'
+            algorithm="RS256",
         )
 
         assert token is not None, "Token is undefined!"
         return token
 
-    def decode_jwt(self, token: str) -> dict:
+    def decode_jwt_provider(self, token: str) -> dict:
+        assert token is not None, "Token is None!"
+        try:
+            PUBLIC_KEY = self.config.public_key
+            payload = jwt.decode(token, PUBLIC_KEY, algorithms=["RS256"])
+
+            return {
+                "email": payload["email"],
+                "name": payload["name"],
+                "provider": payload["provider"],
+                "provider_id": payload["provider_id"],
+            }
+        except Exception as e:
+            return None
+
+    # def generate_jwt_s(self, user_id: int, role: str = 'user', exp_time: dict = None) -> str:
+    #     """
+    #     Generate a JWT token.
+
+    #     Args:
+    #         user_id (int): The user's ID.
+    #         role (str): The user's role. Defaults to 'user'.
+    #         exp_time (dict): Expiration duration as timedelta kwargs e.g. {'days': 30}.
+    #                          Defaults to {'days': 30}.
+
+    #     Returns:
+    #         str: Encoded JWT token.
+    #     """
+    #     if exp_time is None:
+    #         exp_time = {'days': 30}
+
+    #     SECRET_KEY = self.config.private_key
+
+    #     token = jwt.encode(
+    #         {
+    #             "user_id": user_id,
+    #             "role": role,
+    #             "issue": self.get_current_time(),
+    #             "exp": int((datetime.now(timezone.utc) + timedelta(**exp_time)).timestamp())
+    #         },
+    #         SECRET_KEY,
+    #         algorithm='RS256'
+    #     )
+
+    #     assert token is not None, "Token is undefined!"
+    #     return token
+
+    def generate_jwt(self, fields: object, exp_time: dict = {}) -> str | None:
+        if not exp_time:
+            exp_time = {"days": 30}
+
+        SECRET_KEY = self.config.private_key
+        if not SECRET_KEY:
+            return None
+        if not fields:
+            return None
+        payload = {
+            **fields,
+            "exp": int(
+                (datetime.now(timezone.utc) + timedelta(**exp_time)).timestamp()
+            ),
+        }
+        token = jwt.encode(payload, SECRET_KEY, algorithm="RS256")
+
+        assert token is not None, "Token is undefined!"
+        return token
+
+    def decode_jwt(self, token: str, fields: list[str]) -> dict:
         """
         Decode a JWT token and extract payload data.
 
@@ -55,14 +119,17 @@ class TokenService:
             dict: Extracted user_id and role from the token payload.
         """
         assert token is not None, "Token is None!"
-
-        PUBLIC_KEY = self.config.public_key
-        payload = jwt.decode(token, PUBLIC_KEY, algorithms=["RS256"])
-
-        return {
-            'user_id': payload["user_id"],
-            'role': payload['role']
-        }
+        try:
+            PUBLIC_KEY = self.config.public_key
+            if not PUBLIC_KEY:
+                return {}
+            payload = jwt.decode(token, PUBLIC_KEY, algorithms=["RS256"])
+            result = {}
+            for field in fields:
+                result[field] = payload[field]
+            return result
+        except Exception as e:
+            return {}
 
     def jwt_verify(self, token: str) -> tuple[bool, str, str]:
         """
@@ -75,14 +142,11 @@ class TokenService:
             tuple: (status: bool, message: str, code: str)
         """
         PUBLIC_KEY = self.config.public_key
-
+        if not PUBLIC_KEY:
+            return {}
         try:
-            payload = jwt.decode(
-                token,
-                PUBLIC_KEY,
-                algorithms=["RS256"]
-            )
-            if self.get_current_time() > int(payload['exp']):
+            payload = jwt.decode(token, PUBLIC_KEY, algorithms=["RS256"])
+            if self.get_current_time() > int(payload["exp"]):
                 return False, "Token Expired!", "token_expired"
 
         except jwt.ExpiredSignatureError:
@@ -104,28 +168,26 @@ class TokenService:
             bool: True if valid, False otherwise.
         """
         row = self.db.find_item_in_sql(
-            table="tripin_auth.tokens",
-            item="token",
-            value=refresh_token
+            table="tripin_auth.tokens", item="token", value=refresh_token
         )
 
         if row is None:
             return False
 
-        revoked_status = row['revoked']
+        revoked_status = row["revoked"]
         assert isinstance(revoked_status, bool), "revoked_status must be of type bool"
 
         if revoked_status:
             return False
 
-        expired_at = row['expired_at']
+        expired_at = row["expired_at"]
 
         if expired_at.tzinfo is None:
             expired_at = expired_at.replace(tzinfo=timezone.utc)
 
         if datetime.now(timezone.utc) >= expired_at:
-            print('wrong',refresh_token,datetime.now(timezone.utc),expired_at)
-            self.revoke_refresh_token(user_id=row['user_id'])
+            print("wrong", refresh_token, datetime.now(timezone.utc), expired_at)
+            self.revoke_refresh_token(user_id=row["user_id"])
             return False
 
         return True
@@ -142,7 +204,7 @@ class TokenService:
             item="user_id",
             value=user_id,
             item_to_update="revoked",
-            value_to_update=True
+            value_to_update=True,
         )
         assert status is True, "Error updating database: failed to revoke token"
 
@@ -159,11 +221,8 @@ class TokenService:
         if not self.refresh_token_verify(refresh_token):
             return False, None
 
-        data = self.decode_jwt(refresh_token)
-        new_token = self.generate_jwt(
-            user_id=data['user_id'],
-            role=data['role'],
-            exp_time={'minutes': 15}
-        )
+        data = self.decode_jwt(refresh_token, fields=["user_id", "role"])
+        field = {"user_id": data["user_id"], "role": data["role"]}
+        new_token = self.generate_jwt(fields=field, exp_time={"minutes": 15})
 
         return True, new_token

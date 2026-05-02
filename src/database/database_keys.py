@@ -20,14 +20,16 @@ DATABASEKEYS= SimpleNamespace(
         ETAG='etag',
         TRIPS_DATA_VERSION='trips_data_version',
         TRIPS_DATA_ETAG ='trips_data_etag',
-        USER_DATA_VERSION ='userdata_version'
+        USER_DATA_VERSION ='userdata_version',
+        PROVIDER = 'provider',
+        PROVIDER_ID ='provider_id'
     ),
     TOKENS= SimpleNamespace(
         TOKEN_ID='id',
         USER_ID='user_id',
         USER_NAME='user_name',
         TOKEN='token',
-        ISSUE_TIME='issue_at',
+        ISSUE_TIME='issued_at',
         EXPIRED_TIME='expired_at',
         REVOKED = 'revoked',
     ),

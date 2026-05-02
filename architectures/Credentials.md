@@ -105,9 +105,53 @@ User -> refresh token -> verify
 ```         
 
 
+## Login / Signup with provider
+User -> request provider -> send id_token to server -> server send request to provider -> get data 
 
+provider respond->
+                |
+                |_ invalid token -> return code 404
+                |
+                |_ valid token -> get data from provider (provider name, sub(provider_id)(a unique id that belong to user from the provider),email) ->
+                ->perform checking -> 
+                |
+                |_user exists with the same provider_id, and email -> return 200, app will decide to request signin
+                |
+                |_email belong to user, but provider_id not, return 404 (user will able to linked with provider later on)
+                |
+                |-> return 500, server failed
+                ||
+                |_new user, email, provider_id doesn't exist -> return 200, pending_token (this token contain email, provider,provider_id )
+                                                            |
+                                                            |_user than complete setup account, including (username, password, displayname) 
+                                                            -> Server checking for inputs validation, exists username,email, email-> success -> return 200
+                                                                                                                      |
+                                                                                                                      |-> fail -> return 404
+                                                            
 
+## Reset Password/ Change Password
+3 end points
+User -> request with email 
+                          |-> input validation fail -> return 404
+                          |
+                          |-> checking for exists email
+                                                      |-> not exists return 404
+                                                      |
+                                                      |-> return 500, server failed
+                                                      |
+                                                      |-> send code via email, pending token ,200
 
+User -> send token, code -> server verify code and token -> return 200, verified token
+                                                          |
+                                                          |-> return 500, server failed
+                                                          |
+                                                          |-> invalid token return 404
+
+User -> send new_password -> server -> input validation -> hased-> update db -> return 200
+                                                                            |
+                                                                            |->return 500 if failed
+
+                                                      
 ## Note
 refresh token are set to valid for 30 days
 access token are set to valid for 15 minutes
