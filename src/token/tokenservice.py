@@ -1,6 +1,5 @@
 from dataclasses import field
 from datetime import datetime, timedelta, timezone
-from tkinter.constants import N
 
 import jwt
 
@@ -16,45 +15,45 @@ class TokenService:
     def get_current_time(self) -> int:
         return int(datetime.now(timezone.utc).timestamp())
 
-    def generate_jwt_provider(
-        self, provider_id: str, provider: str, email: str, name: str
-    ) -> str:
+    # def generate_jwt_provider(
+    #     self, provider_id: str, provider: str, email: str, name: str
+    # ) -> str:
 
-        exp_time = {"minutes": 10}
-        SECRET_KEY = self.config.private_key
+    #     exp_time = {"minutes": 10}
+    #     SECRET_KEY = self.config.private_key
 
-        token = jwt.encode(
-            {
-                "email": email,
-                "name": name,
-                "provider": provider,
-                "provider_id": provider_id,
-                "issue": self.get_current_time(),
-                "exp": int(
-                    (datetime.now(timezone.utc) + timedelta(**exp_time)).timestamp()
-                ),
-            },
-            SECRET_KEY,
-            algorithm="RS256",
-        )
+    #     token = jwt.encode(
+    #         {
+    #             "email": email,
+    #             "name": name,
+    #             "provider": provider,
+    #             "provider_id": provider_id,
+    #             "issue": self.get_current_time(),
+    #             "exp": int(
+    #                 (datetime.now(timezone.utc) + timedelta(**exp_time)).timestamp()
+    #             ),
+    #         },
+    #         SECRET_KEY,
+    #         algorithm="RS256",
+    #     )
 
-        assert token is not None, "Token is undefined!"
-        return token
+    #     assert token is not None, "Token is undefined!"
+    #     return token
 
-    def decode_jwt_provider(self, token: str) -> dict:
-        assert token is not None, "Token is None!"
-        try:
-            PUBLIC_KEY = self.config.public_key
-            payload = jwt.decode(token, PUBLIC_KEY, algorithms=["RS256"])
+    # def decode_jwt_provider(self, token: str) -> dict:
+    #     assert token is not None, "Token is None!"
+    #     try:
+    #         PUBLIC_KEY = self.config.public_key
+    #         payload = jwt.decode(token, PUBLIC_KEY, algorithms=["RS256"])
 
-            return {
-                "email": payload["email"],
-                "name": payload["name"],
-                "provider": payload["provider"],
-                "provider_id": payload["provider_id"],
-            }
-        except Exception as e:
-            return None
+    #         return {
+    #             "email": payload["email"],
+    #             "name": payload["name"],
+    #             "provider": payload["provider"],
+    #             "provider_id": payload["provider_id"],
+    #         }
+    #     except Exception as e:
+    #         return None
 
     # def generate_jwt_s(self, user_id: int, role: str = 'user', exp_time: dict = None) -> str:
     #     """
