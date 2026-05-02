@@ -1,9 +1,7 @@
 # import email
 import os
-import re
 from collections import UserDict
 from datetime import datetime, timedelta, timezone
-from turtle import up
 from types import SimpleNamespace
 
 import requests
