@@ -102,8 +102,11 @@ class AuthServer(RouteBase):
     def login(self):
         data = request.json
         username = data.get("username")
+        email = data.get("email")
         password = data.get("password")
-        status, login_process = self.auth.login(username=username, password=password)
+        status, login_process = self.auth.login(
+            username=username, password=password, email=email
+        )
         message = login_process["message"]
         if not status:
             return jsonify({"message": message}), 401

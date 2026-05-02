@@ -4,6 +4,7 @@ import re
 from collections import UserDict
 from datetime import datetime, timedelta, timezone
 from turtle import up
+from types import SimpleNamespace
 
 import requests
 from flask.json import jsonify
@@ -28,9 +29,19 @@ from src.token.tokenservice import TokenService
 from src.trip_service.trip_service import TripService
 from src.user.user_service import UserService
 
-
 # userdata user_id|email|user_name|displayname|password
 # token keyid| userid| username|token|issue name | exp name | revok
+#
+#
+TOKENSTATUS = SimpleNamespace(
+    PENDING="pending", VERIFIED="verified", COMPLETED="completed"
+)
+TOKENACTION = SimpleNamespace(
+    RESET_PASSWORD="reset_password",
+    SIGNUP_VIA_PROVIDER="signup_via_provider",
+)
+
+
 class Auth:
     _instance = None
     _initialize = False
@@ -59,7 +70,7 @@ class Auth:
             self._initialize = True
 
     # login function
-    def login(self, username: str, password: str):
+    def login(self, password: str, username: str | None, email: str | None):
         """Login fuction use for process call jwt generate, verify credential
 
         Returns:
@@ -68,19 +79,31 @@ class Auth:
             tuple:
         """
         # verify user input
-        if not self.inputValidationService.username_validation(username=username):
-            return False, ({"message": INPUT_ERROR.USERNAME})
+
+        if username:
+            if not self.inputValidationService.username_validation(username=username):
+                return False, ({"message": INPUT_ERROR.USERNAME})
+        elif email:
+            if not self.inputValidationService.email_validation(email=email):
+                return False, ({"message": INPUT_ERROR.EMAIL})
+        else:
+            return False, ({"message": "Empty"})
+
         if not self.inputValidationService.password_validation(password=password):
             return False, ({"message": INPUT_ERROR.PASSWORD})
         ##find username in database
-
-        userdata_row = self.db.find_item_in_sql(
-            table="tripin_auth.userdata", item="user_name", value=username
-        )
-
+        userdata_row = None
+        if username:
+            userdata_row = self.db.find_item_in_sql(
+                table="tripin_auth.userdata", item="user_name", value=username
+            )
+        elif email:
+            userdata_row = self.db.find_item_in_sql(
+                table="tripin_auth.userdata", item="email", value=email
+            )
         ##return false if username not exist
         if userdata_row is None:
-            return (False, {"message": "Wrong username", "user_data": None})
+            return (False, {"message": "Wrong username or email", "user_data": None})
 
         userid = userdata_row["id"]
         # checker
@@ -251,6 +274,7 @@ class Auth:
         self, token: str, display_name: str, username: str, password: str
     ):
         try:
+            # input validation
             if not self.inputValidationService.username_validation(username=username):
                 return False, INPUT_ERROR.USERNAME
             if not self.inputValidationService.displayname_validation(
@@ -259,16 +283,26 @@ class Auth:
                 return False, INPUT_ERROR.DISPLAY_NAME
             if not self.inputValidationService.password_validation(password=password):
                 return False, INPUT_ERROR.PASSWORD
-
+            # decode token
             data_from_token = self.tokenService.decode_jwt(
-                token=token, fields=["email", "provider", "provider_id"]
+                token=token,
+                fields=["email", "provider", "provider_id", "action", "status"],
             )
+            # token guard
+            if (
+                not data_from_token
+                or data_from_token["action"] != TOKENACTION.SIGNUP_VIA_PROVIDER
+                or data_from_token["status"] != TOKENSTATUS.PENDING
+            ):
+                return False, {"code": "invalid_token"}
             email = data_from_token["email"]
             provider = data_from_token["provider"]
             provider_id = data_from_token["provider_id"]
-
+            # checking again for exists email
             if self.db.find_item_in_sql(
-                table="tripin_auth.userdata", item="email", value=email
+                table=DATABASEKEYS.TABLES.USERDATA,
+                item=DATABASEKEYS.USERDATA.EMAIL,
+                value=email,
             ):
                 return False, {
                     "code": "email_exists",
@@ -281,7 +315,7 @@ class Auth:
             ):
                 return False, {
                     "code": "username_exists",
-                    "message": "Username aldready exists",
+                    "message": "Username aldready exists, please choose a different one",
                 }
             hashed_password = generate_password_hash(password=password)
             # put inside the database
@@ -340,6 +374,8 @@ class Auth:
 
                 pending_token = self.tokenService.generate_jwt(
                     fields={
+                        "status": "pending",
+                        "action": "signup_via_provider",
                         "email": email,
                         "provider_id": provider_id,
                         "provider": provider,
@@ -427,6 +463,7 @@ class Auth:
             email = user_data["email"]
             user_id = user_data["user_id"]
             verify = self.mail_service.verify_code(recipients=email, code=code)
+
             if not verify:
                 return False, {"code": "code_not_match"}, 404
             # after verified, generate token that have status 'verified',
