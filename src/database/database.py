@@ -6,18 +6,17 @@
 
 
 # from src.error_handler.error_handler import ErrorHandler
-import inspect
 import os
 from datetime import datetime
+from typing import Any
 
-import dotenv
 from dotenv import load_dotenv, set_key
 from psycopg2 import pool
 from psycopg2.extras import DictCursor, RealDictCursor
 
 from src.database.database_keys import DATABASEKEYS
 
-dotenv.load_dotenv()
+load_dotenv()
 
 
 class Database:
@@ -167,9 +166,9 @@ class Database:
         self,
         table: str,
         item: str,
-        value: str,
+        value: Any,
         item_to_update: str,
-        value_to_update: str,
+        value_to_update: Any,
     ):
         """update a specific value where  condition exist
         Args:
@@ -205,10 +204,10 @@ class Database:
         self,
         table: str,
         item: str,
-        value: str,
+        value: Any,
         second_condition: bool | None = None,
         second_item: str | None = None,
-        second_value: str | None = None,
+        second_value: Any | None = None,
     ):
         con, cur = self.connect_db()
 
@@ -226,31 +225,31 @@ class Database:
         else:
             return True
 
-    def insert_to_database_singup(
-        self, email: str, display_name: str, username: str, password: str
-    ):
-        """insert to database, credential table
+    # def insert_to_database_singup(
+    #     self, email: str, display_name: str, username: str, password: str
+    # ):
+    #     """insert to database, credential table
 
-        Args:
-            email (str): _email_
-            display_name (str): _display name_
-            username (str): _username_
-            password (str): _dpassword (hashed)_
+    #     Args:
+    #         email (str): _email_
+    #         display_name (str): _display name_
+    #         username (str): _username_
+    #         password (str): _dpassword (hashed)_
 
-        Returns:
-            _bool_: _status_
-        """
-        con, cur = self.connect_db()
-        current_time = datetime.now()
-        cur.execute(
-            f"INSERT INTO {DATABASEKEYS.TABLES.USERDATA} (email,display_name,user_name,password,created_time) VALUES(%s,%s,%s,%s,%s)",
-            (email, display_name, username, password, current_time),
-        )
-        con.commit()
-        con.close()
-        if cur.rowcount >= 1:
-            return True
-        return False
+    #     Returns:
+    #         _bool_: _status_
+    #     """
+    #     con, cur = self.connect_db()
+    #     current_time = datetime.now()
+    #     cur.execute(
+    #         f"INSERT INTO {DATABASEKEYS.TABLES.USERDATA} (email,display_name,user_name,password,created_time) VALUES(%s,%s,%s,%s,%s)",
+    #         (email, display_name, username, password, current_time),
+    #     )
+    #     con.commit()
+    #     con.close()
+    #     if cur.rowcount >= 1:
+    #         return True
+    #     return False
 
     def insert_to_database_singup_provider(
         self,

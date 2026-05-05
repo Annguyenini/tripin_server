@@ -1,14 +1,12 @@
 ##before pass into service fucntions, this help filter info and verify jwt token for unnesscary function call
 ##rate limit are set as 5 requests total per min
 
-import requests
+from ipaddress import ip_address
+
 from flask import Blueprint, jsonify, request
 
 from src.base.route_base import RouteBase
 from src.credential.credential import Auth
-from src.database.database import Database
-from src.server_config.config import Config
-from src.server_config.encryption.encryption import Encryption
 from src.server_config.service.cache import Cache
 from src.token.tokenservice import TokenService
 
@@ -26,7 +24,6 @@ class AuthServer(RouteBase):
         self.bp = Blueprint("auth", __name__)
         self.auth = Auth()
         self.token_service = TokenService()
-        self.encryption_service = Encryption()
         self.rate_limiter_service = Cache()
         self._register_routes()
 
@@ -74,8 +71,10 @@ class AuthServer(RouteBase):
         respond = self.auth.confirm_code(email, code)
 
         if not respond:
+            return jsonify({"status": "Failed"}), 404
+        process_new_user = self.auth.process_new_user(email=email)
+        if not process_new_user:
             return jsonify({"status": "Failed"}), 500
-
         return jsonify({"status": "Successfully"}), 200
 
     def login_via_token(self):
@@ -151,8 +150,11 @@ class AuthServer(RouteBase):
 
     def request_reset_password(self):
         user_data = request.json
+        ip_address = request.remote_addr
         email = user_data.get("email")
-        res, data, code = self.auth.request_reset_password(email=email)
+        res, data, code = self.auth.request_reset_password(
+            email=email, ip_address=ip_address
+        )
         return jsonify(data), code
 
     def request_reset_password_verify(self):

@@ -10,18 +10,17 @@ from google.auth.transport import requests
 from google.oauth2 import id_token
 from werkzeug.security import check_password_hash, generate_password_hash
 
+from src.audit.userdata_audit import UserdataAudit
 from src.database.database import Database
 from src.database.database_keys import DATABASEKEYS
 from src.database.s3.s3_dirs import AVATAR_DIR, TRIP_DIR
 from src.database.s3.s3_service import S3Sevice
+from src.database.userdata_db_service import UserDataDataBaseService
 from src.error_code.error_code import INPUT_ERROR
 from src.error_handler.error_handler import ErrorHandler
 from src.logger.logging import get_logger
 from src.mail.mail_service import MailService
-from src.server_config.config import Config
 from src.server_config.service.cache import Cache
-from src.server_config.service.Etag.auth_etag_service import AuthEtagService
-from src.server_config.service.Etag.Etag import EtagService
 from src.server_config.service.input_validation import InputValidation
 from src.token.tokenservice import TokenService
 from src.trip_service.trip_service import TripService
@@ -58,10 +57,10 @@ class Auth:
             self.tripService = TripService()
             self.userService = UserService()
             self.cacheService = Cache()
-            self.etagService = EtagService()
-            self.authEtagService = AuthEtagService()
             self.inputValidationService = InputValidation()
             self.errorHandler = ErrorHandler()
+            self.UserDatabaseService = UserDataDataBaseService()
+            self.UserdataAudit = UserdataAudit()
             self.user_queue = {}
             self.logger = get_logger(__name__)
 
@@ -77,86 +76,78 @@ class Auth:
             tuple:
         """
         # verify user input
+        try:
+            if username:
+                if not self.inputValidationService.username_validation(
+                    username=username
+                ):
+                    return False, ({"message": INPUT_ERROR.USERNAME})
+            elif email:
+                if not self.inputValidationService.email_validation(email=email):
+                    return False, ({"message": INPUT_ERROR.EMAIL})
+            else:
+                return False, ({"message": "Empty"})
 
-        if username:
-            if not self.inputValidationService.username_validation(username=username):
-                return False, ({"message": INPUT_ERROR.USERNAME})
-        elif email:
-            if not self.inputValidationService.email_validation(email=email):
-                return False, ({"message": INPUT_ERROR.EMAIL})
-        else:
-            return False, ({"message": "Empty"})
+            if not self.inputValidationService.password_validation(password=password):
+                return False, ({"message": INPUT_ERROR.PASSWORD})
+            ##find username in database
+            userdata_row = None
+            if username:
+                userdata_row = (
+                    self.UserDatabaseService.get_user_data_by_email_or_username(
+                        value=username
+                    )
+                )
+            elif email:
+                userdata_row = (
+                    self.UserDatabaseService.get_user_data_by_email_or_username(
+                        value=email
+                    )
+                )
+            ##return false if username not exist
+            if userdata_row is None:
+                return (
+                    False,
+                    {
+                        "message": "Wrong username or email",
+                        "user_data": None,
+                    },
+                )
 
-        if not self.inputValidationService.password_validation(password=password):
-            return False, ({"message": INPUT_ERROR.PASSWORD})
-        ##find username in database
-        userdata_row = None
-        if username:
-            userdata_row = self.db.find_item_in_sql(
-                table="tripin_auth.userdata", item="user_name", value=username
-            )
-        elif email:
-            userdata_row = self.db.find_item_in_sql(
-                table="tripin_auth.userdata", item="email", value=email
-            )
-        ##return false if username not exist
-        if userdata_row is None:
-            return (False, {"message": "Wrong username or email", "user_data": None})
+            userid = userdata_row["id"]
+            # checker
+            assert userid is not None, "UserID Null"
+            role = userdata_row["role"]
 
-        userid = userdata_row["id"]
-        # checker
-        assert userid is not None, "UserID Null"
-        role = userdata_row["role"]
+            # if user is found and password is correct
+            if not check_password_hash(userdata_row["password"], password):  # password
+                return (
+                    False,
+                    {
+                        "message": "Wrong password",
+                        "user_data": None,
+                        "trip_data": None,
+                        "tokens": None,
+                        "all_trip_data": None,
+                    },
+                )
 
-        # if user is found and password is correct
-        if not check_password_hash(userdata_row["password"], password):  # password
+            # user data
+            user_data = {"user_id": userid, "role": role}
+
+            token_data = self._jwt_cycle_handler(user_id=userid, role=role)
+
             return (
-                False,
+                True,
                 {
-                    "message": "Wrong password",
-                    "user_data": None,
-                    "trip_data": None,
-                    "tokens": None,
-                    "all_trip_data": None,
+                    "message": "Successfully",
+                    "user_data": user_data,
+                    "tokens": token_data,
                 },
             )
-
-        # user data
-        user_data = {"user_id": userid, "role": role}
-
-        token_data = self._jwt_cycle_handler(user_id=userid, role=role)
-
-        return (
-            True,
-            {"message": "Successfully", "user_data": user_data, "tokens": token_data},
-        )
-
-    # def login_via_provider(self,provider_id:str):
-    #     if not self.inputValidationService.validate_provider_id(provider_id=provider_id) :return False,INPUT_ERROR.PROVIDER_ID
-    #     data = self.db.find_item_in_sql(table =DATABASEKEYS.TABLES.USERDATA,
-    #                                       item=DATABASEKEYS.USERDATA.PROVIDER_ID,
-    #                                       value= provider_id)
-    #     if not data:
-    #         return False ,{'code':'not_found','Message':'Account not found'}
-    #     user_id = data ['user_id']
-    #     role = data['role']
-    #     self.tokenService.revoke_refresh_token(user_id=user_id)
-
-    #     # generate refresh token
-    #     refresh_token = self.tokenService.generate_jwt(user_id=user_id,role=role,exp_time={'days':30})
-    #     # generate access token
-    #     access_token = self.tokenService.generate_jwt(user_id=user_id,role=role,exp_time={'minutes':15})
-    #     token_data ={'access_token':access_token,'refresh_token':refresh_token}
-
-    #     ##inserted token into database
-    #     self.db.insert_token_into_db(
-    #         user_id=data["id"],
-    #         token=refresh_token,
-    #         issued_at=datetime.now(timezone.utc),
-    #         expired_at=datetime.now(timezone.utc) + timedelta(days=30),
-    #     )
-
-    #     return (True,{'message':"Successfully",'user_data':data,'tokens':token_data})
+        except Exception as e:
+            self.errorHandler.logger("auth").error("Failed at request login", {e})
+            return None, None
 
     # signup function
     def signup(self, email: str, display_name: str, username: str, password: str):
@@ -173,15 +164,11 @@ class Auth:
                 return False, INPUT_ERROR.PASSWORD
 
             ## if the Email already exists in database, return
-            if self.db.find_item_in_sql(
-                table="tripin_auth.userdata", item="email", value=email
-            ):
+            if self.UserDatabaseService.get_user_data_by_email(email=email):
                 return False, "Email already exists!"
 
             ## if the username already exists in database, return
-            if self.db.find_item_in_sql(
-                table="tripin_auth.userdata", item="user_name", value=username
-            ):
+            if self.UserDatabaseService.get_user_data_by_username(user_name=username):
                 return False, "Username already exists!"
 
             ## process to verify email
@@ -244,27 +231,10 @@ class Auth:
         display_name = data.get("display_name")
         username = data.get("username")
         password = data.get("password")
-        res = self.db.insert_to_database_singup(
-            email=email, display_name=display_name, username=username, password=password
+        res = self.UserDatabaseService.insert_new_userdata(
+            email=email, username=username, display_name=display_name, password=password
         )
         if res < 0:
-            return False
-        return True
-
-    def confirm_code(self, email: str, code: int):
-        # input validation
-        if not self.inputValidationService.email_validation(email=email):
-            return False, INPUT_ERROR.EMAIL
-        if not self.inputValidationService.verify_code_valiation(code=code):
-            return False, INPUT_ERROR.VERIFY_CODE
-        # calling varify method
-        respond = self.mail_service.verify_code(recipients=email, code=code)
-
-        if not respond:
-            return False
-
-        process_new_user = self.process_new_user(email=email)
-        if not process_new_user:
             return False
         return True
 
@@ -297,35 +267,30 @@ class Auth:
             provider = data_from_token["provider"]
             provider_id = data_from_token["provider_id"]
             # checking again for exists email
-            if self.db.find_item_in_sql(
-                table=DATABASEKEYS.TABLES.USERDATA,
-                item=DATABASEKEYS.USERDATA.EMAIL,
-                value=email,
-            ):
+            if self.UserDatabaseService.get_user_data_by_email(email=email):
                 return False, {
                     "code": "email_exists",
                     "message": "Email aldready associate with an account!",
                 }
 
             ## if the username already exists in database, return
-            if self.db.find_item_in_sql(
-                table="tripin_auth.userdata", item="user_name", value=username
-            ):
+            if self.UserDatabaseService.get_user_data_by_username(user_name=username):
                 return False, {
                     "code": "username_exists",
                     "message": "Username aldready exists, please choose a different one",
                 }
             hashed_password = generate_password_hash(password=password)
             # put inside the database
-            res = self.db.insert_to_database_singup_provider(
+            insert_userdata = self.UserDatabaseService.insert_new_userdata(
                 email=email,
                 display_name=display_name,
                 username=username,
-                provider=provider,
-                provider_id=provider_id,
                 password=hashed_password,
             )
-            if not res:
+            insert_provider = self.UserDatabaseService.insert_user_provider_data(
+                provider=provider, provider_id=provider_id
+            )
+            if not insert_userdata or insert_provider:
                 return False, {"code": "failed", "message": "Server Failed"}
 
             return True, {"code": "successfully", "message": "Successfully"}
@@ -352,11 +317,7 @@ class Auth:
                 email = data_from_provider["email"]
                 name = data_from_provider["name"]
                 provider_id = data_from_provider["provider_id"]
-                user_data = self.db.find_item_in_sql(
-                    table=DATABASEKEYS.TABLES.USERDATA,
-                    item=DATABASEKEYS.USERDATA.EMAIL,
-                    value=email,
-                )
+                user_data = self.UserDatabaseService.get_user_data_by_email(email=email)
             else:
                 return {"code": "failed", "message": "Unkown Provider"}
             # verified that email is active
@@ -404,14 +365,12 @@ class Auth:
             )
             return False, {"code": "failed", "message": "Server Failed"}
 
-    def request_reset_password(self, email: str) -> tuple[bool, dict | None, int]:
+    def request_reset_password(
+        self, email: str, ip_address: str
+    ) -> tuple[bool, dict | None, int]:
         try:
             # verify email if it in the database
-            userdata = self.db.find_item_in_sql(
-                table=DATABASEKEYS.TABLES.USERDATA,
-                item=DATABASEKEYS.USERDATA.EMAIL,
-                value=email,
-            )
+            userdata = self.UserDatabaseService.get_user_data_by_email(email=email)
             if not userdata:
                 return False, {"code": "email_not_exists"}, 404
             email = userdata["email"]
@@ -423,6 +382,7 @@ class Auth:
                     "user_id": user_id,
                     "action": "reset_password",
                     "status": "pending",
+                    "ip_address": ip_address,
                 },
                 exp_time={"minutes": 5},
             )
@@ -443,9 +403,6 @@ class Auth:
         # guard
         if not code or not token:
             return False, {"code": "invalid_code_or_token"}, 404
-        if not self.inputValidationService.verify_code_valiation(code=code):
-            return False, {"code": INPUT_ERROR.VERIFY_CODE}, 404
-
         try:
             # get data from token
             user_data = self.tokenService.decode_jwt(
@@ -457,10 +414,11 @@ class Auth:
             action = user_data["action"]
             if action != "reset_password" or status != "pending":
                 return False, {"code": "invalid_token"}, 404
-            # verify code t0 match
             email = user_data["email"]
             user_id = user_data["user_id"]
-            verify = self.mail_service.verify_code(recipients=email, code=code)
+
+            # verify code t0 match
+            verify = self.confirm_code(email=email, code=code)
 
             if not verify:
                 return False, {"code": "code_not_match"}, 404
@@ -472,6 +430,7 @@ class Auth:
                     "user_id": user_id,
                     "action": "reset_password",
                     "status": "verified",
+                    "ip_address": user_data["ip_address"],
                 },
                 exp_time={"minutes": 5},
             )
@@ -480,7 +439,7 @@ class Auth:
             self.errorHandler.logger("Auth").error(
                 "Failed at reset password verify", {e}
             )
-            return False, None, 500
+            return False, {}, 500
         pass
 
     def reset_password_handler(self, token: str, new_password: str):
@@ -497,18 +456,27 @@ class Auth:
             )
             action = user_data["action"]
             status = user_data["status"]
+            ip_address = user_data["ip_address"]
             # guard for token
             if action != "reset_password" or status != "verified":
                 return False, {"code": "invalid_token"}, 404
-
             user_id = user_data["user_id"]
-            hased_new_password = generate_password_hash(password=new_password)
-            update = self.db.update_db(
-                table=DATABASEKEYS.TABLES.USERDATA,
-                item=DATABASEKEYS.USERDATA.USER_ID,
-                value=user_id,
-                item_to_update=DATABASEKEYS.USERDATA.PASSWORD,
-                value_to_update=hased_new_password,
+            # old data , old password we could enforce new password != old password in the future
+            old_userdata = self.UserDatabaseService.get_user_data_by_id(user_id=user_id)
+            old_password = old_userdata["password"]
+
+            new_hased_password = generate_password_hash(password=new_password)
+            update = self.UserDatabaseService.update_user_password(
+                user_id=user_id, new_hashed_password=new_hased_password
+            )
+            # audit
+            self.UserdataAudit.update_user_audit(
+                user_id=user_id,
+                modified_time=str(datetime.now()),
+                action="reset_password",
+                ip_address=ip_address,
+                old_value=old_password,
+                new_value=new_hased_password,
             )
             if not update:
                 return False, {"code": "server_failed"}, 500
@@ -522,9 +490,7 @@ class Auth:
     def _email_verify(self, email: str):
         if not self.inputValidationService.email_validation(email=email):
             return False, INPUT_ERROR.EMAIL
-        exists = self.db.find_item_in_sql(
-            DATABASEKEYS.TABLES.USERDATA, DATABASEKEYS.USERDATA.EMAIL, email
-        )
+        exists = self.UserDatabaseService.get_user_data_by_email(email=email)
         if exists:
             return False, "email_exists"
         return True, "successfully"

@@ -4,6 +4,11 @@
       "settings": {
         "basedpyright": {
           "exclude": ["venv", ".venv", "__pycache__"],
+          "analysis": {
+            "typeCheckingMode": "off",
+            "diagnosticMode": "openFilesOnly",
+            "autoImportCompletions": false,
+          },
         },
       },
     },
