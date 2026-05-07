@@ -3,14 +3,23 @@
     "basedpyright": {
       "settings": {
         "basedpyright": {
-          "exclude": ["venv", ".venv", "__pycache__"],
+          "exclude": ["venv", ".venv", "__pycache__", "node_modules", ".expo"],
           "analysis": {
             "typeCheckingMode": "off",
             "diagnosticMode": "openFilesOnly",
             "autoImportCompletions": false,
+            "indexing": false,
+            "reportReturnType": "none",
+            "reportUnknownVariableType": "none",
+            "reportUnknownMemberType": "none",
           },
         },
       },
     },
   },
+  // "languages": {
+  //   "Python": {
+  //     "language_servers": ["!basedpyright"],
+  //   },
+  // },
 }

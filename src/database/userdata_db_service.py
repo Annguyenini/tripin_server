@@ -66,7 +66,8 @@ class UserDataDataBaseService(Database):
         except Exception as e:
             return None
         finally:
-            self.close_db(conn=con)
+            if con:
+                self.close_db(conn=con)
 
     def insert_new_userdata(
         self, email: str, display_name: str, username: str, password: str
@@ -92,7 +93,8 @@ class UserDataDataBaseService(Database):
         except Exception as e:
             return False
         finally:
-            self.close_db(conn=con)
+            if con:
+                self.close_db(conn=con)
         pass
 
     def insert_user_provider_data(self, provider: str, provider_id: str) -> bool:
@@ -113,7 +115,8 @@ class UserDataDataBaseService(Database):
         except Exception as e:
             return False
         finally:
-            self.close_db(conn=con)
+            if con:
+                self.close_db(conn=con)
 
     def update_user_password(self, user_id: str, new_hashed_password: str) -> bool:
         return self.update_db(
@@ -125,9 +128,9 @@ class UserDataDataBaseService(Database):
         )
 
     def update_userdata_version(self, user_id: int) -> tuple[bool, int | None]:
-        try:
-            con, cur = self.connect_db()
+        con, cur = self.connect_db()
 
+        try:
             cur.execute(
                 f"""
                 UPDATE {DATABASEKEYS.TABLES.USERDATA}
@@ -141,7 +144,6 @@ class UserDataDataBaseService(Database):
 
             row = cur.fetchone()
             con.commit()
-            self.close_db(conn=con)
 
             if row:
                 return True, row[0]  # return new version
@@ -150,3 +152,6 @@ class UserDataDataBaseService(Database):
         except Exception as e:
             print(e)
             return False, None
+        finally:
+            if con:
+                self.close_db(conn=con)

@@ -7,6 +7,7 @@
 
 # from src.error_handler.error_handler import ErrorHandler
 import os
+import threading
 from datetime import datetime
 from typing import Any
 
@@ -78,8 +79,9 @@ class Database:
         if self._pool is None:
             self._init_connection_pool()
 
-        conn = self._pool.getconn()
-
+        key = threading.get_ident()
+        conn = self._pool.getconn(key=key)
+        print("getkey", key)
         # con = sqlite3.connect(path,check_same_thread=False,isolation_level=None)
         if cur_options == "realDict":
             cur = conn.cursor(cursor_factory=RealDictCursor)
@@ -94,7 +96,11 @@ class Database:
         Args:
             conn (_type_): _description_
         """
-        self._pool.putconn(conn=conn)
+        try:
+            key = threading.get_ident()
+            self._pool.putconn(conn=conn, key=key)
+        except KeyError:
+            pass
 
     def find_item_in_sql(
         self,
@@ -180,6 +186,7 @@ class Database:
         Returns:
             bool: status
         """
+        con, cur = None, None
         try:
             con, cur = self.connect_db()
 
@@ -191,7 +198,6 @@ class Database:
                 ),
             )
             con.commit()
-            self.close_db(conn=con)
             if cur.rowcount < 0:
                 return False
 
@@ -199,6 +205,9 @@ class Database:
         except Exception as e:
             print("failed to update to database", e)
             return False
+        finally:
+            if con:
+                self.close_db(conn=con)
 
     def delete_from_table(
         self,
@@ -209,21 +218,27 @@ class Database:
         second_item: str | None = None,
         second_value: Any | None = None,
     ):
-        con, cur = self.connect_db()
+        con, cur = None, None
+        try:
+            con, cur = self.connect_db()
 
-        if second_condition:
-            cur.execute(
-                f"DELETE FROM {table} WHERE {item} = %s AND {second_item} = %s",
-                (value, second_value),
-            )
-        else:
-            cur.execute(f"DELETE FROM {table} WHERE {item} = %s", (value))
-        con.commit()
-        self.close_db(conn=con)
-        if cur.rowcount <= 0:
+            if second_condition:
+                cur.execute(
+                    f"DELETE FROM {table} WHERE {item} = %s AND {second_item} = %s",
+                    (value, second_value),
+                )
+            else:
+                cur.execute(f"DELETE FROM {table} WHERE {item} = %s", (value))
+            con.commit()
+            if cur.rowcount <= 0:
+                return False
+            else:
+                return True
+        except Exception as e:
             return False
-        else:
-            return True
+        finally:
+            if con:
+                self.close_db(conn=con)
 
     # def insert_to_database_singup(
     #     self, email: str, display_name: str, username: str, password: str

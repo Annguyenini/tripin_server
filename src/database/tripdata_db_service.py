@@ -1,4 +1,4 @@
-import datetime
+from datetime import datetime, timezone
 
 from src.database.database import Database
 from src.database.database_keys import DATABASEKEYS
@@ -94,7 +94,7 @@ class TripDataBaseService(Database):
     def insert_new_trip(
         self,
         user_id: str,
-        created_time: str,
+        created_time: int,
         trip_name: str,
     ) -> str | None:
         con, cur = self.connect_db()
@@ -110,7 +110,6 @@ class TripDataBaseService(Database):
             )
             trip_id = cur.fetchone()["id"]
             con.commit()
-            self.close_db(conn=con)
             if cur.rowcount >= 1:
                 return trip_id
         except Exception as e:
@@ -118,6 +117,9 @@ class TripDataBaseService(Database):
                 "Failed to insert to database", body=e
             )
             return None
+        finally:
+            if con:
+                self.close_db(conn=con)
 
     def get_trip_data_by_shared_token(self, token: str) -> dict | None:
         try:
@@ -165,7 +167,7 @@ class TripDataBaseService(Database):
             )
             return False
 
-    def update_end_trip(self, trip_id: str, ended_time: str):
+    def update_end_trip(self, trip_id: str, ended_time: datetime):
         con, cur = self.connect_db()
         try:
             cur.execute(
