@@ -155,3 +155,16 @@ class UserDataDataBaseService(Database):
         finally:
             if con:
                 self.close_db(conn=con)
+    
+    def update_trips_modified_time(self,user_id:str,modified_time:str)->bool:
+        try:
+            update = self.update_db(table=DATABASEKEYS.TABLES.USERDATA,
+                         item=DATABASEKEYS.USERDATA.USER_ID,
+                         value=user_id,
+                         item_to_update=DATABASEKEYS.USERDATA.TRIPS_MODIFIED_TIME ,
+                         value_to_update=modified_time )
+            return update
+        except Exception as e:
+            print(e)
+            return False
+       

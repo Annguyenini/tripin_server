@@ -10,7 +10,7 @@ class UserdataEtag(EtagService):
 
 
 class AllTripsDataEtag(EtagService):
-    def generate_etag_key(self, user_id: int) -> str:
+    def generate_etag_key(self, user_id: str) -> str:
         return f"user:{user_id}::alltrips"
 
     def generate_etag(self, user_id: int, modified_time: str, bucket_hour: int) -> str:
