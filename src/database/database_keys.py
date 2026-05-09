@@ -53,6 +53,7 @@ DATABASEKEYS = SimpleNamespace(
         # TRIPS_MEDIAS_VERSION="trip_medias_version",
         MODIFIED_TIME="modified_time",
         CONTENT_MODIFIED_TIME="content_modified_time",
+        EVENT="event",
     ),
     TRIP_MEDIAS=SimpleNamespace(
         # MEDIA_ID ='id',

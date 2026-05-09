@@ -1,4 +1,5 @@
 import json
+from crypt import methods
 
 from flask import Blueprint, jsonify, request
 
@@ -40,7 +41,6 @@ class TripRoute(RouteBase):
     def _register_route(self):
         self.bp.route("/new-trip", methods=["POST"])(self.request_new_trip)
         self.bp.route("/all-trips/full", methods=["GET"])(self.request_all_trips_data)
-        self.bp.route("/all-trips/sync", methods=["GET"])(self.request_all_trips_metadata)
         self.bp.route("/current-trip-id", methods=["GET"])(self.request_current_trip_id)
         self.bp.route("/end-trip", methods=["POST"])(self.end_trip)
         self.bp.route("/trip", methods=["POST"])(self.request_trip_data)
@@ -48,6 +48,7 @@ class TripRoute(RouteBase):
             self.request_trip_data_by_shared_links
         )
         self.bp.route("/modify-trip-data", methods=["POST"])(self.change_trip_data)
+        self.bp.route("/trip", methods=["DELETE"])(self.request_remove_trip)
 
     ## request new trip
     def request_new_trip(self):
@@ -168,26 +169,16 @@ class TripRoute(RouteBase):
         user_id = user_data.get("user_id")
 
         all_trips_data, code = self.trip_service.get_all_trip_data(
-            user_id=user_id, client_etag=client_etag,want_images= True
+            user_id=user_id, client_etag=client_etag, want_images=True
         )
 
         return jsonify(all_trips_data), code
 
     def request_all_trips_metadata(self):
         user_data, error = self._get_authenticated_user()
-        # return if jwt in valid or expried
-
         if error:
             return jsonify(error), 401
-        client_etag = request.headers.get("If-None-Match")
-        user_id = user_data.get("user_id")
 
-        all_trips_data, code = self.trip_service.get_all_trip_data(
-            user_id=user_id, client_etag=client_etag
-        )
-
-        return jsonify(all_trips_data), code
-    
     def change_trip_data(self):
         user_data, error = self._get_authenticated_user()
         if error:
@@ -197,7 +188,6 @@ class TripRoute(RouteBase):
         trip_id = request.form.get("trip_id") or None
         trip_name = request.form.get("trip_name") or None
         modified_time = request.form.get("modified_time") or None
-        print (trip_id,trip_name,modified_time)
         image = request.files.get("image")
         data, code = self.trip_service.change_trip_data(
             new_trip_name=trip_name,
@@ -207,4 +197,18 @@ class TripRoute(RouteBase):
             image=image,
         )
 
+        return jsonify(data), code
+
+    def request_remove_trip(self):
+        user_data_from_jwt, error = self._get_authenticated_user()
+        if error:
+            return jsonify(error), 401
+        user_data = request.json
+        user_id = user_data_from_jwt["user_id"]
+        trip_id = user_data.get("trip_id")
+        deleted_time = user_data.get("deleted_time")
+
+        data, code = self.trip_service.remove_trip(
+            user_id=user_id, trip_id=trip_id, deleted_time=deleted_time
+        )
         return jsonify(data), code

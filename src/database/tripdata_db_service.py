@@ -21,11 +21,14 @@ class TripDataBaseService(Database):
         super().__init__()
         self._init = True
 
-    def get_all_trips_from_user_id(self, user_id: str) -> list[dict] | None:
+    def get_all_active_trips_from_user_id(self, user_id: str) -> list[dict] | None:
         userdata = self.find_item_in_sql(
             table=DATABASEKEYS.TABLES.TRIPS,
             item=DATABASEKEYS.TRIPS.USER_ID,
             value=user_id,
+            second_condition=True,
+            second_item=DATABASEKEYS.TRIPS.EVENT,
+            second_value="add",
             return_option="fetchall",
             order_by=DATABASEKEYS.TRIPS.TRIP_ID,
             order_type="DESC",
@@ -78,6 +81,15 @@ class TripDataBaseService(Database):
             value=trip_id,
             item_to_update=DATABASEKEYS.TRIPS.MODIFIED_TIME,
             value_to_update=modified_time,
+        )
+
+    def remove_trip(self, trip_id: str) -> bool:
+        return self.update_db(
+            table=DATABASEKEYS.TABLES.TRIPS,
+            item=DATABASEKEYS.TRIPS.TRIP_ID,
+            value=trip_id,
+            item_to_update=DATABASEKEYS.TRIPS.EVENT,
+            value_to_update="remove",
         )
 
     def get_current_trip_id_from_user(self, user_id: str) -> str | None:
