@@ -27,6 +27,10 @@ def ms_to_timestamptz(ms: int) -> datetime:
     return datetime.fromtimestamp(ms / 1000, tz=timezone.utc)
 
 
+def timestamptz_to_ms(timestamp: datetime) -> int:
+    return int(timestamp.timestamp() * 1000)
+
+
 class TripService:
     _instance = None
     _init = False
