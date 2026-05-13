@@ -21,7 +21,7 @@ depends_on: Union[str, Sequence[str], None] = None
 def upgrade() -> None:
     """Upgrade schema."""
     op.execute("""
-        CREATE TYPE IF NOT EXISTS tripin_trips.content_events AS ENUM ('add','remove');
+        CREATE TYPE tripin_trips.content_events AS ENUM ('add','remove');
         CREATE TABLE IF NOT EXISTS tripin_trips.content_cards (
         id SERIAL PRIMARY KEY,
         trip_id INTEGER NOT NULL REFERENCES tripin_trips.trips_table(id) ON DELETE CASCADE,
@@ -40,7 +40,7 @@ def upgrade() -> None:
         city TEXT DEFAULT NULL,
         region TEXT DEFAULT NULL,
         country TEXT DEFAULT NULL,
-        iso_country_code TEXT DEFAULT NULL,
+        iso_country_code TEXT DEFAULT NULL
         )
         """)
     pass
@@ -49,7 +49,7 @@ def upgrade() -> None:
 def downgrade() -> None:
     """Downgrade schema."""
     op.execute("""
-        DROP TYPE IF EXISTS tripin_trips.content_events;
+        DROP TYPE tripin_trips.content_events;
         DROP TABLE IF EXISTS tripin_trips.content_cards;
         """)
     pass

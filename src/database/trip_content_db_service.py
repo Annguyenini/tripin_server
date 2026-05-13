@@ -1,3 +1,5 @@
+from datetime import datetime
+
 from src.database.database import Database
 from src.database.database_keys import DATABASEKEYS
 from src.database.trip_db_service import TripDatabaseService
@@ -17,36 +19,39 @@ class TripContentsDatabaseService(Database):
         if self._init:
             return
         super().__init__()
-        self.ErrorHandler = ErrorHandler().logger('Trip Contents Service')
+        self.ErrorHandler = ErrorHandler().logger("Trip Contents Service")
         self._init = True
 
-    def get_trip_content_cards(self,uuid:str,trip_id:str)->dict:
+    def get_trip_content_cards(self, uuid: str, trip_id: str) -> dict:
         try:
-            content = self.find_item_in_sql(table=DATABASEKEYS.TABLES.TRIP_CONTENT_CARDS,
-                                  item=DATABASEKEYS.TRIP_CONTENT_CARDS.UUID,
-                                  value=uuid,
-                                  second_condition=True,
-                                  second_item=DATABASEKEYS.TRIP_CONTENT_CARDS.TRIP_ID,
-                                  second_value=trip_id)
+            content = self.find_item_in_sql(
+                table=DATABASEKEYS.TABLES.TRIP_CONTENT_CARDS,
+                item=DATABASEKEYS.TRIP_CONTENT_CARDS.UUID,
+                value=uuid,
+                second_condition=True,
+                second_item=DATABASEKEYS.TRIP_CONTENT_CARDS.TRIP_ID,
+                second_value=trip_id,
+            )
             return dict(content) if content else None
         except Exception as e:
-            self.ErrorHandler.error('Faield to get trip content card',{e})
+            self.ErrorHandler.error("Faield to get trip content card", {e})
             return None
 
-    def get_all_trip_content_cards(self,trip_id:str)->list[dict[Any]] | None:
+    def get_all_trip_content_cards(self, trip_id: str) -> list[dict] | None:
         try:
             contents = self.find_item_in_sql(
                 table=DATABASEKEYS.TABLES.TRIP_CONTENT_CARDS,
                 item=DATABASEKEYS.TRIP_CONTENT_CARDS.TRIP_ID,
                 value=trip_id,
-                return_option='fetchall',
-                order_by =DATABASEKEYS.TRIP_CONTENT_CARDS.CARD_ID,
-                order_type='DECS')
-            return (dict(content) for content in contents) if contents else [] 
+                return_option="fetchall",
+                order_by=DATABASEKEYS.TRIP_CONTENT_CARDS.CARD_ID,
+                order_type="DECS",
+            )
+            return (dict(content) for content in contents) if contents else []
         except Exception as e:
-            self.ErrorHandler.error('Failed to get trip all trip content!')
+            self.ErrorHandler.error("Failed to get trip all trip content!")
             return None
-        
+
     def insert_content_to_database(
         self,
         trip_id: str,
@@ -120,24 +125,23 @@ class TripContentsDatabaseService(Database):
             self.close_db(conn=con)
         pass
 
-    def remove_media_card_from_database(self, uuid: str,trip_id:str) -> bool:
+    def remove_media_card_from_database(
+        self, uuid: str, trip_id: str, modified_time: datetime
+    ) -> bool:
         """
-        change event flag to 'remove' 
+        change event flag to 'remove'
         """
         con, cur = self.connect_db()
         try:
             cur.execute(
                 f"""
-                UPDATE {DATABASEKEYS.TABLES.TRIP_CONTENT_CARDS} 
-                SET {DATABASEKEYS.TRIP_CONTENT_CARDS.EVENT} = %s
-                WHERE {DATABASEKEYS.TRIP_CONTENT_CARDS.UUID} =%s
-                AND {DATABASEKEYS.TRIP_CONTENT_CARDS.TRIP_ID} =%s
+                UPDATE {DATABASEKEYS.TABLES.TRIP_CONTENT_CARDS}
+                SET {DATABASEKEYS.TRIP_CONTENT_CARDS.EVENT} = %s,
+                {DATABASEKEYS.TRIP_CONTENT_CARDS.MODIFIED_TIME} =%s,
+                WHERE {DATABASEKEYS.TRIP_CONTENT_CARDS.UUID} =%s,
+                {DATABASEKEYS.TRIP_CONTENT_CARDS.TRIP_ID} =%s
                 """,
-                (
-                    "remove",
-                    uuid,
-                    trip_id
-                ),
+                ("remove", modified_time, uuid, trip_id),
             )
             con.commit()
             return True if cur.rowcount >= 1 else False

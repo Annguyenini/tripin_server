@@ -42,9 +42,71 @@ class TripContentsService:
         self._init = True
         pass
 
+    def generate_presign_url_for_medias(
+        self, trip_id: str, user_id: str, content_cards: list[str]
+    ) -> tuple[list[str], int]:
+        try:
+            assert trip_id, "trip_id not found"
+            assert user_id, "user id not found"
+            if not self._trip_owner_validation(trip_id=trip_id, user_id=user_id):
+                return {"code": "no_permission"}, 403
+            for content_card in content_cards:
+                print(content_card)
+                content_card["presign_url"] = self.s3Service.generate_upload_url(
+                    key=get_s3_media_path(
+                        trip_id=trip_id, media_path=content_card.get("filename")
+                    ),
+                    content_type=content_card.get("minetype"),
+                )
+                print(content_card)
+
+            return {
+                "code": "successfully",
+                "presign_urls": content_cards,
+            }, 200
+        except Exception as e:
+            print(e)
+            self.ErrorHandler.error("Failed to resolve generate url request", {e})
+            return {"code": "failed"}, 500
+
+    def handle_sync(
+        self, trip_id: str, user_id: str, requests: list[Any]
+    ) -> tuple[dict, int]:
+        try:
+            assert trip_id, "trip id is epmty"
+            assert user_id, "user id is epmty"
+            assert requests, "request is empty"
+
+            fail_requests = []
+            for request in requests:
+                # assume that request already sort from client
+                if request.event == "add":
+                    data, code = self._insert_card_to_database(
+                        user_id=user_id, trip_id=trip_id, card_data=request
+                    )
+                    if code != 200:
+                        fail_requests.append(request)
+                    # pass
+                elif request.event == "remove":
+                    data, code = self._delete_content_card(
+                        card_data=request, trip_id=trip_id
+                    )
+                    if code != 200:
+                        fail_requests.append(request)
+
+            if fail_requests:
+                return {"code": "requests_failed", "request": fail_requests}, 500
+            return {"code": "successfully"}, 200
+        except AssertionError as ass:
+            return {"code": "missing input"}, 400
+        except Exception as e:
+            self.ErrorHandler.error("failed to handle trip contents sync", {e})
+            return {"code": "failed"}, 500
+
     def _insert_card_to_database(
         self, user_id: str, trip_id: str, card_data: dict[Any]
     ) -> tuple[bool, dict]:
+        """ """
         try:
             assert card_data, "Card data is empty"
             assert trip_id, "Trip id is empty"
@@ -71,17 +133,6 @@ class TripContentsService:
             assert time_stamp, "time stamp is empty"
             assert uuid, "uuid is empty"
 
-            # # insert media data first
-            # if media_path or media_type or media_id or media:
-            #     assert media_path, "media path is empty"
-            #     assert media_type, "media type is empty"
-            #     assert media_id, "media id is empty"
-            #     assert media, "media is empty"
-            #     if media_type == "photo" or media_type == "video":
-            #         s3_path = f"trips/{trip_id}/{media_path}"
-            #         insert_to_s5 = self.s3Service.upload_media(path=s3_path, data=media)
-            #         if not insert_to_s5:
-            #             return {"code": "failed at upload to cloud"}, 502
             # insert into postgres
             insert_to_database = self.TripContentsDatabase.insert_content_to_database(
                 trip_id=trip_id,
@@ -126,38 +177,45 @@ class TripContentsService:
             return {"code": "failed"}, 502
 
     def _delete_content_card(
-        self, card_data: dict[Any], trip_id: int, modified_time: int
+        self,
+        card_data: dict[Any],
+        trip_id: int,
     ) -> bool | str:
         # remove from db,
         try:
             assert card_data, "card data is empty"
             assert trip_id, "trip_id is empty"
-            assert modified_time, "modified time is empty"
 
+            modified_time = card_data.get("modified_time")
             format_time = ms_to_timestamptz(int(modified_time))
+            assert format_time, "modified time is empty"
 
             uuid = card_data.get("uuid")
             assert uuid, "uuid is empty"
 
+            # get exists data from database
             server_card_data = self.TripContentsDatabase.get_trip_content_cards(
                 uuid=uuid, trip_id=trip_id
             )
+
             if not server_card_data:
-                return {"code": "content card not found"}
+                return {"code": "content card not found"}, 404
             # -----media -----
             media_path = server_card_data.get("media_path")
             media_type = server_card_data.get("media_type")
-            if media_path and media_type == "photo" or media_type == "video":
+            # process to delete in cloud
+            if media_path and (media_type == "photo" or media_type == "video"):
                 s3_path = get_s3_media_path(trip_id=trip_id, media_path=media_path)
                 delete_from_s3 = self.s3Service.delete_media(path=s3_path)
                 if not delete_from_s3:
                     return {"code": "failed_to_delete_media_from_cloud"}, 503
-
+            # if delete from cloud success process to delete in postgres
             delete_from_postgres = (
                 self.TripContentsDatabase.remove_media_card_from_database(
-                    uuid=uuid, trip_id=trip_id
+                    uuid=uuid, trip_id=trip_id, modified_time=format_time
                 )
             )
+
             if not delete_from_postgres:
                 return {"code": "database failed"}, 503
 
@@ -179,7 +237,7 @@ class TripContentsService:
             trip_data = self.TripDataBaseService.get_trip_data_from_trip_id(
                 trip_id=trip_id
             )
-            if trip_data.get("user_id") == user_id:
+            if trip_data.get("user_id") != user_id:
                 return {"code": "no_permission"}, 405
 
             # content cards
@@ -192,9 +250,9 @@ class TripContentsService:
                 media_type = content.get("media_type")
 
                 # if media type is photo or video, genrate temp uri
-                if media_type == "photo" and media_type == "video":
+                if media_type == "photo" or media_type == "video":
                     default_path = content["media_path"]
-                    media_path = self.s5Service.generate_temp_uri(
+                    media_path = self.s3Service.generate_temp_uri(
                         get_s3_media_path(trip_id=trip_id, media_path=default_path)
                     )
                     content["media_path"] = media_path
@@ -226,69 +284,4 @@ class TripContentsService:
             return trip_data.get("user_id") == user_id
         except Exception as e:
             self.ErrorHandler.error("Failed to verify trip owner", {e})
-            return Falses
-
-    def generate_presign_url_for_medias(
-        self, trip_id: str, user_id: str, media_paths: list[str]
-    ) -> tuple[list[str], int]:
-        try:
-            assert trip_id, "trip_id not found"
-            assert user_id, "user id not found"
-            if not self._trip_owner_validation(trip_id=trip_id, user_id=user_id):
-                return {"code": "no_permission"}, 403
-            result = []
-            for media_path in media_paths:
-                result.push(
-                    self.s3Service.generate_upload_url(
-                        key=get_s3_media_path(trip_id=trip_id, media_path=media_path)
-                    )
-                )
-            pending_token = self.TokenService.generate_jwt(
-                fields={
-                    "user_id": user_id,
-                    "trip_id": trip_id,
-                    "action": TOKENACTION.SYNC_CONTENTS,
-                    "status": TOKENSTATUS.PENDING,
-                },
-                exp_time=({"minutes": 5}),
-            )
-            if result is None or not pending_token:
-                return {"code": "failed"}, 500
-            return {
-                "code": "successfully",
-                "urls": result,
-                "pending_token": pending_token,
-            }, 200
-        except Exception as e:
-            self.ErrorHandler.error("Failed to resolve generate url request", {e})
-            return {"code": "failed"}, 500
-
-    def handle_sync(self, token: str, requests: list[Any]) -> tuple[dict, int]:
-        try:
-            assert token, "token is empty"
-            data_from_token = self.TokenService.decode_jwt(
-                token=token, fields=["user_id", "trip_id", "action", "status"]
-            )
-            trip_id = data_from_token.get("trip_id")
-            user_id = data_from_token.get("user_id")
-            action = data_from_token.get("action")
-            status = data_from_token.get("status")
-            assert trip_id, "trip id is epmty"
-            assert user_id, "user id is epmty"
-            assert requests, "request is empty"
-            if action != TOKENACTION.SYNC_CONTENTS or status != TOKENSTATUS.PENNDING:
-                return {"code": "invalid_token"}, 401
-
-            dead_requests = []
-            for request in requests:
-                # assume that request already sort from client
-                if request.event == "add":
-                    pass
-                elif request.event == "remove":
-                    pass
-            if dead_requests:
-                return {"code": "requests_failed", "request": dead_requests}, 500
-        except AssertionError as ass:
-            pass
-        except Exception as e:
-            pass
+            return False
