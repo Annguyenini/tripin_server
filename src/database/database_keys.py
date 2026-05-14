@@ -100,6 +100,7 @@ DATABASEKEYS = SimpleNamespace(
         HEADING="heading",
         TIME_STAMP="time_stamp",
         MODIFIED_TIME="modified_time",
+        MEDIA_ID="media_id",
         MEDIA_TYPE="media_type",
         MEDIA_PATH="media_path",
         UUID="uuid",

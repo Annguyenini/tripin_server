@@ -37,6 +37,24 @@ class TripContentsDatabaseService(Database):
             self.ErrorHandler.error("Faield to get trip content card", {e})
             return None
 
+    def get_all_trip_add_content_cards(self, trip_id: str) -> list[dict] | None:
+        try:
+            contents = self.find_item_in_sql(
+                table=DATABASEKEYS.TABLES.TRIP_CONTENT_CARDS,
+                item=DATABASEKEYS.TRIP_CONTENT_CARDS.TRIP_ID,
+                value=trip_id,
+                return_option="fetchall",
+                second_condition=True,
+                second_item=DATABASEKEYS.TRIP_CONTENT_CARDS.EVENT,
+                second_value="add",
+                order_by=DATABASEKEYS.TRIP_CONTENT_CARDS.CARD_ID,
+                order_type="DESC",
+            )
+            return [dict(content) for content in contents] if contents else []
+        except Exception as e:
+            self.ErrorHandler.error("Failed to get trip all trip content!")
+            return None
+
     def get_all_trip_content_cards(self, trip_id: str) -> list[dict] | None:
         try:
             contents = self.find_item_in_sql(
@@ -45,9 +63,9 @@ class TripContentsDatabaseService(Database):
                 value=trip_id,
                 return_option="fetchall",
                 order_by=DATABASEKEYS.TRIP_CONTENT_CARDS.CARD_ID,
-                order_type="DECS",
+                order_type="DESC",
             )
-            return (dict(content) for content in contents) if contents else []
+            return [dict(content) for content in contents] if contents else []
         except Exception as e:
             self.ErrorHandler.error("Failed to get trip all trip content!")
             return None
@@ -94,6 +112,7 @@ class TripContentsDatabaseService(Database):
                 {DATABASEKEYS.TRIP_CONTENT_CARDS.REGION},
                 {DATABASEKEYS.TRIP_CONTENT_CARDS.COUNTRY},
                 {DATABASEKEYS.TRIP_CONTENT_CARDS.ISO_COUNTRY_CODE})
+                VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s)
                 """,
                 (
                     trip_id,
@@ -152,3 +171,27 @@ class TripContentsDatabaseService(Database):
             return False
         finally:
             self.close_db(conn=con)
+
+    def generate_contents_hash(self, trip_id: int):
+        con, cur = None, None
+        try:
+            con, cur = self.connect_db()
+            cur.execute(
+                f"""
+                        SELECT COUNT(*), MAX({DATABASEKEYS.TRIP_CONTENT_CARDS.MODIFIED_TIME})
+                        FROM {DATABASEKEYS.TABLES.TRIP_CONTENT_CARDS}
+                        WHERE {DATABASEKEYS.TRIP_CONTENT_CARDS.TRIP_ID} = %s
+                        """,
+                (trip_id,),
+            )
+            count, max = cur.fetchone()
+            con.commit()
+            return f"{count}:{max}"
+        except Exception as e:
+            self.ErrorHandler.logger("TripDataBase").error(
+                "Failed to get trip meida max", body=e
+            )
+            return None
+        finally:
+            if con:
+                self.close_db(conn=con)

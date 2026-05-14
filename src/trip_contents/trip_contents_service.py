@@ -37,7 +37,7 @@ class TripContentsService:
         self.TripContentsDatabase = TripContentsDatabaseService()
         self.s3Service = S3Sevice()
         self.TripDatabaseService = TripDataBaseService()
-        self.ErrorHandler = ErrorHandler()
+        self.ErrorHandler = ErrorHandler().logger("TripContentService")
         self.TokenService = TokenService
         self._init = True
         pass
@@ -70,24 +70,24 @@ class TripContentsService:
             return {"code": "failed"}, 500
 
     def handle_sync(
-        self, trip_id: str, user_id: str, requests: list[Any]
+        self, trip_id: str, user_id: str, content_cards: list[Any]
     ) -> tuple[dict, int]:
         try:
             assert trip_id, "trip id is epmty"
             assert user_id, "user id is epmty"
-            assert requests, "request is empty"
+            assert content_cards, "content_cards is empty"
 
             fail_requests = []
-            for request in requests:
+            for request in content_cards:
                 # assume that request already sort from client
-                if request.event == "add":
+                if request.get("event") == "add":
                     data, code = self._insert_card_to_database(
                         user_id=user_id, trip_id=trip_id, card_data=request
                     )
                     if code != 200:
                         fail_requests.append(request)
                     # pass
-                elif request.event == "remove":
+                elif request.get("event") == "remove":
                     data, code = self._delete_content_card(
                         card_data=request, trip_id=trip_id
                     )
@@ -98,7 +98,7 @@ class TripContentsService:
                 return {"code": "requests_failed", "request": fail_requests}, 500
             return {"code": "successfully"}, 200
         except AssertionError as ass:
-            return {"code": "missing input"}, 400
+            return {"code": f"missing input: {str(ass)}"}, 400
         except Exception as e:
             self.ErrorHandler.error("failed to handle trip contents sync", {e})
             return {"code": "failed"}, 500
@@ -112,7 +112,8 @@ class TripContentsService:
             assert trip_id, "Trip id is empty"
             # ------media data ------
             media_type = card_data.get("media_type")
-            media_path = card_data.get("media_path")
+
+            media_path = card_data.get("filename")
             media_id = card_data.get("media_id")
             # ------card data--------
             time_stamp = card_data.get("time_stamp")
@@ -153,7 +154,7 @@ class TripContentsService:
                 iso_country_code=iso_country_code,
             )
             if not insert_to_database:
-                return {"code": "failed_to_insert_to_database"}, 502
+                return {"code": "failed_to_insert_to_database"}, 500
 
             # # update modified time
             # update_modified_time = self.TripDatabaseService.update_trip_modified_time(
@@ -163,18 +164,18 @@ class TripContentsService:
             # if not update_modified_time:
             #     return {"code": "failed_to_update_modified_time"}, 502
 
-            return {"code": "successfully"}, 202
+            return {"code": "successfully"}, 200
 
         except AssertionError as ass:
             self.ErrorHandler.logger("trip contents service").error(
                 "Failed to handler user request", {ass}
             )
-            return {"code": "input_error"}, 402
+            return {"code": "input_error"}, 400
         except Exception as e:
             self.ErrorHandler.logger("trip contents service").error(
                 "Failed to handler user request", {e}
             )
-            return {"code": "failed"}, 502
+            return {"code": "failed"}, 500
 
     def _delete_content_card(
         self,
@@ -226,24 +227,27 @@ class TripContentsService:
             return {"code": "failed"}, 502
 
     def get_all_content_card_from_trip_id(
-        self, trip_id: str, user_id: str
+        self, trip_id: str, user_id: str, client_hash: str = None
     ) -> tuple[list[dict], int]:
         try:
             # guard
             assert trip_id, "trip id is empty"
             assert user_id, "user id is empty"
 
-            # trip data and owner validation
-            trip_data = self.TripDataBaseService.get_trip_data_from_trip_id(
-                trip_id=trip_id
-            )
-            if trip_data.get("user_id") != user_id:
-                return {"code": "no_permission"}, 405
+            #  owner validation
+            self.owner_validation_policy(user_id=user_id, trip_id=trip_id)
 
-            # content cards
-            contents = self.TripContentsDatabase.get_all_trip_content_cards(
+            server_hash = self.TripContentsDatabase.generate_contents_hash(
                 trip_id=trip_id
             )
+            if client_hash == server_hash and client_hash and server_hash:
+                return {"code": "match"}, 304
+            # content cards
+            contents = self.TripContentsDatabase.get_all_trip_add_content_cards(
+                trip_id=trip_id
+            )
+            if contents is None:
+                return {"code": "failed"}, 500
 
             # loop through to convert data
             for content in contents:
@@ -264,12 +268,14 @@ class TripContentsService:
                 content["modified_time"] = timestamptz_to_ms(
                     timestamp=content["modified_time"]
                 )
-
+            print(contents)
             if contents is None:
                 return {"code": "failed to get trip contents"}, 502
-            return {"code": "successfully", "contents": contents}, 202
+            return {"code": "successfully", "content_cards": contents}, 200
         except AssertionError as ass:
             return {"code": "missing_require_inputs"}, 402
+        except PermissionError as e:
+            return {"code": "no_permission"}, 403
         except Exception as e:
             self.ErrorHandler.error("failed to get add trip contents", {e})
             return {"code": "failed"}, 502
@@ -285,3 +291,53 @@ class TripContentsService:
         except Exception as e:
             self.ErrorHandler.error("Failed to verify trip owner", {e})
             return False
+
+    def requestTripContentsHash(self, user_id: str, trip_id: str):
+        try:
+            assert trip_id, "trip id is empty"
+            assert user_id, "user id is empty"
+            self.owner_validation_policy(user_id=user_id, trip_id=trip_id)
+            hash = self.TripContentsDatabase.generate_contents_hash(trip_id=trip_id)
+            if not hash:
+                return {"code": "failed"}, 500
+            return {"code": "successfully", "hash": hash}, 200
+        except PermissionError as e:
+            return {"code": "no_permission"}, 403
+        except Exception as e:
+            self.ErrorHandler.error("Failed to resolve hash request", {e})
+            return {"code": "failed"}, 500
+
+    def get_all_content_card_meta_data_from_trip_id(
+        self, trip_id: str, user_id: str
+    ) -> tuple[list[dict], int]:
+        try:
+            # guard
+            assert trip_id, "trip id is empty"
+            assert user_id, "user id is empty"
+
+            #  owner validation
+            self.owner_validation_policy(user_id=user_id, trip_id=trip_id)
+
+            # content cards
+            contents = self.TripContentsDatabase.get_all_trip_content_cards(
+                trip_id=trip_id
+            )
+            if contents is None:
+                return {"code": "failed"}, 500
+
+            # loop through to convert data
+
+            if contents is None:
+                return {"code": "failed to get trip contents metadata"}, 502
+            return {"code": "successfully", "content_cards": contents}, 200
+        except AssertionError as ass:
+            return {"code": "missing_require_inputs"}, 402
+        except PermissionError as e:
+            return {"code": "no_permission"}, 403
+        except Exception as e:
+            self.ErrorHandler.error("failed to get get trip contents metadata", {e})
+            return {"code": "failed"}, 502
+
+    def owner_validation_policy(self, user_id: str, trip_id: str):
+        if not self._trip_owner_validation(user_id=user_id, trip_id=trip_id):
+            raise PermissionError("no_permission")
