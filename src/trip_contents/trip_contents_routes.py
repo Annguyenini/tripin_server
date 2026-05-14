@@ -52,7 +52,6 @@ class TripContentRoutes(RouteBase):
             data, code = self.TripContentsService.get_all_content_card_from_trip_id(
                 trip_id=trip_id, user_id=user_id, client_hash=client_hash
             )
-            print(data, code)
             return jsonify(data), code
         except Exception as e:
             print(e)

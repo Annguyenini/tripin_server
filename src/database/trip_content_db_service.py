@@ -4,6 +4,7 @@ from src.database.database import Database
 from src.database.database_keys import DATABASEKEYS
 from src.database.trip_db_service import TripDatabaseService
 from src.error_handler.error_handler import ErrorHandler
+from src.trip_service.trip_service import timestamptz_to_ms
 
 
 class TripContentsDatabaseService(Database):
@@ -156,9 +157,9 @@ class TripContentsDatabaseService(Database):
                 f"""
                 UPDATE {DATABASEKEYS.TABLES.TRIP_CONTENT_CARDS}
                 SET {DATABASEKEYS.TRIP_CONTENT_CARDS.EVENT} = %s,
-                {DATABASEKEYS.TRIP_CONTENT_CARDS.MODIFIED_TIME} =%s,
-                WHERE {DATABASEKEYS.TRIP_CONTENT_CARDS.UUID} =%s,
-                {DATABASEKEYS.TRIP_CONTENT_CARDS.TRIP_ID} =%s
+                {DATABASEKEYS.TRIP_CONTENT_CARDS.MODIFIED_TIME} =%s
+                WHERE {DATABASEKEYS.TRIP_CONTENT_CARDS.UUID} =%s
+                AND {DATABASEKEYS.TRIP_CONTENT_CARDS.TRIP_ID} =%s
                 """,
                 ("remove", modified_time, uuid, trip_id),
             )
@@ -186,7 +187,8 @@ class TripContentsDatabaseService(Database):
             )
             count, max = cur.fetchone()
             con.commit()
-            return f"{count}:{max}"
+
+            return f"{count}:{timestamptz_to_ms(max)}"
         except Exception as e:
             self.ErrorHandler.logger("TripDataBase").error(
                 "Failed to get trip meida max", body=e

@@ -209,7 +209,7 @@ class TripContentsService:
                 s3_path = get_s3_media_path(trip_id=trip_id, media_path=media_path)
                 delete_from_s3 = self.s3Service.delete_media(path=s3_path)
                 if not delete_from_s3:
-                    return {"code": "failed_to_delete_media_from_cloud"}, 503
+                    return {"code": "failed_to_delete_media_from_cloud"}, 500
             # if delete from cloud success process to delete in postgres
             delete_from_postgres = (
                 self.TripContentsDatabase.remove_media_card_from_database(
@@ -218,13 +218,13 @@ class TripContentsService:
             )
 
             if not delete_from_postgres:
-                return {"code": "database failed"}, 503
+                return {"code": "database failed"}, 500
 
-            return {"code": "successfully"}, 202
+            return {"code": "successfully"}, 200
         except AssertionError as e:
-            return {"code": "inputs invalid"}, 402
+            return {"code": "inputs invalid"}, 400
         except Exception as e:
-            return {"code": "failed"}, 502
+            return {"code": "failed"}, 500
 
     def get_all_content_card_from_trip_id(
         self, trip_id: str, user_id: str, client_hash: str = None
@@ -270,7 +270,7 @@ class TripContentsService:
                 )
             print(contents)
             if contents is None:
-                return {"code": "failed to get trip contents"}, 502
+                return {"code": "failed to get trip contents"}, 500
             return {"code": "successfully", "content_cards": contents}, 200
         except AssertionError as ass:
             return {"code": "missing_require_inputs"}, 402
