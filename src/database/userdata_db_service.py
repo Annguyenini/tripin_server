@@ -127,34 +127,29 @@ class UserDataDataBaseService(Database):
             value_to_update=new_hashed_password,
         )
 
-    def update_userdata_version(self, user_id: int) -> tuple[bool, int | None]:
-        con, cur = self.connect_db()
-
+    def update_user_avatar_and_modified_time(
+        self, user_id: str, avatar_path: str, modified_time: str
+    ) -> bool:
+        con, cur = self.databaseService.connect_db()
+        # update path, and modified time
         try:
             cur.execute(
                 f"""
                 UPDATE {DATABASEKEYS.TABLES.USERDATA}
-                SET {DATABASEKEYS.USERDATA.USER_DATA_VERSION} =
-                    {DATABASEKEYS.USERDATA.USER_DATA_VERSION} + 1
-                WHERE {DATABASEKEYS.USERDATA.USER_ID} = %s
-                RETURNING {DATABASEKEYS.USERDATA.USER_DATA_VERSION}
-            """,
-                (user_id,),
+                SET {DATABASEKEYS.USERDATA.AVARTAR} = %s,
+                {DATABASEKEYS.USERDATA.MODIFIED_TIME} =%s
+                WHERE {DATABASEKEYS.USERDATA.USER_ID} = %s;""",
+                (avatar_path, modified_time, user_id),
             )
-
-            row = cur.fetchone()
             con.commit()
-
-            if row:
-                return True, row[0]  # return new version
-            return False, None
-
+            return True
         except Exception as e:
-            print(e)
-            return False, None
+            self.ErrorHandler.logger("User_data").error(
+                "Failed to update user avatar to postges", {e}
+            )
+            return False
         finally:
-            if con:
-                self.close_db(conn=con)
+            self.close_db(conn=con)
 
     def update_trips_modified_time(self, user_id: str, modified_time: str) -> bool:
         try:

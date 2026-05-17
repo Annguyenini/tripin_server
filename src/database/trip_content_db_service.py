@@ -188,7 +188,7 @@ class TripContentsDatabaseService(Database):
             count, max = cur.fetchone()
             con.commit()
 
-            return f"{count}:{timestamptz_to_ms(max)}"
+            return f"{count}:{timestamptz_to_ms(max) if max else 0}"
         except Exception as e:
             self.ErrorHandler.logger("TripDataBase").error(
                 "Failed to get trip meida max", body=e

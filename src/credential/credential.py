@@ -81,15 +81,15 @@ class Auth:
                 if not self.inputValidationService.username_validation(
                     username=username
                 ):
-                    return False, ({"message": INPUT_ERROR.USERNAME})
+                    raise ValueError(INPUT_ERROR.USERNAME)
             elif email:
                 if not self.inputValidationService.email_validation(email=email):
-                    return False, ({"message": INPUT_ERROR.EMAIL})
+                    raise ValueError(INPUT_ERROR.EMAIL)
             else:
-                return False, ({"message": "Empty"})
+                raise ValueError("Empty")
 
             if not self.inputValidationService.password_validation(password=password):
-                return False, ({"message": INPUT_ERROR.PASSWORD})
+                raise ValueError(INPUT_ERROR.PASSWORD)
             ##find username in database
             userdata_row = None
             if username:
@@ -107,22 +107,20 @@ class Auth:
             ##return false if username not exist
             if userdata_row is None:
                 return (
-                    False,
                     {
                         "message": "Wrong username or email",
                         "user_data": None,
                     },
+                    400,
                 )
 
             userid = userdata_row["id"]
             # checker
-            assert userid is not None, "UserID Null"
             role = userdata_row["role"]
 
             # if user is found and password is correct
             if not check_password_hash(userdata_row["password"], password):  # password
                 return (
-                    False,
                     {
                         "message": "Wrong password",
                         "user_data": None,
@@ -130,6 +128,7 @@ class Auth:
                         "tokens": None,
                         "all_trip_data": None,
                     },
+                    403,
                 )
 
             # user data
@@ -138,13 +137,15 @@ class Auth:
             token_data = self._jwt_cycle_handler(user_id=userid, role=role)
 
             return (
-                True,
                 {
                     "message": "Successfully",
                     "user_data": user_data,
                     "tokens": token_data,
                 },
+                200,
             )
+        except ValueError as e:
+            return {"code": "input_validation_failed", "message": str(e)}, 400
         except Exception as e:
             self.errorHandler.logger("auth").error("Failed at request login", {e})
             return None, None
@@ -153,23 +154,29 @@ class Auth:
     def signup(self, email: str, display_name: str, username: str, password: str):
         try:
             if not self.inputValidationService.email_validation(email=email):
-                return False, INPUT_ERROR.EMAIL
+                raise ValueError(INPUT_ERROR.EMAIL)
             if not self.inputValidationService.username_validation(username=username):
-                return False, INPUT_ERROR.USERNAME
+                raise ValueError(INPUT_ERROR.USERNAME)
             if not self.inputValidationService.displayname_validation(
                 display_name=display_name
             ):
-                return False, INPUT_ERROR.DISPLAY_NAME
+                raise ValueError(INPUT_ERROR.DISPLAY_NAME)
             if not self.inputValidationService.password_validation(password=password):
-                return False, INPUT_ERROR.PASSWORD
+                raise ValueError(INPUT_ERROR.PASSWORD)
 
             ## if the Email already exists in database, return
             if self.UserDatabaseService.get_user_data_by_email(email=email):
-                return False, "Email already exists!"
+                return {
+                    "code": "email_exists",
+                    "message": "Email already link to an account!",
+                }, 400
 
             ## if the username already exists in database, return
             if self.UserDatabaseService.get_user_data_by_username(user_name=username):
-                return False, "Username already exists!"
+                return {
+                    "code": "username_exists",
+                    "message": "Username already exists in the database!",
+                }, 400
 
             ## process to verify email
             respond = self.mail_service.send_confirmation_code(email)
@@ -235,6 +242,23 @@ class Auth:
             email=email, username=username, display_name=display_name, password=password
         )
         if res < 0:
+            return False
+        return True
+
+    def confirm_code(self, email: str, code: int):
+        # input validation
+        if not self.inputValidationService.email_validation(email=email):
+            return False, INPUT_ERROR.EMAIL
+        if not self.inputValidationService.verify_code_valiation(code=code):
+            return False, INPUT_ERROR.VERIFY_CODE
+        # calling varify method
+        respond = self.mail_service.verify_code(recipients=email, code=code)
+
+        if not respond:
+            return False
+
+        process_new_user = self.process_new_user(email=email)
+        if not process_new_user:
             return False
         return True
 

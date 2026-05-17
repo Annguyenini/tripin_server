@@ -86,35 +86,16 @@ class AuthServer(RouteBase):
         ptoken = request.headers.get("Authorization")
         token = ptoken.replace("Bearer ", "")
 
-        data = self.auth.login_via_token(token=token)
-
-        status = data["status"]
-        message = data["message"]
-        code = data["code"]
-        user_data = data["user_data"]
-
-        if not status:
-            return jsonify({"message": message, "user_data": None, "code": code}), 401
-
-        return jsonify({"message": message, "user_data": user_data}), 200
+        data, code = self.auth.login_via_token(token=token)
+        return jsonify(data), code
 
     def login(self):
         data = request.json
         username = data.get("username")
         email = data.get("email")
         password = data.get("password")
-        status, login_process = self.auth.login(
-            username=username, password=password, email=email
-        )
-        message = login_process["message"]
-        if not status:
-            return jsonify({"message": message}), 401
-        user_data = login_process["user_data"]
-        tokens = login_process["tokens"]
-
-        return jsonify(
-            {"message": message, "tokens": tokens, "user_data": user_data}
-        ), 200
+        data, code = self.auth.login(username=username, password=password, email=email)
+        return jsonify(data), code
 
     def signup(self):
         data = request.json

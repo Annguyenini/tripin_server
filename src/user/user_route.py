@@ -1,5 +1,6 @@
 from flask import Blueprint, jsonify, request
 
+from src.audit.userdata_audit import UserdataAudit
 from src.base.route_base import RouteBase
 from src.database.database_keys import DATABASEKEYS
 from src.database.s3.s3_dirs import AVATAR_DIR
@@ -26,6 +27,7 @@ class UserRoute(RouteBase):
         self.UserService = UserService()
         self.UserDataBaseService = UserDataDataBaseService()
         self.ErrorHandler = ErrorHandler()
+        self.UserDataAudit = UserdataAudit()
         self._register_route()
 
     def _register_route(self):
@@ -48,41 +50,46 @@ class UserRoute(RouteBase):
             )
 
             return jsonify(user_data), code
+        except ValueError as v:
+            return {"code": "missing_inputs", "message": v}, code
         except Exception as e:
             self.ErrorHandler.logger("Userdata").error(
                 "Error at get userdata endpoint", {e}
             )
-            return None, 500
+            return {"code": "failed"}, 500
 
-    def update_profile_image(self):
-        """update user avatar
+    def request_update_avatar_presign_url(self):
+        try:
+            user_data = self._user_jwt_validation_policy()
+            user_id = user_data.get("user_id")
+            data, code = self.UserService.request_user_avatar_upload_presign_url(
+                user_id=user_id
+            )
+            return jsonify(data), code
+        except PermissionError as p:
+            return {"code": "token_invalid"}, 401
+        except Exception as e:
+            return {"code": "server_failed"}, 500
 
-        Returns:
-            jsonify: json object , http code
-        """
-        # get token and verify token
+    def complete_update_user_avatar(self):
+        try:
+            user_data_from_jwt = self._user_jwt_validation_policy()
+            user_id = user_data_from_jwt.get("user_id")
+            user_data = request.json
 
-        user_data, error = self._get_authenticated_user()
-        if error:
-            return jsonify(error), 401
+            modified_time = user_data.get("modified_time")
+            pending_token = user_data.get("pending_token")
 
-        # get user data direcly from jwt
-        user_id = user_data.get("user_id")
-        ip_address = request.remote_addr
-        if not user_id:
-            raise ValueError("Missing user_id in JWT")
-        # get image and return if not image
-        image = request.files.get("image")
-        modified_time = request.form.get("modified_time")
-        if image is None:
-            return jsonify({"message": "No Image Found", "code": "failed"}), 401
+            ip_address = self._get_request_ip_address()
+            data, code = self.UserService.process_update_user_avatar(
+                user_id=user_id,
+                pending_token=pending_token,
+                modified_time=modified_time,
+                ip_address=ip_address,
+            )
 
-        # upload to s3 and return 401 if error occurr
-        upload, code = self.UserService.update_user_avartar(
-            user_id=user_id,
-            image=image,
-            modified_time=modified_time,
-            ip_address=ip_address,
-        )
-        # return 200
-        return jsonify(upload), code
+            return jsonify(data), code
+        except PermissionError as p:
+            return {"code": "token_invalid"}, 401
+        except Exception as e:
+            return {"code": "server_failed"}, 500

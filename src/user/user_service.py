@@ -1,6 +1,10 @@
+import uuid
+from linecache import cache
+
 from src.audit.userdata_audit import UserdataAudit
 from src.database.database import Database
 from src.database.database_keys import DATABASEKEYS
+from src.database.s3.s3_client import ClientError
 from src.database.s3.s3_dirs import AVATAR_DIR
 from src.database.s3.s3_service import S3Sevice
 from src.database.userdata_db_service import UserDataDataBaseService
@@ -8,6 +12,19 @@ from src.error_handler.error_handler import ErrorHandler
 from src.server_config.service.cache import Cache
 from src.server_config.service.Etag.auth_etag_service import AuthEtagService
 from src.server_config.service.Etag.etag_services import UserdataEtag
+
+
+def GENERATE_RANDOM_PENDING_TOKEN(user_id: str):
+
+    return {f"update_avatar::{user_id}::{uuid.uuid4}"}
+
+
+def GENERATE_AVATAR_S3_KEY(user_id: str):
+    return f"{AVATAR_DIR}user{user_id}_avatar.jpg"
+
+
+def GENERATE_AVATAR_PATH(user_id: str):
+    return f"user{user_id}_avatar.jpg"
 
 
 class UserService:
@@ -29,7 +46,7 @@ class UserService:
         self.userDataEtagService = UserdataEtag()
         self.cacheService = Cache()
         self.UserDataBaseService = UserDataDataBaseService()
-        self.ErrorHandler = ErrorHandler()
+        self.ErrorHandler = ErrorHandler().logger("User Service")
         self.UserdataAudit = UserdataAudit()
         self._init = True
 
@@ -37,23 +54,8 @@ class UserService:
         self, user_id: int, client_etag: str | None
     ) -> tuple[dict, int]:
         try:
-            # check etag in cache
-            if not user_id:
-                return {"code": "invalid_user_id"}, 404
-            # generate etag key
-            etag_key = self.userDataEtagService.generate_etag_key(user_id=user_id)
-            # get etag from cache
-            etag_from_cache = self.userDataEtagService._get_etag_from_cache(
-                etag_key=etag_key
-            )
-            # return early when match
-            if client_etag == etag_from_cache and client_etag:
-                return {
-                    "etag": client_etag,
-                    "message": "Not Change",
-                    "code": "successfully",
-                }, 304
-            # find userdata in database
+            assert user_id, "user_id empty"
+
             userdata_row = self.UserDataBaseService.get_user_data_by_id(user_id=user_id)
             # return false if username not exist
             if userdata_row is None:
@@ -64,87 +66,105 @@ class UserService:
             etag = self.userDataEtagService.generate_etag(
                 user_id=user_id, modified_time=modified_time
             )
+
             if etag == client_etag:
                 return {"code": "successfully", "message": "Not Change"}, 304
             # generate link for avatar
             avatar = userdata_row["avatar"]
             if avatar:
-                avatar = self.s3Service.generate_temp_uri(key="avatar/" + avatar)
+                avatar = self.s3Service.generate_temp_uri(key=avatar)
                 userdata_row["avatar"] = avatar
-
-            # put etag into cache
-            self.userDataEtagService._set_etag_to_cache(etag_key=etag_key, etag=etag)
 
             return (
                 {"user_data": userdata_row, "code": "successfully", "etag": etag},
                 200,
             )
+        except AssertionError as ass:
+            raise ValueError(str(ass))
         except Exception as e:
             self.ErrorHandler.logger("Userdata").error("failed at get userdata", {e})
-            return {}, 500
+            return {"code": "failed"}, 500
 
-    def update_user_avartar(
-        self, ip_address: str, user_id: int, image, modified_time: str
-    ) -> tuple[dict, int]:
-        # default path
-        path = f"user{user_id}_avatar.jpg"
-        s3key = AVATAR_DIR + path
-        # upload to aws s3
-        s3_status = self.s3Service.upload_media(path=s3key, data=image)
-        if not s3_status:
-            return {
-                "status": False,
-                "message": "Error Upload To Cloud",
-                "code": "failed",
-            }, 500
-
-        # write default avatar path to db and return 500 if error ocurr
-        # db_status = self.databaseService.update_db('tripin_auth.userdata','id',user_id,'avatar',path)
-
-        con, cur = self.databaseService.connect_db()
-        # update path, and modified time
+    def request_user_avatar_upload_presign_url(self, user_id: str):
         try:
-            cur.execute(
-                f"""
-                UPDATE {DATABASEKEYS.TABLES.USERDATA}
-                SET {DATABASEKEYS.USERDATA.AVATAR} = %s,
-                {DATABASEKEYS.USERDATA.MODIFIED_TIME} =%s
-                WHERE {DATABASEKEYS.USERDATA.USER_ID} = %s;""",
-                (path, modified_time, user_id),
+            assert user_id, "user_id empty"
+
+            path_key = f"{AVATAR_DIR}user{user_id}_avatar.jpg"
+            # only except image
+            content_type = "image/jpeg"
+            # max size 5mb
+            max_size = 5 * 1024 * 1024
+            # key
+            #
+            presign_url = self.s3Service.generate_upload_url(
+                key=path_key, content_type=content_type, max_size=max_size
             )
-            con.commit()
-        except Exception as e:
-            self.ErrorHandler.logger("User_data").error(
-                "Failed to update user avatar to postges", {e}
-            )
+            if not presign_url:
+                return {"code": "failed_to_generate_presign_url"}, 500
+
+            token = GENERATE_RANDOM_PENDING_TOKEN(user_id=user_id)
+            self.cacheService.set(key=token, time=300, data=path_key)
+
             return {
-                "status": False,
-                "message": "Error Upload To Database",
-                "code": "failed",
-            }, 500
+                "code": "successfully",
+                "presign_url": presign_url,
+                "pending_token": token,
+            }
+        except AssertionError as e:
+            return ({"code": "missing_inputs"}), 400
+        except Exception as e:
+            self.ErrorHandler.error("failed to requets presignurl", {e})
+            return {"code": "failed"}, 500
 
-        finally:
-            self.databaseService.close_db(conn=con)
-        # generate etag,
-        etag_key = self.userDataEtagService.generate_etag_key(user_id=user_id)
-        etag = self.userDataEtagService.generate_etag(
-            user_id=user_id, modified_time=modified_time
-        )
-        # audit
+    def process_update_user_avatar(
+        self, user_id: str, pending_token: str, modified_time: str, ip_address: str
+    ) -> tuple[dict, int]:
+        MAX_RETRY = 2
 
-        self.UserdataAudit.update_user_audit(
-            user_id=user_id,
-            modified_time=modified_time,
-            action="change_avatar",
-            old_value=path,
-            new_value=path,
-            ip_address=ip_address,
-        )
-        # put etag into cache
-        self.userDataEtagService._set_etag_to_cache(etag_key=etag_key, etag=etag)
-        return {
-            "status": True,
-            "message": "Successfully",
-            "code": "successfully",
-            "etag": etag,
-        }, 200
+        try:
+            # get pending_token
+            assert pending_token, "pending_token empty"
+            assert user_id, "user_id epmty"
+
+            path_key = self.cacheService.get(key=pending_token)
+
+            if not path_key:
+                return {"code": "request_not_found"}, 404
+
+            # check if the object exists in the cloud
+            if not self.s3Service.check_s3_object_exists(key=path_key):
+                return {"code": "object not found"}, 404
+
+            # update path in postgress
+            avatar_path = GENERATE_AVATAR_PATH(user_id=user_id)
+            for i in range(MAX_RETRY):
+                if self.UserDataBaseService.update_user_avatar_and_modified_time(
+                    user_id=user_id,
+                    avatar_path=avatar_path,
+                    modified_time=modified_time,
+                ):
+                    break
+            else:
+                return {"code": "failed to update database"}, 500
+
+            # delete from catch
+            self.cacheService.delete(key=pending_token)
+
+            # not strictly enforce, failed will be pass to error service
+            self.UserdataAudit.change_user_avatar_audit(
+                user_id=user_id,
+                modified_time=modified_time,
+                ip_address=ip_address,
+                old_value=path_key,
+                new_value=path_key,
+            )
+
+            return {"code": "successfully"}, 200
+        except ClientError as e:
+            self.ErrorHandler.error("failed to reach s3", {e})
+            return {"code": "failed_to_reach_s3_cloud"}, 500
+        except AssertionError as e:
+            return {"code": "missing_input", "message": str(e)}, 400
+        except Exception as e:
+            self.ErrorHandler.error("failed to requets presignurl", {e})
+            return {"code": "failed"}, 500

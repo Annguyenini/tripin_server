@@ -62,6 +62,7 @@ class Server:
         internal_error_route = ErrorSSE()
         self.app.register_blueprint(auth_route.bp, url_prefix="/auth")
         self.app.register_blueprint(trip_route.bp, url_prefix="/trip")
+
         self.app.register_blueprint(trip_contents_route.bp, url_prefix="/trip-contents")
         self.app.register_blueprint(trip_content_routes.bp, url_prefix="/trip-contents")
 
@@ -72,6 +73,8 @@ class Server:
         self.app.route("/test-error", methods=["GET"])(self.test_error)
         self.app.route("/health", methods=["GET"])(self.health)
         self.app.route("/", methods=["GET"])(self.landing)
+        self.app.route("/app-version", methods=["GET"])(self.app_version)
+
         # self.app.route("/testmap",methods =['GET'])(self.testmap)
 
         # self.app.route("/trip-view",methods =['GET'])(self.trip_view)
@@ -87,6 +90,9 @@ class Server:
     def test_error(self):
 
         1 / 0
+
+    def app_version(self):
+        return jsonify({"version": f"{os.getenv('APP_VERSION')}"}), 200
 
     def health(self):
         return jsonify({"code": "success"}), 200

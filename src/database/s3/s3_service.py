@@ -2,8 +2,11 @@ import time
 from queue import Queue
 
 from src.database.s3.s3_client import ClientError, s3Client, s3Resource
+from src.error_handler.error_handler import ErrorHandler
 from src.server_config.config import Config
 from src.server_config.service.cache import Cache
+
+MAX_CLOUD_UPLOAD_RETRY = 3
 
 
 class S3Sevice:
@@ -21,7 +24,14 @@ class S3Sevice:
         self.config = Config()
         self._queue = Queue()
         self.cache_service = Cache()
+        self.ErrorHandler = ErrorHandler().logger("S3 service")
         self._init = True
+
+    def _s3_client_error(self, traceback: dict):
+        self.ErrorHandler.error("S3 Client error", {traceback})
+
+    def _s3_error(self, body: str, traceback: dict):
+        self.ErrorHandler.error(body, {traceback})
 
     def generate_temp_uri(self, key: str, expiration: int = 3600):
         # print(s3Client)
@@ -53,12 +63,14 @@ class S3Sevice:
 
             # print(respond)
         except ClientError as e:
-            print(e)
+            self._s3_client_error({e})
             return None
         self.cache_service.set(cache_key, expiration, respond)
         return respond
 
-    def generate_upload_url(self, key: str, content_type: str, expiration: int = 300):
+    def generate_upload_url(
+        self, key: str, content_type: str, expiration: int = 300, max_size: int = None
+    ):
         # print(s3Client)
         """generate presigned uri for media
 
@@ -70,18 +82,21 @@ class S3Sevice:
             _type_: _description_
         """
         try:
+            param = {
+                "Bucket": self.config.aws_bucket,
+                "Key": key,
+                "ContentType": content_type,
+            }
+            if max_size:
+                param["ContentLength"] = max_size
             respond = s3Client.generate_presigned_url(
                 "put_object",
-                Params={
-                    "Bucket": self.config.aws_bucket,
-                    "Key": key,
-                    "ContentType": content_type,
-                },
+                Params=param,
                 ExpiresIn=expiration,
             )
             # print(respond)
         except ClientError as e:
-            print(e)
+            self._s3_client_error({e})
             return None
         return respond
 
@@ -94,12 +109,11 @@ class S3Sevice:
         Return:
             status(boolean)
         """
-        self._queue.put((path, data))
-        while not self._queue.empty():
-            item_path, item_data = self._queue.get()
+
+        for i in range(MAX_CLOUD_UPLOAD_RETRY):
             try:
                 respond_obj = s3Resource.Bucket(self.config.aws_bucket).put_object(
-                    Key=item_path, Body=item_data
+                    Key=path, Body=data
                 )
                 response = respond_obj.get()  # returns a dict
                 if response["ResponseMetadata"]["HTTPStatusCode"] == 200:
@@ -107,12 +121,24 @@ class S3Sevice:
             except ClientError as e:
                 # Handles AWS service errors, e.g., AccessDenied, NoSuchBucket
                 print("AWS ClientError:", e)
+                self._s3_client_error({e})
+
             except Exception as e:
                 # Handles all other exceptions
                 print("Other error:", e)
-            self._queue.put((item_path, item_data))
+                self._s3_error(body="S3 failed", traceback={e})
             time.sleep(1)
-            return False
+        return False
+
+    def check_s3_object_exists(self, key: str) -> bool:
+        try:
+            s3Client.head_object(Bucket=self.config.aws_bucket, Key=key)
+            return True
+        except ClientError as e:
+            self._s3_error(body="failed to get head_object", traceback={e})
+            if e.response["Error"]["Code"] == "404":
+                return False
+            raise
 
     def delete_media(self, path: str) -> bool:
         try:
@@ -123,9 +149,12 @@ class S3Sevice:
                 return True
         except ClientError as e:
             # Handles AWS service errors, e.g., AccessDenied, NoSuchBucket
+            self._s3_client_error({e})
             print("AWS ClientError:", e)
         except Exception as e:
             # Handles all other exceptions
+            self._s3_error(body="failed to delete object", traceback={e})
+
             print("Other error:", e)
         return False
 
@@ -135,4 +164,5 @@ class S3Sevice:
                 file_path, self.config.aws_logs_bucket, base_name
             )
         except ClientError as e:
+            self._s3_client_error({e})
             print(e)
