@@ -1,9 +1,7 @@
 from werkzeug.security import check_password_hash, generate_password_hash
 
 from src.credential.credential_base import CredentialBase
-from src.error_code.error_code import INPUT_ERROR
-from src.server_config.service.input_validation import InputValidation
-from src.token.tokenservice import TokenService
+from src.server_config.service.input_validation import CredentialInputValidation
 
 
 class LoginService(CredentialBase):
@@ -19,23 +17,9 @@ class LoginService(CredentialBase):
         if self._init:
             return
         super()
-        self.inputValidationService = InputValidation()
-        self.tokenService = TokenService()
+        self.CredentialInputValidation = CredentialInputValidation()
 
         self._init = True
-
-    def _login_input_validation(self, **kwargs):
-        username = kwargs.get("username")
-        password = kwargs.get("password")
-        email = kwargs.get("email")
-        if username:
-            if not self.inputValidationService.username_validation(username=username):
-                raise ValueError(INPUT_ERROR.USERNAME)
-        elif email:
-            if not self.inputValidationService.email_validation(email=email):
-                raise ValueError(INPUT_ERROR.EMAIL)
-        if not self.inputValidationService.password_validation(password=password):
-            raise ValueError(INPUT_ERROR.PASSWORD)
 
     def login(self, password: str, username: str | None, email: str | None):
         """Login fuction use for process call jwt generate, verify credential
@@ -47,7 +31,7 @@ class LoginService(CredentialBase):
         """
         # verify user input
         try:
-            self._login_input_validation(
+            self.CredentialInputValidation.login_input_validation(
                 username=username, password=password, email=email
             )
             ##find username in database
@@ -107,5 +91,5 @@ class LoginService(CredentialBase):
         except ValueError as e:
             return {"code": "input_validation_failed", "message": str(e)}, 400
         except Exception as e:
-            self.errorHandler.logger("auth").error("Failed at request login", {e})
-            return None, None
+            self._credential_logger().error("Failed at request login", {e})
+            return {"code": "failed"}, 500

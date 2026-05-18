@@ -6,7 +6,8 @@ from psycopg2.extras import RealDictRow
 
 from src.database.database import Database
 from src.database.database_keys import DATABASEKEYS
-from trip_service.trip_service import timestamptz_to_ms
+from src.error_handler.error_handler import ErrorHandler
+from src.trip_service.trip_service import timestamptz_to_ms
 
 
 class TokenDatabaseService(Database):
@@ -22,6 +23,7 @@ class TokenDatabaseService(Database):
         if self._init:
             return
         super().__init__()
+        self.ErrorHandler = ErrorHandler().logger("Database Service")
         self._init = True
 
     def verify_refresh_token(self, refresh_token: str) -> bool:
@@ -64,3 +66,33 @@ class TokenDatabaseService(Database):
             value_to_update=True,
         )
         return status
+
+    def insert_token_into_db(self, user_id: int, token: str, issued_at, expired_at):
+
+        con, cur = self.connect_db()
+        try:
+            cur.execute(
+                f"""INSERT INTO {DATABASEKEYS.TABLES.TOKENS} ({DATABASEKEYS.TOKENS.USER_ID},
+                        {DATABASEKEYS.TOKENS.TOKEN},
+                        {DATABASEKEYS.TOKENS.ISSUE_TIME},
+                        {DATABASEKEYS.TOKENS.EXPIRED_TIME}) VALUES ( %s, %s, %s, %s)""",
+                (
+                    user_id,
+                    token,
+                    issued_at,
+                    expired_at,
+                ),
+            )
+            con.commit()
+            if cur.rowcount >= 1:
+                return True
+            return False
+        except ConnectionError as e:
+            self.ErrorHandler.error("Can not reach the postgres", {e})
+            return False
+        except Exception as e:
+            self.ErrorHandler.error("Can not insert token into postgres", {e})
+            return False
+        finally:
+            if con:
+                self.close_db(conn=con)

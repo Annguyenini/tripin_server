@@ -1,13 +1,20 @@
 import os
 from datetime import datetime, timedelta, timezone
 
+from database.userdata_db_service import UserDataDataBaseService
+from src.database.token_db_service import TokenDatabaseService
 from src.error_code.error_code import INPUT_ERROR
+from src.error_handler.error_handler import ErrorHandler
+from src.mail.mail_service import MailService
+from src.server_config.service.cache import Cache
+from src.server_config.service.input_validation import CredentialInputValidation
 from src.token.tokenservice import TokenService
 
 
 class CredentialBase:
     _instance = None
     _init = False
+    _init_error_handler = False
 
     def __new__(cls):
         if cls._instance is None:
@@ -18,7 +25,20 @@ class CredentialBase:
         if self._init:
             return
         self.TokenService = TokenService()
+        self.TokenDatabaseService = TokenDatabaseService()
+        self.CredentialInputValidation = CredentialInputValidation()
+        self.ErrorHandler = ErrorHandler()
+        self.EmailService = MailService()
+        self.CacheService = Cache()
+        self.UserDataBaseService = UserDataDataBaseService()
         self._init = True
+
+    def _init_error_handler(self):
+        if not self._init_error_handler:
+            self.ErrorHandler.logger("Credential Service")
+
+    def _credential_logger(self) -> ErrorHandler:
+        return self.ErrorHandler
 
     def _email_verify(self, email: str):
         if not self.inputValidationService.email_validation(email=email):
@@ -30,8 +50,9 @@ class CredentialBase:
 
     def _jwt_cycle_handler(self, user_id: int, role: str):
         # old token got revoked
-        self.TokenService.revoke_refresh_token(user_id=user_id)
-
+        revoke_token = self.TokenDatabaseService.revoke_refresh_token(user_id=user_id)
+        if not revoke_token:
+            return None
         # new tokens generated
         refresh_token = self.TokenService.generate_jwt(
             fields={"user_id": user_id, "role": role}, exp_time={"days": 30}
