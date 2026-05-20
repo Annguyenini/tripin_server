@@ -31,7 +31,12 @@ class UserRoute(RouteBase):
         self._register_route()
 
     def _register_route(self):
-        self.bp.route("/update-avatar", methods=["POST"])(self.update_profile_image)
+        self.bp.route("/request-update-avatar-presign-url", methods=["GET"])(
+            self.request_update_avatar_presign_url
+        )
+        self.bp.route("/complete-update-avatar", methods=["GET"])(
+            self.complete_update_user_avatar
+        )
         self.bp.route("/get-user-data", methods=["GET"])(self.get_user_data)
 
     def get_user_data(self):

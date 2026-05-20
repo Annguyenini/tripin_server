@@ -5,6 +5,7 @@ from psycopg2.extras import RealDictRow
 
 from src.database.database import Database
 from src.database.database_keys import DATABASEKEYS
+from src.error_handler.error_handler import ErrorHandler
 
 
 class UserDataDataBaseService(Database):
@@ -19,6 +20,7 @@ class UserDataDataBaseService(Database):
     def __init__(self):
         if self._init:
             return
+        self.ErrorHandler = ErrorHandler().logger("Userdata database service")
         super().__init__()
         self._init = True
 
@@ -64,6 +66,7 @@ class UserDataDataBaseService(Database):
             userdata = cur.fetchone()
             return dict(userdata) if userdata else None
         except Exception as e:
+            self.Erro
             return None
         finally:
             if con:
@@ -91,21 +94,46 @@ class UserDataDataBaseService(Database):
                 return True
             return False
         except Exception as e:
+            self.ErrorHandler.error("failed to insert new userdata", {e})
             return False
         finally:
             if con:
                 self.close_db(conn=con)
         pass
 
-    def insert_user_provider_data(self, provider: str, provider_id: str) -> bool:
+    def insert_new_user_with_provider_data(
+        self,
+        email: str,
+        display_name: str,
+        username: str,
+        password: str,
+        provider: str,
+        provider_id: str,
+    ) -> bool:
         con, cur = self.connect_db()
+        current_time = datetime.now()
         try:
             cur.execute(
                 f"""INSERT INTO {DATABASEKEYS.TABLES.USERDATA}
-                ({DATABASEKEYS.USERDATA.PROVIDER},
+                ({DATABASEKEYS.USERDATA.EMAIL},
+                {DATABASEKEYS.USERDATA.DISPLAY_NAME},
+                {DATABASEKEYS.USERDATA.USER_NAME},
+                {DATABASEKEYS.USERDATA.PASSWORD},
+                {DATABASEKEYS.USERDATA.CREATED_TIME},
+                {DATABASEKEYS.USERDATA.MODIFIED_TIME},
+                {DATABASEKEYS.USERDATA.PROVIDER},
                 {DATABASEKEYS.USERDATA.PROVIDER_ID})
-                VALUES(%s,%s)""",
-                (provider, provider_id),
+                VALUES(%s,%s,%s,%s,%s,%s,%s,%s)""",
+                (
+                    email,
+                    display_name,
+                    username,
+                    password,
+                    current_time,
+                    current_time,
+                    provider,
+                    provider_id,
+                ),
             )
             con.commit()
             con.close()
@@ -113,6 +141,7 @@ class UserDataDataBaseService(Database):
                 return True
             return False
         except Exception as e:
+            self.ErrorHandler.error("failed to insert new userdata with provider", {e})
             return False
         finally:
             if con:

@@ -111,3 +111,22 @@ class CredentialInputValidation(InputValidation):
             raise ValueError(INPUT_ERROR.PROVIDER)
         if not self._validate_provider_id(provider_id=protiver_id):
             raise ValueError(INPUT_ERROR.PROVIDER_ID)
+
+    def provider_complete_signup_inputs_validation(
+        self, username: str, password: str, display_name: str
+    ) -> None:
+        if not self._username_validation(username=username):
+            raise ValueError(INPUT_ERROR.USERNAME)
+
+        if not self._password_validation(password=password):
+            raise ValueError(INPUT_ERROR.PASSWORD)
+        if not self._displayname_validation(display_name=display_name):
+            raise ValueError(INPUT_ERROR.DISPLAY_NAME)
+
+    def email_validation(self, email: str):
+        if not self._email_validation(email=email):
+            raise ValueError(INPUT_ERROR.EMAIL)
+
+    def password_validation(self, password: str):
+        if not self._password_validation(password=password):
+            raise ValueError(INPUT_ERROR.PASSWORD)

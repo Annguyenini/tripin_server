@@ -55,14 +55,3 @@ class CredentialEmailService(MailService):
         message = f"Your Email Confirmation Code: {code} \n nananana =))"
         self._send_email(recipients=recipient, subject=subject, body=message)
         return
-
-    def verify_cofimation_code(self, code: str, recipient: str) -> bool:
-        # verify key and compare it with the cache
-        key = self._generate_email_corfirm_code_key(email=recipient)
-        if not key:
-            return False
-        cache_code = self.CacheService.get(key=key)
-        if cache_code == code:
-            self.CacheService.delete(key=key)
-            return True
-        return False

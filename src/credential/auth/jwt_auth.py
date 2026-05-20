@@ -1,12 +1,7 @@
-from werkzeug.security import check_password_hash, generate_password_hash
-
-from src.database.token_db_service import TokenDatabaseService
-from src.error_code.error_code import INPUT_ERROR
-from src.server_config.service.input_validation import InputValidation
-from src.token.tokenservice import TokenService
+from src.credential.credential_base import CredentialBase
 
 
-class LoginService:
+class JWTAuthenticationService(CredentialBase):
     _instance = None
     _init = False
 
@@ -18,42 +13,43 @@ class LoginService:
     def __init__(self) -> None:
         if self._init:
             return
-        self.inputValidationService = InputValidation()
-        self.tokenService = TokenService()
-        self.tokenDatabaseService = TokenDatabaseService()
         self._init = True
 
-    def login_via_token(self, token: str):
+    def login_via_token(self, token: str) -> tuple[dict, int]:
+        try:
+            status, message, code = self.TokenService.jwt_verify(token)
 
-        status, message, code = self.tokenService.jwt_verify(token)
-        # print(status,message,code
-        # if token invalid or expried, return
-        if not status:
+            if not status:
+                return {
+                    "message": message,
+                    "code": code,
+                    "user_data": None,
+                }, 401
+
+            # get userdata from token
+            userdata_from_jwt = self.tokenService.decode_jwt(
+                token, fields=["user_id", "role"]
+            )
+
+            user_id = userdata_from_jwt["user_id"]
+            role = userdata_from_jwt["role"]
+
+            user_data = {"user_id": user_id, "role": role}
+
             return {
-                "status": False,
                 "message": message,
-                "code": code,
-                "user_data": None,
-            }, 401
+                "user_data": user_data,
+                "code": "successfully",
+            }, 200
+        except AssertionError as e:
+            return {"code": "missing_inputs", "message": str(e)}
+        except Exception as e:
+            self.ErrorHandler.logger("JWT").error(
+                "failed to login with access_token", {e}
+            )
+            return {"code": "failed", "message": "Failed to complete request!"}, 500
 
-        # get userdata from token
-        userdata_from_jwt = self.tokenService.decode_jwt(
-            token, fields=["user_id", "role"]
-        )
-
-        user_id = userdata_from_jwt["user_id"]
-        role = userdata_from_jwt["role"]
-
-        user_data = {"user_id": user_id, "role": role}
-
-        return {
-            "status": True,
-            "message": message,
-            "user_data": user_data,
-            "code": code,
-        }, 200
-
-    def request_new_access_token(self, refresh_token: str):
+    def request_new_access_token(self, refresh_token: str) -> tuple[dict, int]:
         try:
             assert refresh_token, "token is empty"
             # check if token expired
@@ -85,9 +81,21 @@ class LoginService:
             )
             return ({"message": "Successfully", "token": new_access_token}), 200
         except AssertionError as e:
+            self.ErrorHandler.logger("JWT").error(
+                "failed to request new access_token", {e}
+            )
+
             return (
                 {
-                    "code": "invalid_token",
+                    "code": "missing_inputs",
+                    "message": str(e),
+                }
+            ), 404
+        except Exception as e:
+            self.Err
+            return (
+                {
+                    "code": "failed",
                     "message": "Failed",
                 }
             ), 404

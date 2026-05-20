@@ -55,7 +55,7 @@ class TokenService:
             result = {}
             for field in fields:
                 result[field] = payload[field]
-            return result
+            return dict(result)
         except Exception as e:
             return {}
 

@@ -120,7 +120,7 @@ provider respond->
                 |_email belong to user, but provider_id not, return 404 (user will able to linked with provider later on)
                 |
                 |-> return 500, server failed
-                ||
+                |
                 |_new user, email, provider_id doesn't exist -> return 200, pending_token (this token contain email, provider,provider_id )
                                                             |
                                                             |_user than complete setup account, including (username, password, displayname) 
@@ -139,7 +139,7 @@ User -> request with email
                                                       |
                                                       |-> return 500, server failed
                                                       |
-                                                      |-> send code via email, pending token ,200
+                                                      |-> send code via email ,201
 
 User -> send token, code -> server verify code and token -> return 200, verified token
                                                           |
@@ -150,6 +150,8 @@ User -> send token, code -> server verify code and token -> return 200, verified
 User -> send new_password -> server -> input validation -> hased-> update db -> return 200
                                                                             |
                                                                             |->return 500 if failed
+
+
 
                                                       
 ## Note

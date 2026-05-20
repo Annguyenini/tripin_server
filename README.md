@@ -1,2 +1,5 @@
 # tripin_server
-in dev not productionQ
+Server that run on Python/ Flask
+use to handle request from Tripping App 
+
+Architectures can be found on /architectures

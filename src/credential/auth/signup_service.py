@@ -1,10 +1,10 @@
+import json
 from random import random
 
 from werkzeug.security import check_password_hash, generate_password_hash
 
 from src.credential.credential_base import CredentialBase
 from src.error_code.error_code import INPUT_ERROR
-from src.mail.mail_service import CredentialEmailService
 
 
 class SignupService(CredentialBase):
@@ -19,7 +19,6 @@ class SignupService(CredentialBase):
     def __init__(self) -> None:
         if self._init:
             return
-        self.CredentialEmailService = CredentialEmailService()
         self._init = True
 
     def _generate_user_process_queue_key(self, code: str) -> str:
@@ -97,7 +96,7 @@ class SignupService(CredentialBase):
             )
             self.CacheService.set(
                 key=self._generate_user_process_queue_key(code=random_code),
-                data=data,
+                data=json.dumps(data),
                 time=300,
             )
             return {"code": "pending", "message": "Pending"}, 201
@@ -108,7 +107,9 @@ class SignupService(CredentialBase):
             self._credential_logger().error("failed to solve signup", {e})
             return {"code": "failed"}, 500
 
-    def confirm_code_and_process_new_user(self, email: str, code: str):
+    def confirm_code_and_process_new_user(
+        self, email: str, code: str
+    ) -> tuple[dict, int]:
         try:
             # ------------verify code validation----------
             # input validation
@@ -127,7 +128,7 @@ class SignupService(CredentialBase):
 
             userdata_key = self._generate_user_process_queue_key(code=code)
 
-            pending_userdata = self.CacheService.get(key=userdata_key)
+            pending_userdata = json.loads(self.CacheService.get(key=userdata_key))
             if not pending_userdata:
                 return {
                     "code": "failed",
@@ -146,7 +147,7 @@ class SignupService(CredentialBase):
                     "message": "Failed to complete process new user!",
                 }, 500
 
-            return {"code": "successfully", "message": "Successfully"}
+            return {"code": "successfully", "message": "Successfully"}, 200
         except ValueError as e:
             return {"code": "missing_inputs", "message": str(e)}, 400
         except Exception as e:
