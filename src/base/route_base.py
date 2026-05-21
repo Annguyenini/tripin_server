@@ -24,10 +24,7 @@ class RouteBase:
         self._init = True
 
     def _get_request_ip_address(self):
-        if os.getenv("DEBUG"):
-            return request.remote_addr
-        else:
-            return request.headers.get("X-Forwarded-For", request.remote_addr)
+        return request.headers.get("X-Forwarded-For", request.remote_addr)
 
     def _get_authenticated_user(self) -> tuple[dict | None, dict | None]:
         # verify jwt

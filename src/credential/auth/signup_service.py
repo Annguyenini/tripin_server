@@ -1,4 +1,5 @@
 import json
+import secrets
 from random import random
 
 from werkzeug.security import check_password_hash, generate_password_hash
@@ -19,6 +20,8 @@ class SignupService(CredentialBase):
     def __init__(self) -> None:
         if self._init:
             return
+        super().__init__()
+
         self._init = True
 
     def _generate_user_process_queue_key(self, code: str) -> str:
@@ -55,7 +58,7 @@ class SignupService(CredentialBase):
 
             # ----------Process sending confirmation code----
             ## process to verify email
-            random_code = str(random(100000, 999999))
+            random_code = secrets.randbelow(900000) + 100000
 
             send_code = self.CredentialEmailService.send_email_confirmation_code(
                 code=random_code, recipient=email
@@ -79,18 +82,18 @@ class SignupService(CredentialBase):
 
             # --------check if OTP in cache------------------------
             #
-            if (
-                self.CacheService.get(
-                    key=self._generate_email_confirm_code_key(email=email)
-                )
-                is None
-            ):
-                return {"code": "pending", "message": "OTP on the way"}, 400
+            # if (
+            #     self.CacheService.get(
+            #         key=self._generate_email_confirm_code_key(email=email)
+            #     )
+            #     is None
+            # ):
+            #     return {"code": "pending", "message": "OTP on the way"}, 400
 
             # --------put into cache------------------------
             #
             self.CacheService.set(
-                key=self._generate_email_corfirm_code_key(email=email),
+                key=self._generate_email_confirm_code_key(email=email),
                 data=random_code,
                 time=300,
             )
@@ -117,11 +120,10 @@ class SignupService(CredentialBase):
                 code=code, email=email
             )
             # calling varify method
-            email_key = self._generate_email_corfirm_code_key(email=email)
+            email_key = self._generate_email_confirm_code_key(email=email)
 
             cache_code = self.CacheService.get(key=email_key)
-
-            if not cache_code or str(cache_code) != code:
+            if not cache_code or str(cache_code) != str(code):
                 return {"code": "invalid_code"}, 400
 
             # -------------Process new user---------------

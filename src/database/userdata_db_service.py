@@ -159,7 +159,7 @@ class UserDataDataBaseService(Database):
     def update_user_avatar_and_modified_time(
         self, user_id: str, avatar_path: str, modified_time: str
     ) -> bool:
-        con, cur = self.databaseService.connect_db()
+        con, cur = self.connect_db()
         # update path, and modified time
         try:
             cur.execute(

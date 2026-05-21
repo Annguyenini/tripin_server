@@ -4,10 +4,9 @@ from types import SimpleNamespace
 # from falsk import requests
 from google.auth.transport import requests
 from google.oauth2 import id_token
-from werkzeug.security import check_password_hash, generate_password_hash
+from werkzeug.security import generate_password_hash
 
 from src.credential.credential_base import CredentialBase
-from src.error_code.error_code import INPUT_ERROR
 
 TOKENSTATUS = SimpleNamespace(
     PENDING="pending", VERIFIED="verified", COMPLETED="completed"
@@ -28,8 +27,11 @@ class ProviderAuth(CredentialBase):
         return cls._instance
 
     def __init__(self):
-        if not self._initialize:
-            self._initialize = True
+        if self._initialize:
+            return
+        super().__init__()
+
+        self._initialize = True
 
     def provider_verify(self, provider: str, token: str) -> tuple[dict, int]:
         # this function use to process signup or signin with provider
@@ -63,12 +65,11 @@ class ProviderAuth(CredentialBase):
             if not user_data:
                 # if user doesnt exists,
                 # return request Sign up
-                email_verify, code = self._email_verify(email=email)
-                if not email_verify:
+                if self.UserDataBaseService.get_user_data_by_email(email=email):
                     return (
                         False,
                         {
-                            "code": code,
+                            "code": "email_exists",
                             "message": "Email already associate with an account, but not with provider.\nPlease sign in with your credential!",
                         },
                         400,
@@ -85,6 +86,7 @@ class ProviderAuth(CredentialBase):
                         "provider": provider,
                     }
                 )
+                print(pending_token)
                 return {"code": "pending", "pending_token": pending_token}, 201
             # ---------------------Log in-----------------------------------
             # treat as signin, if it linked
@@ -172,7 +174,7 @@ class ProviderAuth(CredentialBase):
                 )
             )
             if not insert_userdata:
-                return {"code": "failed", "message": "Server Failed"}, 500
+                raise Exception("failed")
 
             return {"code": "successfully", "message": "Successfully"}, 200
         except ValueError as e:

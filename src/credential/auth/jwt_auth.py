@@ -13,6 +13,7 @@ class JWTAuthenticationService(CredentialBase):
     def __init__(self) -> None:
         if self._init:
             return
+        super().__init__()
         self._init = True
 
     def login_via_token(self, token: str) -> tuple[dict, int]:
@@ -27,7 +28,7 @@ class JWTAuthenticationService(CredentialBase):
                 }, 401
 
             # get userdata from token
-            userdata_from_jwt = self.tokenService.decode_jwt(
+            userdata_from_jwt = self.TokenService.decode_jwt(
                 token, fields=["user_id", "role"]
             )
 
@@ -44,23 +45,21 @@ class JWTAuthenticationService(CredentialBase):
         except AssertionError as e:
             return {"code": "missing_inputs", "message": str(e)}
         except Exception as e:
-            self.ErrorHandler.logger("JWT").error(
-                "failed to login with access_token", {e}
-            )
+            self._credential_logger().error("failed to login with access_token", {e})
             return {"code": "failed", "message": "Failed to complete request!"}, 500
 
     def request_new_access_token(self, refresh_token: str) -> tuple[dict, int]:
         try:
             assert refresh_token, "token is empty"
             # check if token expired
-            status, message, code = self.tokenService.jwt_verify(token=refresh_token)
+            status, message, code = self.TokenService.jwt_verify(token=refresh_token)
             if not status:
                 return (
                     {"code": "failed", "message": "Could not finish the request!"}
                 ), 401
 
             # check refresh token in database
-            refresh_token_verify = self.tokenDatabaseService.verify_refresh_token(
+            refresh_token_verify = self.TokenDatabaseService.verify_refresh_token(
                 refresh_token=refresh_token
             )
             if not refresh_token_verify:
@@ -68,7 +67,7 @@ class JWTAuthenticationService(CredentialBase):
 
             # get userdata from token
 
-            userdata_from_jwt = self.tokenService.decode_jwt(
+            userdata_from_jwt = self.TokenService.decode_jwt(
                 token=refresh_token, fields=["user_id", "role"]
             )
 
@@ -76,15 +75,11 @@ class JWTAuthenticationService(CredentialBase):
             role = userdata_from_jwt["role"]
             # generate new access token
 
-            new_access_token = self.tokenService.generate_jwt(
+            new_access_token = self.TokenService.generate_jwt(
                 fields={"user_id": user_id, "role": role}
             )
             return ({"message": "Successfully", "token": new_access_token}), 200
         except AssertionError as e:
-            self.ErrorHandler.logger("JWT").error(
-                "failed to request new access_token", {e}
-            )
-
             return (
                 {
                     "code": "missing_inputs",
@@ -92,7 +87,7 @@ class JWTAuthenticationService(CredentialBase):
                 }
             ), 404
         except Exception as e:
-            self.Err
+            self._credential_logger().error("failed to request new access_token", {e})
             return (
                 {
                     "code": "failed",

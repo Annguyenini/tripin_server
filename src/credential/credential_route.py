@@ -2,6 +2,8 @@
 ##rate limit are set as 5 requests total per min
 
 
+import re
+
 from flask import Blueprint, jsonify, request
 
 from src.base.route_base import RouteBase
@@ -95,6 +97,7 @@ class AuthServer(RouteBase):
         respond, code = self.JwtAuthenticationService.request_new_access_token(
             refresh_token=token
         )
+        return jsonify(respond), code
 
     # ---------------Login-----------------------------
     def login(self):
@@ -157,7 +160,7 @@ class AuthServer(RouteBase):
         user_data = request.json
         token = user_data.get("token")
         email = user_data.get("email")
-        ip_address = user_data.get("ip_address")
+        ip_address = self._get_request_ip_address()
         new_password = user_data.get("new_password")
 
         data, code = self.ResetPasswordService.reset_password_handler(
@@ -188,7 +191,7 @@ class AuthServer(RouteBase):
                 display_name=display_name,
                 password=password,
             )
-
+            print(data)
             return jsonify(data), code
         except Exception as e:
             print(e)

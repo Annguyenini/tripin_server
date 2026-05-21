@@ -13,6 +13,7 @@ from src.user.user_service import UserService
 
 class UserRoute(RouteBase):
     _instance = None
+    _init = False
 
     def __new__(cls):
         if not cls._instance:
@@ -20,6 +21,8 @@ class UserRoute(RouteBase):
         return cls._instance
 
     def __init__(self):
+        if self._init:
+            return
         super().__init__()
         self.bp = Blueprint("user", __name__)
         self.S3Service = S3Sevice()
@@ -29,12 +32,13 @@ class UserRoute(RouteBase):
         self.ErrorHandler = ErrorHandler()
         self.UserDataAudit = UserdataAudit()
         self._register_route()
+        self._init = True
 
     def _register_route(self):
         self.bp.route("/request-update-avatar-presign-url", methods=["GET"])(
             self.request_update_avatar_presign_url
         )
-        self.bp.route("/complete-update-avatar", methods=["GET"])(
+        self.bp.route("/complete-update-avatar", methods=["POST"])(
             self.complete_update_user_avatar
         )
         self.bp.route("/get-user-data", methods=["GET"])(self.get_user_data)
@@ -70,10 +74,14 @@ class UserRoute(RouteBase):
             data, code = self.UserService.request_user_avatar_upload_presign_url(
                 user_id=user_id
             )
+            print(data, code)
             return jsonify(data), code
         except PermissionError as p:
             return {"code": "token_invalid"}, 401
         except Exception as e:
+            self.ErrorHandler.logger("Userdata").error(
+                "Error at request avatar presign url endpoint", {e}
+            )
             return {"code": "server_failed"}, 500
 
     def complete_update_user_avatar(self):
@@ -86,12 +94,14 @@ class UserRoute(RouteBase):
             pending_token = user_data.get("pending_token")
 
             ip_address = self._get_request_ip_address()
+
             data, code = self.UserService.process_update_user_avatar(
                 user_id=user_id,
                 pending_token=pending_token,
                 modified_time=modified_time,
                 ip_address=ip_address,
             )
+            print(data, code)
 
             return jsonify(data), code
         except PermissionError as p:

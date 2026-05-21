@@ -20,6 +20,7 @@ class ResetPasswordService(CredentialBase):
     def __init__(self):
         if self._initialize:
             return
+        super().__init__()
         self._initialize = True
 
     def _generate_reset_password_process_key(self, token: str) -> str:
@@ -49,7 +50,7 @@ class ResetPasswordService(CredentialBase):
                 key=confirmation_key, data=json.dumps({"email": email}), time=300
             )
             send_code = self.CredentialEmailService.send_email_confirmation_code(
-                code=random_code, recipients=email
+                code=random_code, recipient=email
             )
             if not send_code:
                 return {"code": "server_failed", "token": None}, 500
@@ -83,18 +84,18 @@ class ResetPasswordService(CredentialBase):
             # ---------------Verify email -----
             email_from_cache = result_from_cache["email"]
             if not email_from_cache or str(email_from_cache) != email:
-                return {"code": "email_not_match", "message": "Email not match!"}
+                return {"code": "email_not_match", "message": "Email not match!"}, 400
 
             # --------------generate token-----
             # return for next step
-            verified_token = uuid.uuid4()
+            verified_token = str(uuid.uuid4())
             verified_key = self._generate_reset_password_process_key(
                 token=verified_token
             )
 
             # _________put verify token ---------
             if not self.CacheService.set(
-                key=verified_key, data=json.dumps({"email": email}, time=300)
+                key=verified_key, data=json.dumps({"email": email}), time=300
             ):
                 return {"code": "failed", "message": "server failed"}, 500
 
@@ -103,7 +104,7 @@ class ResetPasswordService(CredentialBase):
 
             return {"token": verified_token, "code": "verified"}, 201
         except AssertionError as e:
-            return {"code": "missing_inputs", "message": str(e)}
+            return {"code": "missing_inputs", "message": str(e)}, 400
         except Exception as e:
             self.errorHandler.logger("Auth").error(
                 "Failed at reset password verify", {e}
@@ -116,13 +117,15 @@ class ResetPasswordService(CredentialBase):
         try:
             # ---------------Token/ Email Checking---------------
             process_key = self._generate_reset_password_process_key(token=token)
-            result_from_cache = json.loads(self.CacheService.get(key=process_key))
+            result_from_cache = self.CacheService.get(key=process_key)
+
             if not result_from_cache:
                 return {
                     "code": "invalid_token",
                     "message": "There are a problem occur with your session! \n Please try again!",
                 }, 400
             # guard
+            result_from_cache = json.loads(result_from_cache)
             if result_from_cache["email"] != email:
                 return {
                     "code": "invalid_email",
@@ -134,21 +137,22 @@ class ResetPasswordService(CredentialBase):
 
             # old data , old password we could enforce new password != old password in the future
             userdata = self.UserDataBaseService.get_user_data_by_email(email=email)
-            user_id = userdata.get("user_id")
+            user_id = userdata.get("id")
+            print(userdata)
             old_password = userdata["password"]
             # -----------------------generate new hased passwords-----
             new_hased_password = generate_password_hash(password=new_password)
             # ---------------------Update new password--------------
-            update = self.UserDatabaseService.update_user_password(
+            update = self.UserDataBaseService.update_user_password(
                 user_id=user_id, new_hashed_password=new_hased_password
             )
             # ---------------------Delete token from cache----------
             self.CacheService.delete(key=process_key)
             # ---------------------Audit-----------------------
             # audit
-            self.UserdataAudit.update_user_audit(
+            self.UserdataAudit._update_user_audit(
                 user_id=user_id,
-                modified_time=str(datetime.now()),
+                modified_time=datetime.now(),
                 action="reset_password",
                 ip_address=ip_address,
                 old_value=old_password,

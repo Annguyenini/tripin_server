@@ -12,11 +12,12 @@ from src.error_handler.error_handler import ErrorHandler
 from src.server_config.service.cache import Cache
 from src.server_config.service.Etag.auth_etag_service import AuthEtagService
 from src.server_config.service.Etag.etag_services import UserdataEtag
+from src.trip_service.trip_service import ms_to_timestamptz
 
 
 def GENERATE_RANDOM_PENDING_TOKEN(user_id: str):
 
-    return {f"update_avatar::{user_id}::{uuid.uuid4}"}
+    return f"update_avatar::{user_id}::{uuid.uuid4()}"
 
 
 def GENERATE_AVATAR_S3_KEY(user_id: str):
@@ -32,9 +33,9 @@ class UserService:
     _init = False
 
     def __new__(cls):
-        if cls._instace:
-            return cls._instace
-        cls._instace = super().__new__(cls)
+        if cls._instace is None:
+            cls._instace = super().__new__(cls)
+        return cls._instace
 
     def __init__(self):
         if self._init:
@@ -71,6 +72,7 @@ class UserService:
                 return {"code": "successfully", "message": "Not Change"}, 304
             # generate link for avatar
             avatar = userdata_row["avatar"]
+            print(avatar)
             if avatar:
                 avatar = self.s3Service.generate_temp_uri(key=avatar)
                 userdata_row["avatar"] = avatar
@@ -82,7 +84,7 @@ class UserService:
         except AssertionError as ass:
             raise ValueError(str(ass))
         except Exception as e:
-            self.ErrorHandler.logger("Userdata").error("failed at get userdata", {e})
+            self.ErrorHandler.error("failed at get userdata", {e})
             return {"code": "failed"}, 500
 
     def request_user_avatar_upload_presign_url(self, user_id: str):
@@ -109,7 +111,7 @@ class UserService:
                 "code": "successfully",
                 "presign_url": presign_url,
                 "pending_token": token,
-            }
+            }, 201
         except AssertionError as e:
             return ({"code": "missing_inputs"}), 400
         except Exception as e:
@@ -127,6 +129,7 @@ class UserService:
             assert user_id, "user_id epmty"
 
             path_key = self.cacheService.get(key=pending_token)
+            print(path_key)
 
             if not path_key:
                 return {"code": "request_not_found"}, 404
@@ -134,26 +137,28 @@ class UserService:
             # check if the object exists in the cloud
             if not self.s3Service.check_s3_object_exists(key=path_key):
                 return {"code": "object not found"}, 404
+            print(1)
 
             # update path in postgress
-            avatar_path = GENERATE_AVATAR_PATH(user_id=user_id)
+            format_time = ms_to_timestamptz(int(modified_time))
             for i in range(MAX_RETRY):
                 if self.UserDataBaseService.update_user_avatar_and_modified_time(
                     user_id=user_id,
-                    avatar_path=avatar_path,
-                    modified_time=modified_time,
+                    avatar_path=path_key,
+                    modified_time=format_time,
                 ):
                     break
             else:
                 return {"code": "failed to update database"}, 500
+            print(2)
 
             # delete from catch
             self.cacheService.delete(key=pending_token)
-
+            print(3)
             # not strictly enforce, failed will be pass to error service
             self.UserdataAudit.change_user_avatar_audit(
                 user_id=user_id,
-                modified_time=modified_time,
+                modified_time=format_time,
                 ip_address=ip_address,
                 old_value=path_key,
                 new_value=path_key,

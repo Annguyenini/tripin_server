@@ -43,9 +43,9 @@ class TokenDatabaseService(Database):
             return False
 
         expired_at = row["expired_at"]
-        format_expired_at = timestamptz_to_ms(int(expired_at))
+        format_expired_at = timestamptz_to_ms(expired_at)
 
-        if int(time.time() * 1000) >= format_expired_at:
+        if int(time() * 1000) >= format_expired_at:
             self.revoke_refresh_token(user_id=row["user_id"])
             return False
 

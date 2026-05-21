@@ -8,7 +8,7 @@ DATABASEKEYS = SimpleNamespace(
         TRIP_MEDIAS="tripin_trips.trip_medias",
         TRIPS="tripin_trips.trips_table",
         TRIP_SHARED_LINKS="tripin_trips.trip_shared_links",
-        USER_AUDIT="tripin_auth.user_audit_action",
+        USER_AUDIT="tripin_auth.user_audit",
         TRIP_CONTENT_CARDS="tripin_trips.content_cards",
     ),
     USERDATA=SimpleNamespace(

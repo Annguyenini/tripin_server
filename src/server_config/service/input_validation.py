@@ -103,7 +103,7 @@ class CredentialInputValidation(InputValidation):
     def verify_code_input_validation(self, email: str, code: str) -> None:
         if not self._email_validation(email=email):
             raise ValueError(INPUT_ERROR.EMAIL)
-        if not self._verify_code_valiation(email=code):
+        if not self._verify_code_validation(code=str(code)):
             raise ValueError(INPUT_ERROR.VERIFY_CODE)
 
     def provider_input_validation(self, provider: str, protiver_id: str) -> None:

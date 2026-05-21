@@ -1,6 +1,7 @@
 import os
 from datetime import datetime, timedelta, timezone
 
+from src.audit.userdata_audit import UserdataAudit
 from src.database.token_db_service import TokenDatabaseService
 from src.database.userdata_db_service import UserDataDataBaseService
 from src.error_code.error_code import INPUT_ERROR
@@ -32,6 +33,7 @@ class CredentialBase:
         self.CredentialEmailService = CredentialEmailService()
         self.CacheService = Cache()
         self.UserDataBaseService = UserDataDataBaseService()
+        self.UserdataAudit = UserdataAudit()
         self._init = True
 
     def _init_error_handler(self):
@@ -64,7 +66,7 @@ class CredentialBase:
         token_data = {"access_token": access_token, "refresh_token": refresh_token}
 
         ##inserted token into database
-        self.db.insert_token_into_db(
+        self.TokenDatabaseService.insert_token_into_db(
             user_id=user_id,
             token=refresh_token,
             issued_at=datetime.now(timezone.utc),

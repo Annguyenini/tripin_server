@@ -87,8 +87,8 @@ class S3Sevice:
                 "Key": key,
                 "ContentType": content_type,
             }
-            if max_size:
-                param["ContentLength"] = max_size
+            # if max_size:
+            #     param["ContentLength"] = max_size
             respond = s3Client.generate_presigned_url(
                 "put_object",
                 Params=param,

@@ -38,6 +38,7 @@ class UserdataAudit:
                 {DATABASEKEYS.USER_AUDIT.OLD_VALUE},
                 {DATABASEKEYS.USER_AUDIT.NEW_VALUE}
                 )
+                VALUES (%s, %s, %s, %s, %s, %s)
                 """,
                 (user_id, modified_time, action, ip_address, old_value, new_value),
             )
@@ -45,7 +46,7 @@ class UserdataAudit:
             return True if cur.rowcount > 0 else False
         except ConnectionError as ce:
             self.ErrorHandler.error(
-                "failed to update userdata audit, connection error: ", {ce}
+                "failed to update userdata audit, connection error: ", {str(ce)}
             )
             False
         except Exception as e:

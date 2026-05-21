@@ -1,4 +1,4 @@
-from operator import sub
+from operator import sub, truediv
 
 from flask_mail import Mail, Message
 
@@ -51,7 +51,11 @@ class CredentialEmailService(MailService):
 
     def send_email_confirmation_code(self, code: str, recipient: str):
         # send email code to user and set code in cache
-        subject = "Email Confirmation Code"
-        message = f"Your Email Confirmation Code: {code} \n nananana =))"
-        self._send_email(recipients=recipient, subject=subject, body=message)
-        return
+        try:
+            subject = "Email Confirmation Code"
+            message = f"Your Email Confirmation Code: {code} \n nananana =))"
+            self._send_email(recipients=recipient, subject=subject, body=message)
+            return True
+        except Exception as e:
+            self.ErrorHandler.error("failed to send confirmation code", {e})
+            return False

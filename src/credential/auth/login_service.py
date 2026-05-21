@@ -16,7 +16,8 @@ class LoginService(CredentialBase):
     def __init__(self) -> None:
         if self._init:
             return
-        super()
+        super().__init__()
+
         self.CredentialInputValidation = CredentialInputValidation()
 
         self._init = True
@@ -38,13 +39,13 @@ class LoginService(CredentialBase):
             userdata_row = None
             if username:
                 userdata_row = (
-                    self.UserDatabaseService.get_user_data_by_email_or_username(
+                    self.UserDataBaseService.get_user_data_by_email_or_username(
                         value=username
                     )
                 )
             elif email:
                 userdata_row = (
-                    self.UserDatabaseService.get_user_data_by_email_or_username(
+                    self.UserDataBaseService.get_user_data_by_email_or_username(
                         value=email
                     )
                 )
