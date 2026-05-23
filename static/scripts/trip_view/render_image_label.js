@@ -1,29 +1,35 @@
-const requestTripMedias = async () => {
-  const response = await fetch(TRIP_MEDIAS_URL(TOKEN), {
+const requestTripContents = async () => {
+  const response = await fetch(TRIP_CONTENTS_URL(TOKEN), {
     method: "GET",
   });
   const medias = await response.json();
-  return medias.medias;
+  return medias?.content_cards;
 };
 let _cluster = null;
 let _zoom = null;
-let _medias = null;
+let _content_card = null;
 let _clusterMode = true;
 let _preMeidaArray = null;
-const renderTripMedias = async (map, zoom) => {
+let _fresh_start = true;
+const renderMarkers = async (map, zoom) => {
   if (zoom === _zoom) return;
   _zoom = zoom;
-  if (!_medias) {
-    _medias = await requestTripMedias();
-    // setUpPolaroidLine(_medias)
+  if (!_content_card) {
+    _content_card = await requestTripContents();
+
+    // setUpPolaroidLine(_content_card)
   }
 
   if (!_cluster) {
     // console.log('compute')
-    _medias = _medias.filter((m) => m.event !== "remove");
-    _cluster = clustersMap(_medias);
+    _content_card = _content_card.filter((m) => m.event !== "remove");
+    _cluster = clustersMap(_content_card);
   }
   renderImageLabels(_cluster[zoom] || [], map);
+  if (_fresh_start) {
+    renderTripCoordinates(_content_card, map);
+    _fresh_start = false;
+  }
 };
 const toggleFullMediasMode = () => {
   _clusterMode = !_clusterMode;
@@ -32,7 +38,7 @@ const toggleFullMediasMode = () => {
   btn.classList.toggle("active", !_clusterMode);
   console.log(_clusterMode);
   if (!_clusterMode) {
-    openPolaroidViewer(_medias || [], 0);
+    openPolaroidViewer(_content_card || [], 0);
   } else {
     if (!_preMeidaArray) return;
     openPolaroidViewer(_preMeidaArray, 0);

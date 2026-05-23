@@ -249,7 +249,7 @@ class TripContentsService:
             contents = self.TripContentsDatabase.get_all_trip_add_content_cards(
                 trip_id=trip_id
             )
-            if contents is None:
+            if not contents:
                 return {"code": "failed"}, 500
 
             # loop through to convert data
@@ -271,9 +271,7 @@ class TripContentsService:
                 content["modified_time"] = timestamptz_to_ms(
                     timestamp=content["modified_time"]
                 )
-            print(contents)
-            if contents is None:
-                return {"code": "failed to get trip contents"}, 500
+
             return {"code": "successfully", "content_cards": contents}, 200
         except AssertionError as ass:
             return {"code": "missing_require_inputs"}, 402

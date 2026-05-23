@@ -17,7 +17,7 @@ from src.server_config.config import Config
 from src.server_config.service.cache import Cache
 from src.server_config.service.Etag.etag_services import TripShareLinksEtag
 from src.server_config.service.smart_cast import smart_cast
-from src.trip_service.trip_contents.trip_contents_service import TripContentService
+from src.trip_contents.trip_contents_service import TripContentsService
 
 load_dotenv(".env")
 MAPTOKEN = os.getenv("MAPBOX_PUBLIC_KEY")
@@ -45,13 +45,16 @@ class TripViewRoute(RouteBase):
         self.S3Service = S3Sevice()
         self.TripShareLinksEtag = TripShareLinksEtag()
         self.CacheService = Cache()
-        self.TripContentsService = TripContentService()
+        self.TripContentsService = TripContentsService()
         self._init = True
 
     def _register_routes(self):
         self.bp.route("/<token>", methods=["GET"])(self.request_trip_view)
         self.bp.route("/generate-trip-view-link", methods=["POST"])(
             self.generate_trip_view_link
+        )
+        self.bp.route("/<token>/contents", methods=["GET"])(
+            self.request_trip_contents_by_token
         )
 
     def generate_trip_view_link(self):
@@ -204,7 +207,16 @@ class TripViewRoute(RouteBase):
 
             if not trip_data:
                 return jsonify({"code": "not_found", "message": "Trip Not Found"}), 403
+            trip_data = json.loads(trip_data)
+            trip_id = trip_data.get("trip_id")
+            user_id = trip_data.get("user_id")
+            trip_contents, code = (
+                self.TripContentsService.get_all_content_card_from_trip_id(
+                    trip_id=trip_id, user_id=user_id
+                )
+            )
 
+            return jsonify(trip_contents), code
             # -----------------------get trip contents----------------
 
         except AssertionError as e:
