@@ -129,7 +129,6 @@ class UserService:
             assert user_id, "user_id epmty"
 
             path_key = self.cacheService.get(key=pending_token)
-            print(path_key)
 
             if not path_key:
                 return {"code": "request_not_found"}, 404
@@ -137,7 +136,6 @@ class UserService:
             # check if the object exists in the cloud
             if not self.s3Service.check_s3_object_exists(key=path_key):
                 return {"code": "object not found"}, 404
-            print(1)
 
             # update path in postgress
             format_time = ms_to_timestamptz(int(modified_time))
@@ -150,11 +148,9 @@ class UserService:
                     break
             else:
                 return {"code": "failed to update database"}, 500
-            print(2)
 
             # delete from catch
             self.cacheService.delete(key=pending_token)
-            print(3)
             # not strictly enforce, failed will be pass to error service
             self.UserdataAudit.change_user_avatar_audit(
                 user_id=user_id,
@@ -171,5 +167,5 @@ class UserService:
         except AssertionError as e:
             return {"code": "missing_input", "message": str(e)}, 400
         except Exception as e:
-            self.ErrorHandler.error("failed to requets presignurl", {e})
+            self.ErrorHandler.error("failed to requets presignurl", {str(e)})
             return {"code": "failed"}, 500

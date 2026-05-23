@@ -38,6 +38,6 @@ const renderTripCoordinates = async (map) => {
 
   // trigger first media render
   const zoom = Math.floor(map.getZoom());
-  renderTripMedias(map, zoom);
+  // renderTripMedias(map, zoom);
   hideLoading();
 };

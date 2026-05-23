@@ -24,8 +24,9 @@ from src.server_config.discord_error_logs import (
 from src.trip_contents.trip_contents_routes import TripContentRoutes
 from src.trip_service.trip_contents.trip_contents_route import TripContentsRoute
 from src.trip_service.trip_route import TripRoute
-from src.trip_view.trip_view_route import TripViewRoute
 from src.user.user_route import UserRoute
+from src.web.trip_view.trip_view_route import TripViewRoute
+from src.web.web_service import WebService
 
 bootstrap_manager()
 mail = Mail()
@@ -49,6 +50,7 @@ class Server:
         print(self.app.extensions)
         self._register_blueprints()
         self.app.config.from_object(MailConfig)
+        self.WebSetting = WebService()
         mail.init_app(self.app)
 
     def _register_blueprints(self):
@@ -98,7 +100,8 @@ class Server:
         return jsonify({"code": "success"}), 200
 
     def landing(self):
-        return render_template("index.html")
+        settings = self.WebSetting.get_index_setting()
+        return render_template("index.html", settings=settings)
 
     def trip_view(self):
         return render_template("trip_view.html")

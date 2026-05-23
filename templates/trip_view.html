@@ -712,6 +712,7 @@
         <script>
             const MAPBOX_TOKEN = "{{ MAPTOKEN }}";
             const BASE_URL = "{{ BASE_URL }}";
+            const TRIP_DATA = {{ TRIP_DATA | tojson | safe }};
         </script>
 
         <script src="../static/scripts/keys/urls.js"></script>
@@ -725,13 +726,16 @@
         <script src="../static/scripts/trip_view/display.js"></script>
         <script src="../static/scripts/trip_view/image_viewer.js"></script>
         <script src="../static/scripts/trip_view/render_image_label.js"></script>
-        <script src="../static/scripts/trip_view_main.js"></script>
         <script src="../static/scripts/trip_cover/trip_cover.js"></script>
+
+        <script src="../static/scripts/trip_view_main.js"></script>
 
         <script>
             // ══════════════════════════════════════════
             // COVER → MAP
             // ══════════════════════════════════════════
+            const trip_data = {{ TRIP_DATA | tojson }};
+
             const enterTrip = () => {
                 showLoading();
                 document.getElementById("cover-screen").classList.add("hidden");

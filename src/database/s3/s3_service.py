@@ -7,6 +7,7 @@ from src.server_config.config import Config
 from src.server_config.service.cache import Cache
 
 MAX_CLOUD_UPLOAD_RETRY = 3
+WEB_PREFIX = "web_images/"
 
 
 class S3Sevice:
@@ -166,3 +167,36 @@ class S3Sevice:
         except ClientError as e:
             self._s3_client_error({e})
             print(e)
+
+    def get_all_web_presigned_urls(self, expiry=3600):
+
+        response = s3Client.list_objects_v2(
+            Bucket=self.config.aws_bucket, Prefix=WEB_PREFIX
+        )
+        if "Contents" not in response:
+            return []
+
+        urls = []
+        for obj in response["Contents"]:
+            if obj["Key"] == "web_images/":
+                continue
+            cache_key = f"presigned:{obj['Key']}"
+            # cache using redis can replace it with simple dictionary
+            cache = self.cache_service.get(cache_key)
+            if cache:
+                urls.append({"key": obj["Key"], "url": cache})
+                continue
+
+            url = s3Client.generate_presigned_url(
+                "get_object",
+                Params={
+                    "Bucket": self.config.aws_bucket,
+                    "Key": obj["Key"],
+                },
+                ExpiresIn=expiry,
+            )
+
+            urls.append({"key": obj["Key"], "url": url})
+            cache = self.cache_service.set(key=cache_key, data=url, time=3300)
+
+        return urls

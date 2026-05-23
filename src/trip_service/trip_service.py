@@ -262,7 +262,8 @@ class TripService:
         # set etag to redis
         self.TripEtagService._set_etag_to_cache(etag_key=etag_key, etag=new_etag)
         media_path = trip_data["image"]
-        trip_data["image"] = self.s3_service.generate_temp_uri(key=media_path)
+        if media_path:
+            trip_data["image"] = self.s3_service.generate_temp_uri(key=media_path)
 
         return ({"trip_data": trip_data, "etag": new_etag}, 200)
 

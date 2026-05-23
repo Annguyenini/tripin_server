@@ -33,3 +33,11 @@ class TripContentEtag(EtagService):
 
     def generate_etag(self, trip_id: int, modified_time: str) -> str:
         return f"trip:{trip_id}::tripcontent::modi_time:{modified_time}"
+
+
+class TripShareLinksEtag(EtagService):
+    def generate_etag_key(self, token: str) -> str:
+        return f"trip_view:{token}::shared_link"
+
+    def generate_etag(self, token: str, bucket_hour: str) -> str:
+        return f"trip_view:{token}::shared_link::bucket_hour:{bucket_hour}"

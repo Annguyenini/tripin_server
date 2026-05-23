@@ -1,3 +1,4 @@
+from datetime import datetime
 from types import SimpleNamespace
 from typing import Any
 
@@ -6,6 +7,7 @@ from flask import request
 from src.database.s3.s3_service import S3Sevice
 from src.database.trip_content_db_service import TripContentsDatabaseService
 from src.database.tripdata_db_service import TripDataBaseService
+from src.database.view_trip_db_service import ViewTripDatabaseService
 from src.error_handler.error_handler import ErrorHandler
 from src.token.tokenservice import TokenService
 from src.trip_service.trip_service import ms_to_timestamptz, timestamptz_to_ms
@@ -38,7 +40,8 @@ class TripContentsService:
         self.s3Service = S3Sevice()
         self.TripDatabaseService = TripDataBaseService()
         self.ErrorHandler = ErrorHandler().logger("TripContentService")
-        self.TokenService = TokenService
+        self.TokenService = TokenService()
+        self.ViewTripDatabaseService = ViewTripDatabaseService()
         self._init = True
         pass
 

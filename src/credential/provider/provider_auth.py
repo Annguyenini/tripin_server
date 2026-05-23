@@ -1,4 +1,6 @@
+import json
 import os
+import uuid
 from types import SimpleNamespace
 
 # from falsk import requests
@@ -33,6 +35,9 @@ class ProviderAuth(CredentialBase):
 
         self._initialize = True
 
+    def _generate_pending_key(self, token: str) -> str:
+        return f"new_user_pending_provider:token:{token}"
+
     def provider_verify(self, provider: str, token: str) -> tuple[dict, int]:
         # this function use to process signup or signin with provider
 
@@ -65,28 +70,20 @@ class ProviderAuth(CredentialBase):
             if not user_data:
                 # if user doesnt exists,
                 # return request Sign up
-                if self.UserDataBaseService.get_user_data_by_email(email=email):
-                    return (
-                        False,
-                        {
-                            "code": "email_exists",
-                            "message": "Email already associate with an account, but not with provider.\nPlease sign in with your credential!",
-                        },
-                        400,
-                    )
-                    # token containt email,sub(provider_id),name,provider
-                    # token will been use for complete sign up form
+                fields = {
+                    "status": "pending",
+                    "action": "signup_via_provider",
+                    "email": email,
+                    "provider_id": provider_id,
+                    "provider": provider,
+                }
 
-                pending_token = self.TokenService.generate_jwt(
-                    fields={
-                        "status": "pending",
-                        "action": "signup_via_provider",
-                        "email": email,
-                        "provider_id": provider_id,
-                        "provider": provider,
-                    }
-                )
-                print(pending_token)
+                pending_token = str(uuid.uuid4())
+                pending_key = self._generate_pending_key(token=pending_token)
+                if not self.CacheService.set(
+                    key=pending_key, data=json.dumps(fields), time=300
+                ):
+                    raise Exception("failed to handler pending")
                 return {"code": "pending", "pending_token": pending_token}, 201
             # ---------------------Log in-----------------------------------
             # treat as signin, if it linked
@@ -111,30 +108,26 @@ class ProviderAuth(CredentialBase):
             self.errorHandler.logger("Auth").error(
                 "failed to handler provider request", {e}
             )
-            return False, {"code": "failed", "message": "Server Failed"}, 500
+            return {"code": "failed", "message": "Server Failed"}, 500
 
     def provider_signup_complete(
         self, token: str, display_name: str, username: str, password: str
     ) -> tuple[dict, int]:
         try:
-            # ---------------Get token, decode-----------------
-            # decode token
-            data_from_token = self.TokenService.decode_jwt(
-                token=token,
-                fields=["email", "provider", "provider_id", "action", "status"],
-            )
-            # token guard
-            # ---------------Token Guard------------------------
-            if (
-                not data_from_token
-                or data_from_token["action"] != TOKENACTION.SIGNUP_VIA_PROVIDER
-                or data_from_token["status"] != TOKENSTATUS.PENDING
-            ):
-                return {"code": "invalid_token"}, 400
-            email = data_from_token.get("email")
-            provider = data_from_token.get("provider")
-            provider_id = data_from_token.get("provider_id")
-            # input validation
+            assert token, "Pending token not found"
+            # ---------------Get data from cache----------
+            pending_key = self._generate_pending_key(token=token)
+            pending_userdata = self.CacheService.get(key=pending_key)
+            if not pending_userdata:
+                return {
+                    "code": "not_found",
+                    "message": "Request user not found or expired!",
+                }, 400
+
+            pending_userdata = json.loads(pending_userdata)
+            email = pending_userdata.get("email")
+            provider = pending_userdata.get("provider")
+            provider_id = pending_userdata.get("provider_id")
             # -----------------------Input validation-----------------
             self.CredentialInputValidation.signup_input_validation(
                 username=username,
@@ -147,7 +140,7 @@ class ProviderAuth(CredentialBase):
             )
             # checking again for exists email
             # ----------------------Email Check------------------------
-            if self.UserDatabaseService.get_user_data_by_email(email=email):
+            if self.UserDataBaseService.get_user_data_by_email(email=email):
                 return {
                     "code": "email_exists",
                     "message": "Email aldready associate with an account!",
@@ -155,7 +148,7 @@ class ProviderAuth(CredentialBase):
 
             ## if the username already exists in database, return
             # ---------------------Username Check------------------------
-            if self.UserDatabaseService.get_user_data_by_username(user_name=username):
+            if self.UserDataBaseService.get_user_data_by_username(user_name=username):
                 return {
                     "code": "username_exists",
                     "message": "Username aldready exists, please choose a different name",
@@ -175,8 +168,13 @@ class ProviderAuth(CredentialBase):
             )
             if not insert_userdata:
                 raise Exception("failed")
+            # ------------------Clean up---------------------------
+            self.CacheService.delete(key=pending_key)
 
             return {"code": "successfully", "message": "Successfully"}, 200
+        except AssertionError as e:
+            return {"code": "missing_inputs", "message": str(e)}, 400
+
         except ValueError as e:
             return {"code": "missing_inputs", "message": str(e)}, 400
         except Exception as e:
