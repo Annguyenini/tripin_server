@@ -43,9 +43,10 @@ def invalid_jwt():
 
 @pytest.fixture(scope="session")
 def get_auth(client, user_credential):
+    print("\n=== trying login ===")
     response = client.post("/auth/login", json=user_credential)
-    print(response.get_json(), user_credential)
-
+    print(f"=== login response: {response.status_code} ===")
+    print(f"=== login data: {response.get_json()} ===")
     assert response.get_json() is not None
     assert response.get_json()["tokens"] is not None
     return response.get_json()
@@ -53,12 +54,13 @@ def get_auth(client, user_credential):
 
 @pytest.fixture(scope="session")
 def user_data(client, user_credential, get_auth):
-    username = user_credential["username"]
-    password = user_credential["password"]
+    print("\n=== trying get user data ===")
     res = client.get(
         "/user/get-user-data",
         headers={"Authorization": f"Bearer {get_auth['tokens']['access_token']}"},
     )
+    print(f"=== user data response: {res.status_code} ===")
+    print(f"=== user data: {res.get_json()} ===")
     return res.get_json()
 
 
