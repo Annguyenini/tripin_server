@@ -44,12 +44,14 @@ class CredentialBase:
         return self.ErrorHandler
 
     def _email_verify(self, email: str):
-        if not self.inputValidationService.email_validation(email=email):
-            return False, INPUT_ERROR.EMAIL
-        exists = self.UserDatabaseService.get_user_data_by_email(email=email)
-        if exists:
-            return False, "email_exists"
-        return True, "successfully"
+        try:
+            self.CredentialInputValidation.email_validation(email=email)
+            exists = self.UserDatabaseService.get_user_data_by_email(email=email)
+            if exists:
+                return False, "email_exists"
+            return True, "successfully"
+        except ValueError as e:
+            return False, ""
 
     def _jwt_cycle_handler(self, user_id: int, role: str):
         # old token got revoked

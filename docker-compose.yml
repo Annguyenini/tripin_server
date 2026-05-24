@@ -1,6 +1,5 @@
 # version: '3.8'
 services:
-
   db:
     build: ./db
     container_name: tripin_db
@@ -33,8 +32,8 @@ services:
       - "8992:8000"
       - "1514:1514"
     environment:
-      - LOGDIR=logs
-      - ERRORLOGDIR=logs/errorlogs
+      - LOGDIR=/app/logs
+      - ERRORLOGDIR=/app/logs/errorlogs
     env_file:
       - src/assets/configs/.env
       - .env
@@ -56,7 +55,6 @@ services:
 volumes:
   pgdata:
   redisdata:
-
 
 networks:
   tripin_net:

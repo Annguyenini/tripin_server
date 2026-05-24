@@ -10,7 +10,6 @@ from src.database.s3.s3_service import S3Sevice
 from src.database.userdata_db_service import UserDataDataBaseService
 from src.error_handler.error_handler import ErrorHandler
 from src.server_config.service.cache import Cache
-from src.server_config.service.Etag.auth_etag_service import AuthEtagService
 from src.server_config.service.Etag.etag_services import UserdataEtag
 from src.trip_service.trip_service import ms_to_timestamptz
 
@@ -43,7 +42,6 @@ class UserService:
 
         self.databaseService = Database()
         self.s3Service = S3Sevice()
-        self.authEtagService = AuthEtagService()
         self.userDataEtagService = UserdataEtag()
         self.cacheService = Cache()
         self.UserDataBaseService = UserDataDataBaseService()
