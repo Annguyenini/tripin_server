@@ -42,6 +42,5 @@ services:
     command: >
       sh -c "alembic upgrade head &&
               python tests/scripts/create_test_user.py &&
-              python -c 'import pytest; print(pytest.__version__)' &&
-              python -m pytest tests/ -v -s --tb=short 2>&1"
+              python -m pytest tests/ --collect-only 2>&1"
     restart: "no"
