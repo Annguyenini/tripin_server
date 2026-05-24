@@ -1,4 +1,5 @@
 import os
+import sys
 
 import dotenv
 import psycopg2
@@ -26,3 +27,4 @@ cur.close()
 conn.close()
 print("row", row)
 print("Test user created", hashed)
+sys.exit(0)
