@@ -10,6 +10,7 @@ from typing import Sequence, Union
 
 import sqlalchemy as sa
 from alembic import op
+from sqlalchemy import text
 
 # revision identifiers, used by Alembic.
 revision: str = "fb4c305be027"
@@ -18,21 +19,10 @@ branch_labels: Union[str, Sequence[str], None] = None
 depends_on: Union[str, Sequence[str], None] = None
 
 
-def upgrade() -> None:
-    """Upgrade schema."""
-    op.execute("""
-        ALTER TABLE tripin_trips.trip_coordinates
-        ALTER COLUMN time_stamp TYPE TIMESTAMPTZ
-        USING TO_TIMESTAMP(time_stamp / 1000.0);
-        """)
+def upgrade():
     pass
 
 
 def downgrade() -> None:
-    """Downgrade schema."""
-    op.execute("""
-    ALTER TABLE tripin_trips.trip_coordinates
-    ALTER COLUMN time_stamp TYPE TIMESTAMPTZ
-    USING BIGINT;
-""")
+
     pass
