@@ -1,4 +1,5 @@
 import json
+import os
 
 from flask import jsonify
 
@@ -32,6 +33,7 @@ class WebService:
             with open("static/website_setting.json", "r") as setting:
                 settings = json.load(setting)
             settings["images"] = self._get_index_image()
+            settings["appstore_url"] = os.getenv("APP_STORE_URL")
         except Exception as e:
             self.ErrorHandler.error("failed to get web setting", str(e))
             return {}

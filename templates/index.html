@@ -46,7 +46,8 @@
                 {{ settings.get('appstore_label', 'Download on the App Store')
                 }}
                 <span class="badge"
-                    >{{ settings.get('appstore_badge', 'IN DEV') }}</span
+                    >{{ settings.get('appstore_badge', 'Beta (IOS TestFlight)')
+                    }}</span
                 >
             </a>
 
@@ -90,7 +91,6 @@
     </script>
     <script>
         const setting = {{ settings | tojson }};
-
         const list = document.querySelector(".image-list");
         list.innerHTML = "";
         setting.images.forEach((img) => {

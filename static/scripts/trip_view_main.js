@@ -1,7 +1,7 @@
 mapboxgl.accessToken = MAPBOX_TOKEN; // keep for tiles only
 
 const TOKEN = window.location.pathname.split("/").pop();
-console.log(TRIP_DATA);
+// console.log(TRIP_DATA);
 
 const STYLES = {
   streets: `https://api.mapbox.com/styles/v1/mapbox/streets-v12/tiles/512/{z}/{x}/{y}@2x?access_token=${MAPBOX_TOKEN}`,

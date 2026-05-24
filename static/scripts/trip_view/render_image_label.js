@@ -36,7 +36,7 @@ const toggleFullMediasMode = () => {
   const btn = document.getElementById("cluster-btn");
   btn.textContent = _clusterMode ? "CLUSTER" : "ALLMEDIAS";
   btn.classList.toggle("active", !_clusterMode);
-  console.log(_clusterMode);
+  // console.log(_clusterMode);
   if (!_clusterMode) {
     openPolaroidViewer(_content_card || [], 0);
   } else {
@@ -75,10 +75,10 @@ const renderImageLabels = (medias, map) => {
 
   _markers.forEach((m) => m.remove());
   _markers = [];
-  console.log(medias);
+  // console.log(medias);
 
   medias.forEach((media) => {
-    console.log(media);
+    // console.log(media);
     if (media.event === "remove") return;
     const el = document.createElement("div");
     el.className = "img-marker";
