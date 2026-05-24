@@ -55,10 +55,9 @@ def get_auth(client, user_credential):
 def user_data(client, user_credential, get_auth):
     username = user_credential["username"]
     password = user_credential["password"]
-    res = client.post(
+    res = client.get(
         "/user/get-user-data",
         headers={"Authorization": f"Bearer {get_auth['tokens']['access_token']}"},
-        json={"user_id": get_auth["user_data"]["user_id"]},
     )
     return res.get_json()
 
