@@ -1,5 +1,5 @@
 const populateBanner = (tripData) => {
-  console.log(tripData);
+  // console.log(tripData);
   const trip_name = tripData.trip_name;
   const author = tripData.display_name;
   document.getElementById("banner-title").textContent =
