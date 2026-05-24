@@ -22,7 +22,7 @@ def upgrade() -> None:
     """Upgrade schema."""
     op.execute("""
     ALTER TABLE tripin_trips.trip_coordinates
-    ALTER COLUMN time_stamp TYPE BIGINT
+    ALTER COLUMN time_stamp TYPE TIMESTAMPTZ
     USING EXTRACT(EPOCH FROM time_stamp)::BIGINT * 1000;
         """)
     pass
@@ -32,7 +32,7 @@ def downgrade() -> None:
     """Downgrade schema."""
     op.execute("""
     ALTER TABLE tripin_trips.trip_coordinates
-    ALTER COLUMN time_stamp TYPE TIMESTAMP
+    ALTER COLUMN time_stamp TYPE TIMESTAMPTZ
     USING BIGINT;
 """)
     pass
