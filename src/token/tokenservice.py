@@ -4,6 +4,7 @@ from datetime import datetime, timedelta, timezone
 import jwt
 
 from src.database.database import Database
+from src.database.database_keys import DATABASEKEYS
 from src.server_config.config import Config
 
 
@@ -14,78 +15,6 @@ class TokenService:
 
     def get_current_time(self) -> int:
         return int(datetime.now(timezone.utc).timestamp())
-
-    # def generate_jwt_provider(
-    #     self, provider_id: str, provider: str, email: str, name: str
-    # ) -> str:
-
-    #     exp_time = {"minutes": 10}
-    #     SECRET_KEY = self.config.private_key
-
-    #     token = jwt.encode(
-    #         {
-    #             "email": email,
-    #             "name": name,
-    #             "provider": provider,
-    #             "provider_id": provider_id,
-    #             "issue": self.get_current_time(),
-    #             "exp": int(
-    #                 (datetime.now(timezone.utc) + timedelta(**exp_time)).timestamp()
-    #             ),
-    #         },
-    #         SECRET_KEY,
-    #         algorithm="RS256",
-    #     )
-
-    #     assert token is not None, "Token is undefined!"
-    #     return token
-
-    # def decode_jwt_provider(self, token: str) -> dict:
-    #     assert token is not None, "Token is None!"
-    #     try:
-    #         PUBLIC_KEY = self.config.public_key
-    #         payload = jwt.decode(token, PUBLIC_KEY, algorithms=["RS256"])
-
-    #         return {
-    #             "email": payload["email"],
-    #             "name": payload["name"],
-    #             "provider": payload["provider"],
-    #             "provider_id": payload["provider_id"],
-    #         }
-    #     except Exception as e:
-    #         return None
-
-    # def generate_jwt_s(self, user_id: int, role: str = 'user', exp_time: dict = None) -> str:
-    #     """
-    #     Generate a JWT token.
-
-    #     Args:
-    #         user_id (int): The user's ID.
-    #         role (str): The user's role. Defaults to 'user'.
-    #         exp_time (dict): Expiration duration as timedelta kwargs e.g. {'days': 30}.
-    #                          Defaults to {'days': 30}.
-
-    #     Returns:
-    #         str: Encoded JWT token.
-    #     """
-    #     if exp_time is None:
-    #         exp_time = {'days': 30}
-
-    #     SECRET_KEY = self.config.private_key
-
-    #     token = jwt.encode(
-    #         {
-    #             "user_id": user_id,
-    #             "role": role,
-    #             "issue": self.get_current_time(),
-    #             "exp": int((datetime.now(timezone.utc) + timedelta(**exp_time)).timestamp())
-    #         },
-    #         SECRET_KEY,
-    #         algorithm='RS256'
-    #     )
-
-    #     assert token is not None, "Token is undefined!"
-    #     return token
 
     def generate_jwt(self, fields: object, exp_time: dict = {}) -> str | None:
         if not exp_time:
@@ -126,7 +55,7 @@ class TokenService:
             result = {}
             for field in fields:
                 result[field] = payload[field]
-            return result
+            return dict(result)
         except Exception as e:
             return {}
 
@@ -167,7 +96,9 @@ class TokenService:
             bool: True if valid, False otherwise.
         """
         row = self.db.find_item_in_sql(
-            table="tripin_auth.tokens", item="token", value=refresh_token
+            table=DATABASEKEYS.TABLES.TOKENS,
+            item=DATABASEKEYS.TOKENS.TOKEN,
+            value=refresh_token,
         )
 
         if row is None:
@@ -191,7 +122,7 @@ class TokenService:
 
         return True
 
-    def revoke_refresh_token(self, user_id: int) -> None:
+    def revoke_refresh_token(self, user_id) -> None:
         """
         Mark a refresh token as revoked in the database.
 
@@ -199,10 +130,10 @@ class TokenService:
             user_id (int): The user's ID whose token should be revoked.
         """
         status = self.db.update_db(
-            table="tripin_auth.tokens",
-            item="user_id",
+            table=DATABASEKEYS.TABLES.TOKENS,
+            item=DATABASEKEYS.TOKENS.USER_ID,
             value=user_id,
-            item_to_update="revoked",
+            item_to_update=DATABASEKEYS.TOKENS.REVOKED,
             value_to_update=True,
         )
         assert status is True, "Error updating database: failed to revoke token"

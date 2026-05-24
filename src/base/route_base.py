@@ -1,6 +1,11 @@
+import os
+
+import dotenv
 from flask import request
 
 from src.token.tokenservice import TokenService
+
+dotenv.load_dotenv()
 
 
 class RouteBase:
@@ -18,7 +23,10 @@ class RouteBase:
         self.tokenService = TokenService()
         self._init = True
 
-    def _get_authenticated_user(self):
+    def _get_request_ip_address(self):
+        return request.headers.get("X-Forwarded-For", request.remote_addr)
+
+    def _get_authenticated_user(self) -> tuple[dict | None, dict | None]:
         # verify jwt
         Ptoken = request.headers.get("Authorization")
         token = Ptoken.replace("Bearer ", "")
@@ -30,8 +38,22 @@ class RouteBase:
         user_data = self.tokenService.decode_jwt(
             token=token, fields=["user_id", "role"]
         )
-        print(user_data)
-        return user_data, None
+        return dict(user_data), None
 
-    def _get_trip_data(self):
-        trip_data = request.json
+    def _user_jwt_validation_policy(self) -> tuple[dict | None]:
+        try:
+            Ptoken = request.headers.get("Authorization")
+            token = Ptoken.replace("Bearer ", "")
+            valid_token, message, code = self.tokenService.jwt_verify(token)
+            # return if jwt in valid or expried
+            if not valid_token:
+                raise PermissionError(code)
+
+            user_data = self.tokenService.decode_jwt(
+                token=token, fields=["user_id", "role"]
+            )
+            return dict(user_data)
+        except PermissionError as p:
+            raise
+        except Exception as e:
+            raise PermissionError("failed to validate jwt")

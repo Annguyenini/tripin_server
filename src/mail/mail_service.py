@@ -1,8 +1,9 @@
-import os
-import random
+from operator import sub, truediv
 
 from flask_mail import Mail, Message
-from redis import Redis
+
+from src.error_handler.error_handler import ErrorHandler
+from src.server_config.service.cache import Cache
 
 mail = Mail()
 
@@ -18,63 +19,43 @@ class MailService:
 
     def __init__(self):
         if not self._initialize:
-            self.confirmation_list = {}
-            self.redis = Redis(
-                host=os.environ.get("REDIS_HOST"), port=os.environ.get("REDIS_PORT")
-            )
+            self.ErrorHandler = ErrorHandler().logger("Email Service")
             self._initialize = True
         return
 
-    def send_confirmation_code(self, recipients: str):
-        """process sending verify code through email
-
-        Args:
-            recipients (str): _user email_
-
-        Returns:
-            bool: status
-        """
-        assert recipients is not None, "recipient Null"
-
-        ##random 6digits
-        code = random.randint(100000, 999999)
-
-        ##message
-        subject = "Code for Tripin Auth"
-        body = f"This is your code for Tripin {code}"
-
-        ##send email
+    def _send_email(self, recipients: list, subject: str, body: str):
         try:
             msg = Message(subject=subject, recipients=[recipients], body=body)
             mail.send(msg)
         except Exception as e:
-            print("Error at send mail", e)
+            self.ErrorHandler.error("failed at send code", {e})
             return False
 
-        ##append to cache
-        email = recipients.strip()
-        self.redis.set(email, code, ex=300)
-        # self.confirmation_list[email]=code
 
-        return True
+class CredentialEmailService(MailService):
+    # Assuming all the input pass in is ALREADY validate
+    _instance = None
+    _initialize = False
 
-    def verify_code(self, recipients: str, code: int):
-        """Call to verify code
+    def __new__(cls, *args, **kwargs):
+        if cls._instance is None:
+            cls._instance = super().__new__(cls)
+        return cls._instance
 
-        Args:
-            recipients (str): email
-            code (int): userinput code
+    def __init__(self):
+        if self._initialize:
+            return
+        self.ErrorHandler = ErrorHandler().logger("Credential Email Service")
+        self.CacheService = Cache()
+        self._initialize = True
 
-        Returns:
-            bool: status
-        """
-        email = recipients.strip()
-
-        ##correct code
-        realcode = self.redis.get(email).decode()
-        print(realcode, code)
-        if code != realcode:
+    def send_email_confirmation_code(self, code: str, recipient: str):
+        # send email code to user and set code in cache
+        try:
+            subject = "Email Confirmation Code"
+            message = f"Your Email Confirmation Code: {code} \n nananana =))"
+            self._send_email(recipients=recipient, subject=subject, body=message)
+            return True
+        except Exception as e:
+            self.ErrorHandler.error("failed to send confirmation code", {e})
             return False
-
-        self.redis.delete(email)
-        return True

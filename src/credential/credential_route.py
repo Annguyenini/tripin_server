@@ -1,14 +1,17 @@
 ##before pass into service fucntions, this help filter info and verify jwt token for unnesscary function call
 ##rate limit are set as 5 requests total per min
 
-import requests
+
+import re
+
 from flask import Blueprint, jsonify, request
 
 from src.base.route_base import RouteBase
-from src.credential.credential import Auth
-from src.database.database import Database
-from src.server_config.config import Config
-from src.server_config.encryption.encryption import Encryption
+from src.credential.auth.jwt_auth import JWTAuthenticationService
+from src.credential.auth.login_service import LoginService
+from src.credential.auth.reset_password import ResetPasswordService
+from src.credential.auth.signup_service import SignupService
+from src.credential.provider.provider_auth import ProviderAuth
 from src.server_config.service.cache import Cache
 from src.token.tokenservice import TokenService
 
@@ -24,10 +27,13 @@ class AuthServer(RouteBase):
     def __init__(self):
         super().__init__()
         self.bp = Blueprint("auth", __name__)
-        self.auth = Auth()
         self.token_service = TokenService()
-        self.encryption_service = Encryption()
         self.rate_limiter_service = Cache()
+        self.LoginService = LoginService()
+        self.JwtAuthenticationService = JWTAuthenticationService()
+        self.ResetPasswordService = ResetPasswordService()
+        self.SignupService = SignupService()
+        self.ProviderService = ProviderAuth()
         self._register_routes()
 
     def _register_routes(self):
@@ -64,20 +70,7 @@ class AuthServer(RouteBase):
             self.request_reset_password_complete
         )
 
-    def verify_code(self):
-        """User verify code, get user data and pass to a function to check the code"""
-        data = request.json
-        recipients = data.get("email")
-        email = recipients.lower()
-        str_code = data.get("code")
-        code = int(str_code)
-        respond = self.auth.confirm_code(email, code)
-
-        if not respond:
-            return jsonify({"status": "Failed"}), 500
-
-        return jsonify({"status": "Successfully"}), 200
-
+    # --------------JWT authentication---------------
     def login_via_token(self):
         """
         Docstring for login_via_token
@@ -87,53 +80,10 @@ class AuthServer(RouteBase):
         ptoken = request.headers.get("Authorization")
         token = ptoken.replace("Bearer ", "")
 
-        data = self.auth.login_via_token(token=token)
+        data, code = self.JwtAuthenticationService.login_via_token(token=token)
+        return jsonify(data), code
 
-        status = data["status"]
-        message = data["message"]
-        code = data["code"]
-        user_data = data["user_data"]
-
-        if not status:
-            return jsonify({"message": message, "user_data": None, "code": code}), 401
-
-        return jsonify({"message": message, "user_data": user_data}), 200
-
-    def login(self):
-        data = request.json
-        username = data.get("username")
-        email = data.get("email")
-        password = data.get("password")
-        status, login_process = self.auth.login(
-            username=username, password=password, email=email
-        )
-        message = login_process["message"]
-        if not status:
-            return jsonify({"message": message}), 401
-        user_data = login_process["user_data"]
-        tokens = login_process["tokens"]
-
-        return jsonify(
-            {"message": message, "tokens": tokens, "user_data": user_data}
-        ), 200
-
-    def signup(self):
-        data = request.json
-        email = data.get("email")
-        display_name = data.get("displayName")
-        username = data.get("username")
-        password = data.get("password")
-        lower_case_email = email.lower()
-        status, message = self.auth.signup(
-            email=lower_case_email,
-            display_name=display_name,
-            username=username,
-            password=password,
-        )
-        if not status:
-            return jsonify({"message": message}), 401
-        return jsonify({"message": message}), 200
-
+    # --------------Request new access token--------
     def request_new_access_token(self):
         data = request.headers.get("Authorization")
         if not data:
@@ -144,45 +94,89 @@ class AuthServer(RouteBase):
                 }
             ), 404
         token = data.replace("Bearer ", "")
-        status, new_token = self.token_service.request_new_access_token(token)
-        if not status:
-            return jsonify({"message": "Could not finish the request!"}), 401
-        return jsonify({"message": "Successfully", "token": new_token}), 200
+        respond, code = self.JwtAuthenticationService.request_new_access_token(
+            refresh_token=token
+        )
+        return jsonify(respond), code
+
+    # ---------------Login-----------------------------
+    def login(self):
+        data = request.json
+        username = data.get("username")
+        email = data.get("email")
+        password = data.get("password")
+        data, code = self.LoginService.login(
+            username=username, password=password, email=email
+        )
+        return jsonify(data), code
+
+    # --------------Sign up --------------------------
+    def signup(self):
+        data = request.json
+        email = data.get("email")
+        display_name = data.get("displayName")
+        username = data.get("username")
+        password = data.get("password")
+        lower_case_email = email.lower()
+        respond, code = self.SignupService.signup(
+            email=lower_case_email,
+            display_name=display_name,
+            username=username,
+            password=password,
+        )
+        return jsonify(respond), code
+
+    def verify_code(self):
+        """User verify code, get user data and pass to a function to check the code"""
+        data = request.json
+        recipients = data.get("email")
+        email = recipients.lower()
+        str_code = data.get("code")
+        code = int(str_code)
+        respond, respond_code = self.SignupService.confirm_code_and_process_new_user(
+            email=email, code=code
+        )
+
+        return jsonify(respond), respond_code
+
+    # ------reset password--------------
 
     def request_reset_password(self):
         user_data = request.json
         email = user_data.get("email")
-        res, data, code = self.auth.request_reset_password(email=email)
+        data, code = self.ResetPasswordService.request_reset_password(email=email)
         return jsonify(data), code
 
     def request_reset_password_verify(self):
         user_data = request.json
-        token = user_data.get("token")
+        email = user_data.get("email")
         verify_code = user_data.get("code")
-        res, data, code = self.auth.request_reset_password_verify(
-            code=verify_code, token=token
+        data, code = self.ResetPasswordService.request_reset_password_verify(
+            code=verify_code, email=email
         )
         return jsonify(data), code
 
     def request_reset_password_complete(self):
         user_data = request.json
         token = user_data.get("token")
+        email = user_data.get("email")
+        ip_address = self._get_request_ip_address()
         new_password = user_data.get("new_password")
 
-        res, data, code = self.auth.reset_password_handler(
-            new_password=new_password, token=token
+        data, code = self.ResetPasswordService.reset_password_handler(
+            new_password=new_password, token=token, email=email, ip_address=ip_address
         )
         return jsonify(data), code
 
+    # --------------Provider--------------------
     def provider_verify(self, provider):
         user_data = request.json
         id_token = user_data["id_token"]
-        verify, data = self.auth.provider_verify(provider=provider, token=id_token)
-        if not verify:
-            return jsonify(data), 400
-        if data.get("code") == "pending":
-            return jsonify(data), 202
-        return jsonify(data), 200
+        data, code = self.ProviderService.provider_verify(
+            provider=provider, token=id_token
+        )
+
+        return jsonify(data), code
 
     def singup_provider(self):
         try:
@@ -191,15 +185,14 @@ class AuthServer(RouteBase):
             username = user_data["username"]
             display_name = user_data["display_name"]
             password = user_data["password"]
-            status, code = self.auth.provider_signup_complete(
+            data, code = self.ProviderService.provider_signup_complete(
                 token=token,
                 username=username,
                 display_name=display_name,
                 password=password,
             )
-            if not status:
-                return jsonify(code), 500
-            return jsonify(code), 200
+            print(data)
+            return jsonify(data), code
         except Exception as e:
             print(e)
             return ("failed"), 500

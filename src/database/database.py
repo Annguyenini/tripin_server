@@ -6,18 +6,18 @@
 
 
 # from src.error_handler.error_handler import ErrorHandler
-import inspect
 import os
+import threading
 from datetime import datetime
+from typing import Any
 
-import dotenv
 from dotenv import load_dotenv, set_key
 from psycopg2 import pool
 from psycopg2.extras import DictCursor, RealDictCursor
 
 from src.database.database_keys import DATABASEKEYS
 
-dotenv.load_dotenv()
+load_dotenv()
 
 
 class Database:
@@ -79,8 +79,9 @@ class Database:
         if self._pool is None:
             self._init_connection_pool()
 
-        conn = self._pool.getconn()
-
+        key = threading.get_ident()
+        conn = self._pool.getconn(key=key)
+        print("getkey", key)
         # con = sqlite3.connect(path,check_same_thread=False,isolation_level=None)
         if cur_options == "realDict":
             cur = conn.cursor(cursor_factory=RealDictCursor)
@@ -95,7 +96,11 @@ class Database:
         Args:
             conn (_type_): _description_
         """
-        self._pool.putconn(conn=conn)
+        try:
+            key = threading.get_ident()
+            self._pool.putconn(conn=conn, key=key)
+        except KeyError:
+            pass
 
     def find_item_in_sql(
         self,
@@ -167,9 +172,9 @@ class Database:
         self,
         table: str,
         item: str,
-        value: str,
+        value: Any,
         item_to_update: str,
-        value_to_update: str,
+        value_to_update: Any,
     ):
         """update a specific value where  condition exist
         Args:
@@ -181,6 +186,7 @@ class Database:
         Returns:
             bool: status
         """
+        con, cur = None, None
         try:
             con, cur = self.connect_db()
 
@@ -192,7 +198,6 @@ class Database:
                 ),
             )
             con.commit()
-            self.close_db(conn=con)
             if cur.rowcount < 0:
                 return False
 
@@ -200,110 +205,40 @@ class Database:
         except Exception as e:
             print("failed to update to database", e)
             return False
+        finally:
+            if con:
+                self.close_db(conn=con)
 
     def delete_from_table(
         self,
         table: str,
         item: str,
-        value: str,
+        value: Any,
         second_condition: bool | None = None,
         second_item: str | None = None,
-        second_value: str | None = None,
+        second_value: Any | None = None,
     ):
-        con, cur = self.connect_db()
-
-        if second_condition:
-            cur.execute(
-                f"DELETE FROM {table} WHERE {item} = %s AND {second_item} = %s",
-                (value, second_value),
-            )
-        else:
-            cur.execute(f"DELETE FROM {table} WHERE {item} = %s", (value))
-        con.commit()
-        self.close_db(conn=con)
-        if cur.rowcount <= 0:
-            return False
-        else:
-            return True
-
-    def insert_to_database_singup(
-        self, email: str, display_name: str, username: str, password: str
-    ):
-        """insert to database, credential table
-
-        Args:
-            email (str): _email_
-            display_name (str): _display name_
-            username (str): _username_
-            password (str): _dpassword (hashed)_
-
-        Returns:
-            _bool_: _status_
-        """
-        con, cur = self.connect_db()
-        current_time = datetime.now()
-        cur.execute(
-            f"INSERT INTO {DATABASEKEYS.TABLES.USERDATA} (email,display_name,user_name,password,created_time) VALUES(%s,%s,%s,%s,%s)",
-            (email, display_name, username, password, current_time),
-        )
-        con.commit()
-        con.close()
-        if cur.rowcount >= 1:
-            return True
-        return False
-
-    def insert_to_database_singup_provider(
-        self,
-        email: str,
-        display_name: str,
-        username: str,
-        password: str,
-        provider: str,
-        provider_id: str,
-    ):
-        """insert to database, credential table
-
-        Args:
-            email (str): _email_
-            display_name (str): _display name_
-            username (str): _username_
-            password (str): _dpassword (hashed)_
-
-        Returns:
-            _bool_: _status_
-        """
+        con, cur = None, None
         try:
             con, cur = self.connect_db()
-            current_time = datetime.now()
-            cur.execute(
-                f"""INSERT INTO {DATABASEKEYS.TABLES.USERDATA} (
-                        {DATABASEKEYS.USERDATA.EMAIL},
-                        {DATABASEKEYS.USERDATA.DISPLAY_NAME},
-                        {DATABASEKEYS.USERDATA.USER_NAME},
-                        {DATABASEKEYS.USERDATA.PROVIDER},
-                        {DATABASEKEYS.USERDATA.PROVIDER_ID},
-                        {DATABASEKEYS.USERDATA.PASSWORD},
-                        {DATABASEKEYS.USERDATA.CREATED_TIME})
-                        VALUES(%s,%s,%s,%s,%s,%s,%s)""",
-                (
-                    email,
-                    display_name,
-                    username,
-                    provider,
-                    provider_id,
-                    password,
-                    current_time,
-                ),
-            )
-            con.commit()
-            con.close()
-            if cur.rowcount >= 1:
-                return True
-            return False
 
+            if second_condition:
+                cur.execute(
+                    f"DELETE FROM {table} WHERE {item} = %s AND {second_item} = %s",
+                    (value, second_value),
+                )
+            else:
+                cur.execute(f"DELETE FROM {table} WHERE {item} = %s", (value))
+            con.commit()
+            if cur.rowcount <= 0:
+                return False
+            else:
+                return True
         except Exception as e:
-            # self.ErrorHandler.logger('Database').error('Failed at insert to userdata to database',e)
             return False
+        finally:
+            if con:
+                self.close_db(conn=con)
 
     def insert_token_into_db(self, user_id: int, token: str, issued_at, expired_at):
         """insert into database, token table

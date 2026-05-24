@@ -12,11 +12,11 @@ jobs:
     secrets:
       PRIVATE_KEY: ${{ secrets.PRIVATE_KEY }}
       PUBLIC_KEY: ${{ secrets.PUBLIC_KEY }}
-
+      ENV_TEST: ${{ secrets.ENV_TEST }}
   deploy:
-    # needs: test
+    needs: test
     runs-on: ubuntu-latest
-    if: github.ref == 'refs/heads/main'   # only deploy on push to main, not PRs
+    if: github.ref == 'refs/heads/main' # only deploy on push to main, not PRs
     steps:
       - name: Deploy via SSH
         uses: appleboy/ssh-action@v1.0.0

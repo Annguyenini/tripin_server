@@ -21,10 +21,12 @@ from src.server_config.discord_error_logs import (
     discord_request_logs,
     start_server_status_thread,
 )
+from src.trip_contents.trip_contents_routes import TripContentRoutes
 from src.trip_service.trip_contents.trip_contents_route import TripContentsRoute
 from src.trip_service.trip_route import TripRoute
-from src.trip_view.trip_view_route import TripViewRoute
 from src.user.user_route import UserRoute
+from src.web.trip_view.trip_view_route import TripViewRoute
+from src.web.web_service import WebService
 
 bootstrap_manager()
 mail = Mail()
@@ -48,6 +50,7 @@ class Server:
         print(self.app.extensions)
         self._register_blueprints()
         self.app.config.from_object(MailConfig)
+        self.WebSetting = WebService()
         mail.init_app(self.app)
 
     def _register_blueprints(self):
@@ -57,10 +60,14 @@ class Server:
         user_route = UserRoute()
         sync_route = ContentsSyncRoute()
         trip_view_route = TripViewRoute()
+        trip_content_routes = TripContentRoutes()
         internal_error_route = ErrorSSE()
         self.app.register_blueprint(auth_route.bp, url_prefix="/auth")
         self.app.register_blueprint(trip_route.bp, url_prefix="/trip")
+
         self.app.register_blueprint(trip_contents_route.bp, url_prefix="/trip-contents")
+        self.app.register_blueprint(trip_content_routes.bp, url_prefix="/trip-contents")
+
         self.app.register_blueprint(user_route.bp, url_prefix="/user")
         self.app.register_blueprint(sync_route.bp, url_prefix="/sync")
         self.app.register_blueprint(trip_view_route.bp, url_prefix="/trip-view")
@@ -68,6 +75,8 @@ class Server:
         self.app.route("/test-error", methods=["GET"])(self.test_error)
         self.app.route("/health", methods=["GET"])(self.health)
         self.app.route("/", methods=["GET"])(self.landing)
+        self.app.route("/app-version", methods=["GET"])(self.app_version)
+
         # self.app.route("/testmap",methods =['GET'])(self.testmap)
 
         # self.app.route("/trip-view",methods =['GET'])(self.trip_view)
@@ -84,11 +93,15 @@ class Server:
 
         1 / 0
 
+    def app_version(self):
+        return jsonify({"version": f"{os.getenv('APP_VERSION')}"}), 200
+
     def health(self):
         return jsonify({"code": "success"}), 200
 
     def landing(self):
-        return render_template("index.html")
+        settings = self.WebSetting.get_index_setting()
+        return render_template("index.html", settings=settings)
 
     def trip_view(self):
         return render_template("trip_view.html")
