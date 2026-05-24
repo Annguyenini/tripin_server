@@ -12,7 +12,7 @@ services:
     tmpfs:
       - /var/lib/postgresql/data
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U testuser"]
+      test: ["CMD-SHELL", "pg_isready -U testuser -d tripin"]
       interval: 5s
       timeout: 5s
       retries: 10
