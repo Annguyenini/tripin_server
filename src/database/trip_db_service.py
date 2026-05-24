@@ -320,13 +320,14 @@ class TripDatabaseService(Database):
             )
             row = cur.fetchall()
             con.commit()
-            self.close_db(conn=con)
             return row if row else None
         except Exception as e:
             self.ErrorHandler.logger("TripDataBase").error(
                 "Failed to get trip metadata", body=e
             )
             return False
+        finally:
+            self.close_db(conn=con)
 
     def generate_trip_media_hash(self, trip_id: int):
         con, cur = None, None

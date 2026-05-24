@@ -152,13 +152,14 @@ class TripDataBaseService(Database):
 
             row = cur.fetchone()
             con.commit()
-            self.close_db(conn=con)
             return dict(row) if row else None
         except Exception as e:
             self.ErrorHandler.logger("TripDataBase").error(
                 "Failed to update trip version", body=e
             )
             return None
+        finally:
+            self.close_db(conn=con)
 
     def delete_trip_by_trip_id(self, trip_id: str) -> bool:
         con, cur = self.connect_db()
@@ -170,7 +171,6 @@ class TripDataBaseService(Database):
             )
             trip_id = cur.fetchone()["id"]
             con.commit()
-            self.close_db(conn=con)
             return True if cur.rowcount >= 1 else False
 
         except Exception as e:
@@ -178,6 +178,8 @@ class TripDataBaseService(Database):
                 "Failed to delete to database", body=e
             )
             return False
+        finally:
+            self.close_db(conn=con)
 
     def update_end_trip(self, trip_id: str, ended_time: datetime):
         con, cur = self.connect_db()
@@ -197,3 +199,5 @@ class TripDataBaseService(Database):
         except Exception as e:
             self.ErrorHandler.logger("Trip Database").error("Failed at end trip", {e})
             return False
+        finally:
+            self.close_db(conn=con)
