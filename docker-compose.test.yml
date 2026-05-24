@@ -41,6 +41,7 @@ services:
       - ./src/assets/keys:/app/src/assets/keys
     command: >
       sh -c "alembic upgrade head &&
-               python tests/scripts/create_test_user.py &&
-               python -m pytest tests/ -v"
+              python tests/scripts/create_test_user.py &&
+              python -c 'import pytest; print(pytest.__version__)' &&
+              python -m pytest tests/ -v -s --tb=short 2>&1"
     restart: "no"

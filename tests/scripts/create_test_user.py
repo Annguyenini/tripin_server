@@ -4,7 +4,6 @@ import dotenv
 import psycopg2
 from werkzeug.security import generate_password_hash
 
-print(os.environ.get("DB_HOST"), os.environ.get("DB_NAME"))
 conn = psycopg2.connect(
     host=os.environ.get("DB_HOST"),
     dbname=os.environ.get("DB_NAME"),
