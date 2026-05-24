@@ -12,7 +12,7 @@ services:
     tmpfs:
       - /var/lib/postgresql/data
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      test: ["CMD-SHELL", "pg_isready -U testuser"]
       interval: 5s
       timeout: 5s
       retries: 10
@@ -40,5 +40,7 @@ services:
     volumes:
       - ./src/assets/keys:/app/src/assets/keys
     command: >
-      sh -c " alembic upgrade head &&  python tests/scripts/create_test_user.py &&  python -m pytest tests/ -v; exit $?"
+      sh -c "alembic upgrade head &&
+               python tests/scripts/create_test_user.py &&
+               python -m pytest tests/ -v"
     restart: "no"
