@@ -1,11 +1,16 @@
 import os
 
-import dotenv
 import pytest
+from redis import Redis
 
 from app import create_app
 
-dotenv.load_dotenv(".env", override=True)
+
+@pytest.fixture(scope="session")
+def redis_client():
+    host = os.getenv("REDIS_HOST")
+    port = os.getenv("REDIS_PORT")
+    yield Redis(host=host, port=port, decode_responses=True)
 
 
 @pytest.fixture(scope="session")
@@ -21,8 +26,8 @@ def user_credential():
     return {
         "username": "TestUser",
         "password": "Testpass11234@",
-        "invalid_username": "test",
-        "invalid_password": "Test",
+        "invalid_username": "Testting",
+        "invalid_password": "Testting7749@",
     }
 
 

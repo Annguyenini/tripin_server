@@ -71,8 +71,6 @@ class ProviderAuth(CredentialBase):
                 # if user doesnt exists,
                 # return request Sign up
                 fields = {
-                    "status": "pending",
-                    "action": "signup_via_provider",
                     "email": email,
                     "provider_id": provider_id,
                     "provider": provider,

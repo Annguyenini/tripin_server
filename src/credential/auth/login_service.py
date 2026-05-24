@@ -56,7 +56,7 @@ class LoginService(CredentialBase):
                         "message": "Wrong username or email",
                         "user_data": None,
                     },
-                    400,
+                    401,
                 )
 
             userid = userdata_row["id"]

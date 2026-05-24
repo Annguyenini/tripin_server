@@ -16,49 +16,6 @@
         <link rel="stylesheet" href="/static/styles/index.css" />
     </head>
     <body>
-        <!-- drips -->
-        <!--<div class="drips">
-            <div
-                class="drip"
-                style="--h: 45px; --w: 5px; --dur: 4.2s; --delay: 0s"
-            ></div>
-            <div
-                class="drip"
-                style="--h: 75px; --w: 8px; --dur: 5s; --delay: 0.7s"
-            ></div>
-            <div
-                class="drip"
-                style="--h: 30px; --w: 5px; --dur: 3.6s; --delay: 1.4s"
-            ></div>
-            <div
-                class="drip"
-                style="--h: 90px; --w: 9px; --dur: 5.5s; --delay: 0.2s"
-            ></div>
-            <div
-                class="drip"
-                style="--h: 55px; --w: 6px; --dur: 4.5s; --delay: 2.1s"
-            ></div>
-            <div
-                class="drip"
-                style="--h: 65px; --w: 7px; --dur: 4.8s; --delay: 0.9s"
-            ></div>
-            <div
-                class="drip"
-                style="--h: 38px; --w: 5px; --dur: 3.9s; --delay: 1.7s"
-            ></div>
-            <div
-                class="drip"
-                style="--h: 80px; --w: 8px; --dur: 5.2s; --delay: 0.4s"
-            ></div>
-            <div
-                class="drip"
-                style="--h: 50px; --w: 6px; --dur: 4.1s; --delay: 1.1s"
-            ></div>
-            <div
-                class="drip"
-                style="--h: 42px; --w: 5px; --dur: 3.7s; --delay: 2.5s"
-            ></div>
-        </div>-->
         <img
             class="globe-spin"
             src="{{ url_for('static', filename='icon.png') }}"
@@ -98,7 +55,7 @@
                 <li>
                     <img src="{{ img.url }}" alt="trip photo" loading="lazy" />
                 </li>
-                <!--{% else %}
+                {% else %}
                 <li>
                     <img
                         src="{{ url_for('static', filename='images/sample1.png') }}"
@@ -114,7 +71,7 @@
                         src="{{ url_for('static', filename='images/sample3.png') }}"
                     />
                 </li>
-                {% endfor %}-->
+                {% endfor %}
             </ul>
         </div>
 
