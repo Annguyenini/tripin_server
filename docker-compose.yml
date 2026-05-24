@@ -42,6 +42,8 @@ services:
       - redis
     volumes:
       - ./src/assets:/app/src/assets
+      - ./logs:/app/logs
+      - ./logs/errorlogs:/app/logs/errorlogs
   # logs:
   #   image: 2axxaxx/nginx_logs:latest
   #   ports:
