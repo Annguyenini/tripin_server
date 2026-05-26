@@ -7,6 +7,7 @@ from redis import Redis
 
 class Cache:
     _instance = None
+    _init = False
 
     def __new__(cls):
         if cls._instance is None:
@@ -15,10 +16,18 @@ class Cache:
         return cls._instance
 
     def __init__(self):
+        if self._init:
+            return
         dotenv.load_dotenv("src/assets/configs/.env")
         host = os.getenv("REDIS_HOST")
         port = os.getenv("REDIS_PORT")
-        self.redis_client = Redis(host=host, port=port, decode_responses=True)
+        self.redis_client = Redis(host=host, port=int(port), decode_responses=True)
+        _init = True
+
+    def get_redis_client(self) -> Redis:
+        if not self.redis_client:
+            self.__init__()
+        return self.redis_client
 
     def incr(self, key):
         return self.redis_client.incr(key)

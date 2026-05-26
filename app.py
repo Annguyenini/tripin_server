@@ -90,7 +90,7 @@ class Server:
         return render_template("testmap.html")
 
     def test_error(self):
-
+        ErrorHandler().logger("Exception").error(f"Error at test | ", body=str("dsds"))
         1 / 0
 
     def app_version(self):
@@ -122,7 +122,7 @@ class Server:
         method = request.method
         ip = request.remote_addr
         ErrorHandler().logger("Exception").error(
-            f"Error at {route} | {method}", body=trace
+            f"Error at {route} | {method}", body=str(trace)
         )
         # build embed message
         description = f"**Route:** {route}\n**Method:** {method}\n**IP:** {ip}\n**Time:** {timestamp}\n```{trace}```"
