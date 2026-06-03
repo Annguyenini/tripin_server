@@ -1,10 +1,11 @@
 import json
 import time
 from datetime import datetime, timezone
-from this import s
+from textwrap import wrap
 from typing import Any
 
-import psycopg2
+from numpy.ma.extras import isin
+from werkzeug.exceptions import Conflict
 
 from src.database.database import Database
 from src.database.database_keys import DATABASEKEYS
@@ -19,8 +20,12 @@ from src.server_config.service.cache import Cache
 from src.server_config.service.Etag.Etag import EtagService
 from src.server_config.service.Etag.etag_services import AllTripsDataEtag, TripDataEtag
 from src.server_config.service.Etag.trip_etag_service import TripEtagService
-from src.server_config.service.input_validation import InputValidation
+from src.server_config.service.input_validation import (
+    InputValidation,
+    TripInputValidation,
+)
 from src.token.tokenservice import TokenService
+from src.utils.handle_exception import handle_exception
 
 
 def ms_to_timestamptz(ms: int) -> datetime:
@@ -51,21 +56,31 @@ class TripService:
             self.trip_etag_service = TripEtagService()
             self.cache_service = Cache()
             self.input_validation = InputValidation()
+            self.TripInputValidation = TripInputValidation()
             self.ErrorHandler = ErrorHandler()
             self.UserDatabaseService = UserDataDataBaseService()
             self.AllTripEtagService = AllTripsDataEtag()
             self.TripEtagService = TripDataEtag()
             self._init = True
 
+    def _generate_trip_cover_upload_verification_token(self, trip_id: str) -> str:
+        return f"trip_cover_upload::trip_id:{trip_id}"
+
+    def _generate_trip_cover_aws_s3_path(self, trip_id: str) -> str:
+        return f"trips/{trip_id}/cover.jpg"
+
+    def _generate_all_trips_metadata_cache_key(self, user_id: str) -> str:
+        return f"all_trips::user_id:{user_id}"
+
     def process_new_trip(
         self,
         user_id: str,
         trip_name: str,
         created_time: str,
-        image=None,
+        image: bool,
     ) -> tuple[dict, int]:
         try:
-            # check if user on an active trip
+            # -------------------check if user on an active trip
             is_on_a_trip = self.TripDatabaseService.get_current_trip_id_from_user(
                 user_id=user_id
             )
@@ -75,7 +90,14 @@ class TripService:
                     "Message": "Currently on an active trip!",
                 }, 400
 
-            ##return if exists trip name from user
+            # -----------------------input validation
+            self.TripInputValidation.trip_name_validation(trip_name=trip_name)
+            format_time = ms_to_timestamptz(int(created_time))
+            assert format_time and isinstance(format_time, datetime), (
+                "format time is null or not format correctly"
+            )
+
+            ## ---------------------return if exists trip name from user
             exist_trip_name = (
                 self.TripDatabaseService.get_trip_data_from_trip_name_and_user_id(
                     user_id=user_id, trip_name=trip_name
@@ -86,51 +108,113 @@ class TripService:
                     "code": "exists_trip_name",
                     "message": f"Trip name: {trip_name} already exist!",
                 }, 400
-
-            ##process to create new trip
+            ## -----------------------process to create new trip
             # pending
-            format_time = ms_to_timestamptz(int(created_time))
-            assert format_time is not None, "format time must not none"
             trip_id = self.TripDatabaseService.insert_new_trip(
                 user_id=user_id,
                 created_time=format_time,
                 trip_name=trip_name,
             )
             if not trip_id:
-                return {
-                    "code": "server_failed",
-                    "message": "Error occur while creating trip",
-                }, 500
-            image_path = f"trips/{trip_id}/cover.jpg"
+                raise Exception("Error occur while creating trip")
 
-            # callback to delete trip if cloud failed
-            def callback():
-                self.TripDatabaseService.delete_trip_by_trip_id(trip_id=trip_id)
+            ##----------------------if there are image -----------------
+            # genrate presign url and pandinf token
+            image_path = self._generate_trip_cover_aws_s3_path(trip_id=trip_id)
 
             # if image
+            presign_url = None
+            pending_token = None
             if image:
-                try:
-                    if not self.s3_service.upload_media(path=image_path, data=image):
-                        callback()
-                        return {"code": "cloud_failed", "message": "Cloud Failed"}, 500
-                    if not self.TripDatabaseService.update_trip_image_cover(
-                        trip_id=trip_id, path=image_path
-                    ):
-                        callback()
-                        return {"code": "cloud_failed", "message": "Cloud Failed"}, 500
+                presign_url = self.s3_service.generate_upload_url(
+                    key=image_path, content_type="image/jpeg"
+                )
+                if not presign_url:
+                    raise Exception("failed to created presign presign url")
+                ## ----------------------generate and store token--------
+                #
+                pending_token = self._generate_trip_cover_upload_verification_token(
+                    trip_id=trip_id
+                )
+                data_to_cache = json.dumps(
+                    {"trip_id": trip_id, "image_path": image_path}
+                )
+                self.cache_service.set(key=pending_token, data=data_to_cache, time=300)
 
-                except Exception as e:
-                    self.ErrorHandler.logger("trip service").error(
-                        "Failed to upload trip image to cloud", {e}
-                    )
-                    callback()
-                    return {"code": "cloud_failed", "message": "Cloud Failed"}, 500
-
-            return {"code": "successfully", "trip_id": trip_id}, 200
+            # ----------------------update trip modify time--------------------
+            if not self._update_trip_modified_time(
+                modified_time=format_time, trip_id=trip_id
+            ):
+                raise Exception("failed to update modified time")
+            # return
+            return {
+                "code": "successfully",
+                "trip_id": trip_id,
+                "presign_url": presign_url if presign_url else None,
+                "pending_token": pending_token,
+            }, 201
+        except ValueError as e:
+            return {"code": "invalid_input", "message": str(e)}, 400
         except AssertionError as e:
             return {
+                "code": "invalid_input",
+                "message": str(e),
+            }, 400
+
+        except Exception as e:
+            self.ErrorHandler.logger("Trip Service").error(
+                "fail to create trip", str(e)
+            )
+            return {"code": "server_failed", "message": e}, 500
+
+    def trip_cover_verification(
+        self, pending_token: str, modified_time: str
+    ) -> tuple[dict, int]:
+        try:
+            assert pending_token, "pending_token is null"
+            format_time = ms_to_timestamptz(modified_time)
+            assert format_time and isinstance(format_time, datetime), (
+                "modified_time is empty or not formated correctly"
+            )
+            # ------------------get image path and validate the input --------
+            data_from_cache = json.loads(self.cache_service.get(key=pending_token))
+            if not data_from_cache:
+                return {"code": "not_found", "message": "image path not found"}, 400
+            trip_id = data_from_cache.get("trip_id")
+            image_path = self._generate_trip_cover_aws_s3_path(trip_id=trip_id)
+
+            self.TripInputValidation.trip_image_validation(image_path=image_path)
+
+            # -------------------find image in s3---------------------
+            is_exists = self.s3_service.check_s3_object_exists(key=image_path)
+            if not is_exists:
+                return {"code", "not_found", "message", "Trip image not found"}, 500
+            # --------------------update trip cover path in postgres-----------
+            if not self.TripDatabaseService.update_trip_image_cover(
+                trip_id=trip_id, path=image_path
+            ):
+                raise Exception("Fail to update trip image")
+            # -----------------update trip modified time-------------
+            if not self._update_trip_modified_time(
+                modified_time=format_time, trip_id=trip_id
+            ):
+                raise Exception("failed to update modified time")
+
+            #   -------------------delete pending token---------------
+            #
+            self.cache_service.delete(key=pending_token)
+            return {"code": "successfully", "message": "Successfully"}, 200
+        except AssertionError as e:
+            return {"code": "missing_input", "message": str(e)}, 400
+        except ValueError as e:
+            return {"code": "invalid_input", "message": str(e)}, 400
+        except Exception as e:
+            self.ErrorHandler.logger("Trip Service").error(
+                "Failed to complete upload trip image", str(e)
+            )
+            return {
                 "code": "server_failed",
-                "message": "Error occur while creating trip",
+                "message": str(e),
             }, 500
 
     def end_a_trip(self, trip_id: str, user_id: str, ended_time: str):
@@ -271,13 +355,9 @@ class TripService:
         self, user_id, want_images=False, client_etag=None
     ) -> tuple[dict, int]:
         try:
-            # check etag from cache
+            # ------------------------------Etag-------------------------
             etag_key = self.AllTripEtagService.generate_etag_key(user_id=user_id)
-            # cache_etag = self.cache_service.get(etag_key)
-            # if client_etag == cache_etag and cache_etag:
-            #     return {}, 304
 
-            # get userdata
             # check etag that been generate
             userdata = self.UserDatabaseService.get_user_data_by_id(user_id=user_id)
             trips_modified_time = userdata["trips_modified_time"]
@@ -293,7 +373,13 @@ class TripService:
             if client_etag == etag and client_etag:
                 return {}, 304
 
+            # -----------------------------Cache---------------------------
             # get trips data
+            cache_key = self._generate_all_trips_metadata_cache_key(user_id=user_id)
+            cache_trips_list = self.cache_service.get(key=cache_key)
+            if cache_trips_list:
+                {"all_trip_data": cache_trips_list, "etag": etag}, 200
+            # ----------------------------Cache miss-----------------------
             trip_data_row = self.TripDatabaseService.get_all_active_trips_from_user_id(
                 user_id=user_id
             )
@@ -320,8 +406,10 @@ class TripService:
                 row_dict["trip_id"] = row_dict["id"]
                 trip_data_list.append(row_dict)
 
-            # push etag to cache
-            self.AllTripEtagService._set_etag_to_cache(etag_key=etag_key, etag=etag)
+            # ------------------------push data to cache-------------------------
+            self.cache_service.set(
+                key=cache_key, data=json.dumps(trip_data_list), time=3600
+            )
 
             return (
                 {"all_trip_data": trip_data_list, "etag": etag},
@@ -331,32 +419,39 @@ class TripService:
             self.ErrorHandler.logger("trip").error("Failed at get all trips data", {e})
             return {}, 500
 
+    @handle_exception("Trip Service", "Modify trip data")
     def change_trip_data(
         self,
         new_trip_name: str,
         trip_id: str,
         user_id: str,
         modified_time: str,
-        image=None,
+        image: bool,
     ) -> tuple[dict | None, int]:
-        _changed_name = False
-        # guard
-        if not new_trip_name and not image or not user_id:
-            return {}, 400
-        # trip_data before change
+
+        assert user_id, "user_id is empty"
+        assert new_trip_name or image, "Missing new trip name or image"
+        format_time = ms_to_timestamptz(modified_time)
+        assert format_time and isinstance(format_time, datetime), (
+            "modified_time is empty or not formated correctly"
+        )
+
+        # --------------------- trip_data before change-----------------------
         old_trip_data = self.TripDatabaseService.get_trip_data_from_trip_id(
             trip_id=trip_id
         )
         if not old_trip_data:
-            return {"code": "trip_not_found"}, 400
-        # trip_owner validation
+            return {"code": "trip_not_found", "message": "Trip not found"}, 400
+        # ----------------------owner validation----------------------------
         if not self.trip_owner_validation(user_id=user_id, trip_data=old_trip_data):
-            return {"code": "no_permission"}, 403
-        # if want to change trip name
+            raise PermissionError("You dont have permission to modify this trip.")
+
+        presign_url = None
+        pending_token = None
+        # ----------------------modify new trip---------------------------
         if new_trip_name:
-            if not self.input_validation.trip_name_validation(trip_name=new_trip_name):
-                return {"code": INPUT_ERROR.TRIP_NAME}, 400
-            # check if new trip name samee with the old one
+            self.TripInputValidation.trip_name_validation(trip_name=new_trip_name)
+            # check if new trip name same with the old one
             if new_trip_name != old_trip_data["trip_name"]:
                 exist_trip_name = (
                     self.TripDatabaseService.get_trip_data_from_trip_name_and_user_id(
@@ -370,73 +465,50 @@ class TripService:
                     update_trip_name = self.TripDatabaseService.update_trip_name(
                         trip_id=trip_id, new_trip_name=new_trip_name
                     )
+
                     # if failed
                     if not update_trip_name:
-                        return {
-                            "code": "failed_update_db",
-                            "message": "Faild to update into database",
-                        }, 500
-                    _changed_name = True
+                        raise Exception("Fail to update trip name")
+
+                elif exist_trip_name:
+                    raise Conflict(
+                        description={
+                            "code": "duplicate_trip_name",
+                            "message": "Trip Name aldready exist!",
+                        },
+                    )
             elif new_trip_name == old_trip_data["trip_name"]:
-                return {
-                    "code": "duplicate_trip_name",
-                    "message": "Trip Name aldready exist!",
-                }, 400
-            pass
+                pass
 
-        # roll back
-        def trip_name_rollback():
-            if not _changed_name:
-                return
-            self.TripDatabaseService.update_trip_name(
-                trip_id=trip_id, new_trip_name=old_trip_data["trip_name"]
-            )
-
+        # -----------------------modify trip image------------------------
         if image:
-            image_path = f"trips/{trip_id}/cover.jpg"
-            # key will not be change
-            upload_image = self.s3_service.upload_media(path=image_path, data=image)
-
-            # upload new image to s3
-            if not upload_image:
-                trip_name_rollback()
-                return {
-                    "code": "failed_cloud",
-                    "message": "Failed to upload to cloud",
-                }, 500
-
-            # update to postgres if not exist
-            media_path_update = self.TripDatabaseService.update_trip_image_cover(
-                trip_id=trip_id, path=image_path
+            trip_id = old_trip_data.get("trip_id")
+            # image for s3
+            image_path = self._generate_trip_cover_aws_s3_path(trip_id=trip_id)
+            # presign url for s3
+            presign_url = self.s3_service.generate_upload_url(
+                key=image_path, content_type="image/jpeg", expiration=300
             )
-            if not media_path_update:
-                trip_name_rollback()
-                return {
-                    "code": "failed_database",
-                    "message": "Failed update image key",
-                }, 500
-
-        # update trip_data version
-        format_time = ms_to_timestamptz(int(modified_time))
-
-        update_trip_modified_time = self.TripDatabaseService.update_trip_modified_time(
-            trip_id=trip_id, modified_time=format_time
-        )
-        update_trips_modified_time = (
-            self.UserDatabaseService.update_trips_modified_time(
-                user_id=user_id, modified_time=format_time
+            # pending token after upload to s3 and verify
+            pending_token = self._generate_trip_cover_upload_verification_token(
+                trip_id=trip_id
             )
-        )
-        if not update_trip_modified_time or not update_trips_modified_time:
-            return {
-                "code": "failed_update_version",
-                "message": "Failed update trip data version",
-            }, 500
+            # --------------------------Cache data and token----------------------
+            self.cache_service.set(
+                key=pending_token, data=json.dumps({"trip_id": trip_id}), time=300
+            )
+        # -----------------------------Update modify time---------------------
 
+        if not self._update_trip_modified_time(
+            modified_time=format_time, trip_id=trip_id
+        ):
+            raise Exception("failed to update modified time")
         return {
             "code": "successfully",
-            "message": "Successfully update trip data",
-        }, 200
+            "message": "successfully generate trip",
+            "pending_token": pending_token,
+            "presign_url": presign_url,
+        }, 201
 
     def remove_trip(
         self, user_id: str, trip_id: str, deleted_time: str
@@ -486,3 +558,8 @@ class TripService:
 
     def trip_owner_validation(self, user_id: str, trip_data: dict) -> bool:
         return trip_data["user_id"] == user_id
+
+    def _update_trip_modified_time(self, modified_time: datetime, trip_id: str) -> bool:
+        return self.TripDatabaseService.update_trip_modified_time(
+            trip_id=trip_id, modified_time=modified_time
+        )

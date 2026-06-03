@@ -64,10 +64,15 @@ class InputValidation:
     def _trip_name_validation(self, trip_name: str) -> bool:
         if not trip_name:
             return False
+
         if len(trip_name) < 5 or len(trip_name) > 40:
             return False
-        # check = re.match(r'^[a-zA-Z][a-zA-Z0-9_ ]+$', trip_name)
-        return True
+
+        return bool(re.fullmatch(r"[A-Za-z0-9][A-Za-z0-9 ]*", trip_name))
+
+    def _trip_image_validation(self, image_path: str):
+        pattern = r"^trips/\d+/cover\.jpg$"
+        return bool(re.match(pattern, image_path))
 
 
 class CredentialInputValidation(InputValidation):
@@ -130,3 +135,16 @@ class CredentialInputValidation(InputValidation):
     def password_validation(self, password: str):
         if not self._password_validation(password=password):
             raise ValueError(INPUT_ERROR.PASSWORD)
+
+
+class TripInputValidation(InputValidation):
+    def __init__(self) -> None:
+        super().__init__()
+
+    def trip_name_validation(self, trip_name: str):
+        if not self._trip_name_validation(trip_name=trip_name):
+            raise ValueError(INPUT_ERROR.TRIP_NAME)
+
+    def trip_image_validation(self, image_path: str):
+        if not self._trip_image_validation(image_path=image_path):
+            raise ValueError(INPUT_ERROR.TRIP_IMAGE)

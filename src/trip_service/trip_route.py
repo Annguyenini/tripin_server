@@ -40,6 +40,9 @@ class TripRoute(RouteBase):
 
     def _register_route(self):
         self.bp.route("/new-trip", methods=["POST"])(self.request_new_trip)
+        self.bp.route("/trip-cover-upload-verification", methods=["POST"])(
+            self.trip_cover_verification
+        )
         self.bp.route("/all-trips/full", methods=["GET"])(self.request_all_trips_data)
         self.bp.route("/current-trip-id", methods=["GET"])(self.request_current_trip_id)
         self.bp.route("/end-trip", methods=["POST"])(self.end_trip)
@@ -57,33 +60,46 @@ class TripRoute(RouteBase):
         Returns:
             status: html status, message
         """
-        # Ptoken = request.headers.get("Authorization")
-        # token=Ptoken.replace("Bearer ","")
+        try:
+            user_data_from_jwt, error = self._get_authenticated_user()
+            if error:
+                return jsonify(error), 401
+            ##decode jwt to get userdatas
+            user_id = user_data_from_jwt.get("user_id")
+            userdata = request.json
 
-        # ##verify token
-        # valid_token,Tmessage,code = self.token_service.jwt_verify(token)
-        # ##return if invalid token
-        # if not valid_token:
-        #     print(code)
-        #     return jsonify ({"message":Tmessage,"code":code}), 401
-        user_data, error = self._get_authenticated_user()
+            trip_name = userdata.get("trip_name")
+            created_time = userdata.get("created_time")
+            image = bool(userdata.get("image"))
+            data, code = self.trip_service.process_new_trip(
+                user_id=user_id,
+                trip_name=trip_name,
+                created_time=created_time,
+                image=image,
+            )
+
+            return jsonify(data), code
+        except Exception as e:
+            return {"code": "server_failed"}, 500
+
+    def trip_cover_verification(self):
+        """take in user data to process new trip
+
+        Returns:
+            status: html status, message
+        """
+        user_data_from_jwt, error = self._get_authenticated_user()
         if error:
             return jsonify(error), 401
         ##decode jwt to get userdatas
-        user_id = user_data.get("user_id")
-        trip_name = request.form.get("trip_name")
-        created_time = request.form.get("created_time")
-        # process new trip
-
-        # get image, and image_path
-        image = request.files.get("image") or None
-
-        data, code = self.trip_service.process_new_trip(
-            user_id=user_id,
-            trip_name=trip_name,
-            created_time=created_time,
-            image=image,
+        # user_id = user_data_from_jwt.get("user_id")
+        userdata = request.json
+        pending_token = userdata.get("pending_token")
+        modified_time = userdata.get("modified_time")
+        data, code = self.trip_service.trip_cover_verification(
+            pending_token=pending_token, momodified_time=modified_time
         )
+        print(data, code)
         return jsonify(data), code
 
     def end_trip(self):
@@ -180,17 +196,18 @@ class TripRoute(RouteBase):
             return jsonify(error), 401
 
     def change_trip_data(self):
-        user_data, error = self._get_authenticated_user()
+        user_data_from_jwt, error = self._get_authenticated_user()
         if error:
             return jsonify(error), 401
-        user_id = user_data["user_id"]
+        user_id = user_data_from_jwt["user_id"]
 
-        trip_id = request.form.get("trip_id") or None
-        trip_name = request.form.get("trip_name") or None
-        modified_time = request.form.get("modified_time") or None
-        image = request.files.get("image")
+        user_data = request.json
+        trip_id = user_data.get("trip_id")
+        new_trip_name = user_data.get("trip_name", None)
+        modified_time = user_data.get("modified_time")
+        image = bool(user_data.get("image"))
         data, code = self.trip_service.change_trip_data(
-            new_trip_name=trip_name,
+            new_trip_name=new_trip_name,
             trip_id=trip_id,
             user_id=user_id,
             modified_time=modified_time,
