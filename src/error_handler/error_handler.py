@@ -55,7 +55,7 @@ class Filter(logging.Filter):
         return True
 
 
-parent = Path(__file__).parents[3]
+parent = Path(__file__).parents[2]
 print(parent)
 LOGDIR = os.environ.get("ERRORLOGDIR", f"{parent}/logs/errorlogs")
 LOGPATH = f"{LOGDIR}/error.log"

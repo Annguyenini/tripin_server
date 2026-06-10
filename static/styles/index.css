@@ -310,3 +310,21 @@ body::before {
         transform: translate(-50%, -50%) translate(0px, 0px);
     }
 }
+
+.policy-link {
+    position: fixed;
+    top: 50px;
+    left: 28px;
+    font-family: "DM Mono", monospace;
+    font-size: 0.65rem;
+    color: var(--ink);
+    opacity: 0.4;
+    text-decoration: none;
+    letter-spacing: 0.06em;
+    transition: opacity 0.2s;
+    z-index: 2;
+}
+
+.policy-link:hover {
+    opacity: 1;
+}

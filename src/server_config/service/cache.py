@@ -45,6 +45,12 @@ class Cache:
         except Exception as e:
             return False
 
+    def touch(self, key: str, time: int) -> None:
+        try:
+            self.redis_client.expire(key, time)
+        except Exception as e:
+            print(e)
+
     def delete(self, key):
         self.redis_client.delete(key)
 

@@ -12,6 +12,7 @@ from src.server_config.service.cache import Cache
 from src.token.tokenservice import TokenService
 from src.trip_service.trip_contents.trip_contents_service import TripContentService
 from src.trip_service.trip_service import TripService
+from src.utils.handle_exception import handle_exception
 
 
 class TripRoute(RouteBase):
@@ -66,11 +67,24 @@ class TripRoute(RouteBase):
                 return jsonify(error), 401
             ##decode jwt to get userdatas
             user_id = user_data_from_jwt.get("user_id")
-            userdata = request.json
+            body = request.get_json(silent=True)
+            if not body:
+                return jsonify(
+                    {"code": "invalid_body", "message": "JSON body required"}
+                ), 400
 
-            trip_name = userdata.get("trip_name")
-            created_time = userdata.get("created_time")
-            image = bool(userdata.get("image"))
+            trip_name = body.get("trip_name")
+            created_time = body.get("created_time")
+            image = bool(body.get("image"))
+
+            if not trip_name or not created_time:
+                return jsonify(
+                    {
+                        "code": "missing_inputs",
+                        "message": "trip_name and created_time are required",
+                    }
+                ), 400
+
             data, code = self.trip_service.process_new_trip(
                 user_id=user_id,
                 trip_name=trip_name,
@@ -79,6 +93,8 @@ class TripRoute(RouteBase):
             )
 
             return jsonify(data), code
+        except ValueError as e:
+            pass
         except Exception as e:
             return {"code": "server_failed"}, 500
 
@@ -92,12 +108,15 @@ class TripRoute(RouteBase):
         if error:
             return jsonify(error), 401
         ##decode jwt to get userdatas
-        # user_id = user_data_from_jwt.get("user_id")
-        userdata = request.json
+
+        user_id = user_data_from_jwt.get("user_id")
+        userdata = request.get_json(silent=True)
         pending_token = userdata.get("pending_token")
         modified_time = userdata.get("modified_time")
+        if not pending_token or not modified_time:
+            return {"code": "missing_inputs", "message": "Missing Inputs!"}, 400
         data, code = self.trip_service.trip_cover_verification(
-            pending_token=pending_token, momodified_time=modified_time
+            pending_token=pending_token, modified_time=modified_time, user_id=user_id
         )
         print(data, code)
         return jsonify(data), code
@@ -111,13 +130,16 @@ class TripRoute(RouteBase):
         user_data_from_jwt, error = self._get_authenticated_user()
         if error:
             return jsonify(error), 401
-        user_data = request.json
-        ##decode jwt to get userdatas
 
         user_id = user_data_from_jwt.get("user_id")
-        trip_id = user_data.get("trip_id")
-        ended_time = user_data.get("ended_time")
-        data, code = self.trip_service.end_a_trip(
+        body = request.get_json(silent=True)
+        ##decode jwt to get userdatas
+
+        trip_id = body.get("trip_id")
+        ended_time = body.get("ended_time")
+        if not trip_id or not ended_time:
+            return {"code": "missing_inputs", "message": "Missing inputs"}
+        data, code = self.trip_service.request_end_trip(
             trip_id=trip_id, user_id=user_id, ended_time=ended_time
         )
         return jsonify(data), code
@@ -130,6 +152,7 @@ class TripRoute(RouteBase):
         current_trip_id, code = self.trip_service.get_current_trip_id(user_id=user_id)
         return jsonify(current_trip_id), code
 
+    @handle_exception("Trip Route", "request trip data")
     def request_trip_data(self):
         """use for app api
             return tripd data
@@ -144,7 +167,8 @@ class TripRoute(RouteBase):
 
         client_etag = request.headers.get("If-None-Match")
         trip_id = request.json.get("trip_id")
-
+        if not trip_id:
+            return {"code": "missing inputs", "message": "Missing Inputs"}, 400
         data, code = self.trip_service.get_trip_data(
             user_id=user_id, trip_id=trip_id, client_etag=client_etag
         )
@@ -216,15 +240,20 @@ class TripRoute(RouteBase):
 
         return jsonify(data), code
 
+    @handle_exception("Trip Service Route", "request remove trip")
     def request_remove_trip(self):
         user_data_from_jwt, error = self._get_authenticated_user()
         if error:
             return jsonify(error), 401
-        user_data = request.json
+        body = request.get_json(silent=True)
         user_id = user_data_from_jwt["user_id"]
-        trip_id = user_data.get("trip_id")
-        deleted_time = user_data.get("deleted_time")
-
+        trip_id = body.get("trip_id")
+        deleted_time = body.get("deleted_time")
+        if not trip_id or not deleted_time:
+            return {
+                "code": "missing_inputs",
+                "message": "missing trip_id or deleted_time",
+            }
         data, code = self.trip_service.remove_trip(
             user_id=user_id, trip_id=trip_id, deleted_time=deleted_time
         )

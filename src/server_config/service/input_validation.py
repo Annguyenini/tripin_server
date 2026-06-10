@@ -147,4 +147,5 @@ class TripInputValidation(InputValidation):
 
     def trip_image_validation(self, image_path: str):
         if not self._trip_image_validation(image_path=image_path):
+            print(image_path)
             raise ValueError(INPUT_ERROR.TRIP_IMAGE)

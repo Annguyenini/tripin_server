@@ -4,7 +4,16 @@ import traceback
 from logging.handlers import RotatingFileHandler
 
 import dotenv
-from flask import Blueprint, Flask, abort, jsonify, render_template, request, send_file
+from flask import (
+    Blueprint,
+    Flask,
+    abort,
+    jsonify,
+    render_template,
+    request,
+    send_file,
+    send_from_directory,
+)
 from flask_cors import CORS
 from flask_mail import Mail, Message
 from werkzeug.exceptions import HTTPException
@@ -72,10 +81,10 @@ class Server:
         self.app.register_blueprint(sync_route.bp, url_prefix="/sync")
         self.app.register_blueprint(trip_view_route.bp, url_prefix="/trip-view")
         self.app.register_blueprint(internal_error_route.bp, url_prefix="/internal")
-        self.app.route("/test-error", methods=["GET"])(self.test_error)
-        self.app.route("/health", methods=["GET"])(self.health)
         self.app.route("/", methods=["GET"])(self.landing)
         self.app.route("/app-version", methods=["GET"])(self.app_version)
+        self.app.route("/privacy", methods=["GET"])(self.privacy)
+        self.app.route("/policy-text", methods=["GET"])(self.policy_text)
 
         # self.app.route("/testmap",methods =['GET'])(self.testmap)
 
@@ -89,15 +98,14 @@ class Server:
     def testmap(self):
         return render_template("testmap.html")
 
-    def test_error(self):
-        ErrorHandler().logger("Exception").error(f"Error at test | ", body=str("dsds"))
-        1 / 0
-
     def app_version(self):
         return jsonify({"version": f"{os.getenv('APP_VERSION')}"}), 200
 
-    def health(self):
-        return jsonify({"code": "success"}), 200
+    def policy_text(self):
+        return send_from_directory("static", "policy.txt", mimetype="text/plain")
+
+    def privacy(self):
+        return render_template("policy.html"), 200
 
     def landing(self):
         settings = self.WebSetting.get_index_setting()

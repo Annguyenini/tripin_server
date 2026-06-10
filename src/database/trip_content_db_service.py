@@ -48,7 +48,7 @@ class TripContentsDatabaseService(Database):
                 second_condition=True,
                 second_item=DATABASEKEYS.TRIP_CONTENT_CARDS.EVENT,
                 second_value="add",
-                order_by=DATABASEKEYS.TRIP_CONTENT_CARDS.CARD_ID,
+                order_by=DATABASEKEYS.TRIP_CONTENT_CARDS.TIME_STAMP,
                 order_type="DESC",
             )
             return [dict(content) for content in contents] if contents else []
