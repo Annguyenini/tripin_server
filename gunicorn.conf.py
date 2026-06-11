@@ -1,6 +1,6 @@
-from gevent import monkey
+# from gevent import monkey
 
-monkey.patch_all()
+# monkey.patch_all()
 
 import os
 import time
@@ -12,7 +12,7 @@ port = os.getenv("REDIS_PORT")
 LOGDIR = os.environ.get("LOGDIR", "logs")
 bind = "0.0.0.0:8000"
 workers = 4
-worker_class = "gevent"
+worker_class = "sync"
 timeout = 120
 keepalive = 5
 preload_app = True
