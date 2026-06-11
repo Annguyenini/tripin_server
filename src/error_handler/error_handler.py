@@ -4,15 +4,14 @@ import os
 import traceback
 import uuid
 from datetime import datetime, timezone
-from socket import timeout
-from types import SimpleNamespace
+from pathlib import Path
 
-import redis
 from flask import Blueprint, Response, jsonify, request
 
 from src.database.database import Database
 from src.database.database_keys import DATABASEKEYS
 from src.error_code.error_code import ERROR_KEYS
+from src.server_config.service.cache import Cache
 from src.token.tokenservice import TokenService
 
 
@@ -35,7 +34,7 @@ class JSONFormatter(logging.Formatter):
             if record.exc_info
             else getattr(record, "body", None),
         }
-        redis.Redis().publish("admin:error_log", json.dumps(log))
+        Cache().get_redis_client().publish("admin:error_log", json.dumps(log))
 
         return json.dumps(log)
 
@@ -56,7 +55,9 @@ class Filter(logging.Filter):
         return True
 
 
-LOGDIR = os.environ.get("ERRORLOGDIR", "logs/errorlogs")
+parent = Path(__file__).parents[2]
+print(parent)
+LOGDIR = os.environ.get("ERRORLOGDIR", f"{parent}/logs/errorlogs")
 LOGPATH = f"{LOGDIR}/error.log"
 ALLOWCATEGORY = ["auth", "database", "trip"]
 
@@ -75,7 +76,7 @@ class ErrorSSE:
             return
         self.bp = Blueprint("ErrorSSE", __name__)
         self.databaseService = Database()
-        self.redis = redis.Redis()
+        self.redis = Cache().get_redis_client()
         self.tokenService = TokenService()
         self._registerRoute()
         self._init = True

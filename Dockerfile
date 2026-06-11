@@ -11,10 +11,11 @@ COPY requirements.txt .
 
 RUN pip install --no-cache-dir -r requirements.txt
 
-COPY . . 
+COPY . .
 
 
 EXPOSE 8000 1514
-CMD ["sh", "-c", "alembic upgrade head && gunicorn -c gunicorn.conf.py app:app"]
+CMD ["sh", "-c", "alembic upgrade head && python3 app.py"]
+#CMD ["sh", "-c", "alembic upgrade head && gunicorn -c gunicorn.conf.py app:app"]
 
 # CMD ["python3","app.py"]

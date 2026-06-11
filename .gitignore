@@ -13,4 +13,5 @@ logs/
 .pytest_cache
 .secrets
 .env.act
-.zed/
+zed/
+.env.docker

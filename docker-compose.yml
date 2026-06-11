@@ -35,15 +35,13 @@ services:
       - LOGDIR=/app/logs
       - ERRORLOGDIR=/app/logs/errorlogs
     env_file:
-      - src/assets/configs/.env
       - .env
     depends_on:
       - db
       - redis
     volumes:
       - ./src/assets:/app/src/assets
-      - ./logs:/app/logs
-      - ./logs/errorlogs:/app/logs/errorlogs
+      - shared_storage:/app/logs
   # logs:
   #   image: 2axxaxx/nginx_logs:latest
   #   ports:
@@ -57,7 +55,8 @@ services:
 volumes:
   pgdata:
   redisdata:
-
+  shared_storage:
+    external: true
 networks:
   tripin_net:
     external: true

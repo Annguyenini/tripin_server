@@ -1,0 +1,31 @@
+# Privacy Policy
+
+*Last updated: June 4, 2026*
+
+## Information We Collect
+- Account information (name, email) when you sign up
+- Your profile image(Your self or any that you decide to use)
+- Photos and media you upload within the app
+- Location data when you pin memories to a place
+- Basic usage data to improve the app
+
+
+## How We Use Your Information
+- To provide and improve the TRIPPING experience
+- To store and display your trips and memories
+- To enable trip sharing with others you choose
+
+## We Do Not
+- Sell your data to third parties
+- Share your information without your consent
+- Use your data for advertising
+
+## Data Storage
+Your data is stored securely on our servers. You can delete your account and all associated data at any time by contacting us.
+
+## Contact
+If you have any questions, email us at: support@tripping.live
+
+---
+
+© 2026 An Nguyen

@@ -2,8 +2,6 @@ from datetime import datetime
 from types import SimpleNamespace
 from typing import Any
 
-from flask import request
-
 from src.database.s3.s3_service import S3Sevice
 from src.database.trip_content_db_service import TripContentsDatabaseService
 from src.database.tripdata_db_service import TripDataBaseService
@@ -11,6 +9,7 @@ from src.database.view_trip_db_service import ViewTripDatabaseService
 from src.error_handler.error_handler import ErrorHandler
 from src.token.tokenservice import TokenService
 from src.trip_service.trip_service import ms_to_timestamptz, timestamptz_to_ms
+from src.utils.handle_exception import handle_exception
 
 
 def get_s3_media_path(trip_id: str, media_path: str):
@@ -45,6 +44,11 @@ class TripContentsService:
         self._init = True
         pass
 
+    def _generate_content_key_s3(
+        self, trip_id: str, timestamp_ms: int, content_type: str
+    ):
+        return f"trip{trip_id}_{timestamp_ms}.{'mp4' if content_type == 'video' else 'jpeg'}"
+
     def generate_presign_url_for_medias(
         self, trip_id: str, user_id: str, content_cards: list[str]
     ) -> tuple[list[str], int]:
@@ -54,14 +58,16 @@ class TripContentsService:
             if not self._trip_owner_validation(trip_id=trip_id, user_id=user_id):
                 return {"code": "no_permission"}, 403
             for content_card in content_cards:
-                print(content_card)
-                content_card["presign_url"] = self.s3Service.generate_upload_url(
-                    key=get_s3_media_path(
-                        trip_id=trip_id, media_path=content_card.get("filename")
-                    ),
-                    content_type=content_card.get("minetype"),
+                media_path = self._generate_content_key_s3(
+                    trip_id=trip_id,
+                    timestamp_ms=content_card.get("time_stamp"),
+                    content_type=content_card.get("media_type"),
                 )
-                print(content_card)
+                content_type = f"{'video/mp4' if content_card.get('media_type') == 'video' else 'image/jpeg'}"
+                content_card["presign_url"] = self.s3Service.generate_upload_url(
+                    key=get_s3_media_path(trip_id=trip_id, media_path=media_path),
+                    content_type=content_type,
+                )
 
             return {
                 "code": "successfully",
@@ -69,42 +75,38 @@ class TripContentsService:
             }, 200
         except Exception as e:
             print(e)
-            self.ErrorHandler.error("Failed to resolve generate url request", {e})
+            self.ErrorHandler.error("Failed to resolve generate url request", str(e))
             return {"code": "failed"}, 500
 
+    @handle_exception("Trip Contents", "Handle sync")
     def handle_sync(
         self, trip_id: str, user_id: str, content_cards: list[Any]
     ) -> tuple[dict, int]:
-        try:
-            assert trip_id, "trip id is epmty"
-            assert user_id, "user id is epmty"
-            assert content_cards, "content_cards is empty"
+        assert trip_id, "trip id is epmty"
+        assert user_id, "user id is epmty"
+        assert content_cards, "content_cards is empty"
 
-            fail_requests = []
-            for request in content_cards:
-                # assume that request already sort from client
-                if request.get("event") == "add":
-                    data, code = self._insert_card_to_database(
-                        user_id=user_id, trip_id=trip_id, card_data=request
-                    )
-                    if code != 200:
-                        fail_requests.append(request)
-                    # pass
-                elif request.get("event") == "remove":
-                    data, code = self._delete_content_card(
-                        card_data=request, trip_id=trip_id
-                    )
-                    if code != 200:
-                        fail_requests.append(request)
+        fail_requests = []
+        for request in content_cards:
+            # assume that request already sort from client
+            if request.get("event") == "add":
+                data, code = self._insert_card_to_database(
+                    user_id=user_id, trip_id=trip_id, card_data=request
+                )
+                if code != 200:
+                    fail_requests.append(request)
+                # pass
+            elif request.get("event") == "remove":
+                data, code = self._delete_content_card(
+                    card_data=request, trip_id=trip_id
+                )
+                # if code != 200:
+                #     fail_requests.append(request)
 
-            if fail_requests:
-                return {"code": "requests_failed", "request": fail_requests}, 500
-            return {"code": "successfully"}, 200
-        except AssertionError as ass:
-            return {"code": f"missing input: {str(ass)}"}, 400
-        except Exception as e:
-            self.ErrorHandler.error("failed to handle trip contents sync", {e})
-            return {"code": "failed"}, 500
+        if fail_requests:
+            print(fail_requests)
+            return {"code": "requests_failed", "request": fail_requests}, 500
+        return {"code": "successfully"}, 200
 
     def _insert_card_to_database(
         self, user_id: str, trip_id: str, card_data: dict[Any]
@@ -113,15 +115,19 @@ class TripContentsService:
         try:
             assert card_data, "Card data is empty"
             assert trip_id, "Trip id is empty"
-            # ------media data ------
-            media_type = card_data.get("media_type")
-
-            media_path = card_data.get("filename")
-            media_id = card_data.get("media_id")
             # ------card data--------
             time_stamp = card_data.get("time_stamp")
             format_time = ms_to_timestamptz(int(time_stamp))
             uuid = card_data.get("uuid")
+            # ------media data ------
+            media_type = card_data.get("media_type")
+
+            media_path = self._generate_content_key_s3(
+                trip_id=trip_id, timestamp_ms=time_stamp, content_type=media_type
+            )
+            print(media_path)
+            media_id = card_data.get("media_id")
+
             # -----location data ---
             altitude = card_data.get("altitude")
             latitude = card_data.get("latitude")
@@ -249,7 +255,7 @@ class TripContentsService:
             contents = self.TripContentsDatabase.get_all_trip_add_content_cards(
                 trip_id=trip_id
             )
-            if not contents:
+            if contents is None:
                 return {"code": "failed"}, 500
 
             # loop through to convert data
@@ -271,7 +277,6 @@ class TripContentsService:
                 content["modified_time"] = timestamptz_to_ms(
                     timestamp=content["modified_time"]
                 )
-
             return {"code": "successfully", "content_cards": contents}, 200
         except AssertionError as ass:
             return {"code": "missing_require_inputs"}, 402
