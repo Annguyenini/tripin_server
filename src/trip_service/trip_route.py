@@ -7,11 +7,9 @@ from src.base.route_base import RouteBase
 from src.database.s3.s3_dirs import TRIP_DIR
 from src.database.s3.s3_service import S3Sevice
 from src.database.trip_db_service import TripDatabaseService
-from src.geo.geo_service import GeoService
-from src.server_config.service.cache import Cache
 from src.token.tokenservice import TokenService
-from src.trip_service.trip_contents.trip_contents_service import TripContentService
 from src.trip_service.trip_service import TripService
+from src.utils.cache.cache import Cache
 from src.utils.handle_exception import handle_exception
 
 
@@ -31,9 +29,7 @@ class TripRoute(RouteBase):
         self.bp = Blueprint("trip", __name__)
         self.token_service = TokenService()
         self.trip_service = TripService()
-        self.trip_content_service = TripContentService()
         self.trip_s3 = S3Sevice()
-        self.geo_service = GeoService()
         self.cache_service = Cache()
         self.trip_database_service = TripDatabaseService()
         self._init = True
@@ -209,7 +205,7 @@ class TripRoute(RouteBase):
         user_id = user_data.get("user_id")
 
         all_trips_data, code = self.trip_service.get_all_trip_data(
-            user_id=user_id, client_etag=client_etag, want_images=True
+            user_id=user_id, client_etag=client_etag
         )
 
         return jsonify(all_trips_data), code

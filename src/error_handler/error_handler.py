@@ -11,8 +11,8 @@ from flask import Blueprint, Response, jsonify, request
 from src.database.database import Database
 from src.database.database_keys import DATABASEKEYS
 from src.error_code.error_code import ERROR_KEYS
-from src.server_config.service.cache import Cache
 from src.token.tokenservice import TokenService
+from src.utils.cache.cache import Cache
 
 
 class JSONFormatter(logging.Formatter):

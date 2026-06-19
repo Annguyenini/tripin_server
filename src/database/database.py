@@ -113,7 +113,7 @@ class Database:
         order_by: str | None = None,
         order_type: str | None = None,
         return_option: str | None = "fetchone",
-    ) -> dict:
+    ) -> dict | None:
         """return value base on table and item in postgress
 
         Args:

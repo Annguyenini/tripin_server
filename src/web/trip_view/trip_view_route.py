@@ -14,10 +14,10 @@ from src.database.trip_db_service import TripDatabaseService
 from src.database.view_trip_db_service import ViewTripDatabaseService
 from src.error_handler.error_handler import ErrorHandler
 from src.server_config.config import Config
-from src.server_config.service.cache import Cache
 from src.server_config.service.Etag.etag_services import TripShareLinksEtag
 from src.server_config.service.smart_cast import smart_cast
 from src.trip_contents.trip_contents_service import TripContentsService
+from src.utils.cache.cache import Cache
 
 load_dotenv(".env")
 MAPTOKEN = os.getenv("MAPBOX_PUBLIC_KEY")

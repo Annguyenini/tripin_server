@@ -49,7 +49,7 @@ class TripContentsDatabaseService(Database):
                 second_item=DATABASEKEYS.TRIP_CONTENT_CARDS.EVENT,
                 second_value="add",
                 order_by=DATABASEKEYS.TRIP_CONTENT_CARDS.TIME_STAMP,
-                order_type="DESC",
+                order_type="ASC",
             )
             return [dict(content) for content in contents] if contents else []
         except Exception as e:

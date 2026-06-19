@@ -1,11 +1,8 @@
 import json
 import os
 
-from flask import jsonify
-
 from src.database.s3.s3_service import S3Sevice
 from src.error_handler.error_handler import ErrorHandler
-from src.server_config.service.cache import Cache
 
 
 class WebService:

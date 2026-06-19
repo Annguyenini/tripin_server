@@ -6,15 +6,12 @@ from typing import Any
 from werkzeug.exceptions import Conflict
 
 from src.database.database import Database
-from src.database.database_keys import DATABASEKEYS
-from src.database.s3.s3_dirs import TRIP_DIR
 from src.database.s3.s3_service import S3Sevice
 from src.database.trip_db_service import TripDatabaseService
 from src.database.tripdata_db_service import TripDataBaseService
 from src.database.userdata_db_service import UserDataDataBaseService
-from src.error_code.error_code import INPUT_ERROR
 from src.error_handler.error_handler import ErrorHandler
-from src.server_config.service.cache import Cache
+from src.repository.trip_repository import TripRepository
 from src.server_config.service.Etag.Etag import EtagService
 from src.server_config.service.Etag.etag_services import AllTripsDataEtag, TripDataEtag
 from src.server_config.service.Etag.trip_etag_service import TripEtagService
@@ -23,6 +20,11 @@ from src.server_config.service.input_validation import (
     TripInputValidation,
 )
 from src.token.tokenservice import TokenService
+from src.utils.cache.cache import Cache
+from src.utils.cache.keys.cache_keys import (
+    GetTripDataCacheKey,
+    GetUserTripsDataCacheKey,
+)
 from src.utils.exceptions import TripNotFound, TripPermissionError
 from src.utils.handle_exception import handle_exception
 
@@ -60,6 +62,7 @@ class TripService:
             self.UserDatabaseService = UserDataDataBaseService()
             self.AllTripEtagService = AllTripsDataEtag()
             self.TripEtagService = TripDataEtag()
+            self.TripRepository = TripRepository()
             self._init = True
 
     def _generate_trip_cover_upload_verification_token(self, trip_id: str) -> str:
@@ -72,7 +75,7 @@ class TripService:
         return f"all_trips::user_id:{user_id}"
 
     def _generate_trip_data_cache_key(self, trip_id: str) -> str:
-        return f"trip:{trip_id}::metadata"
+        return f"trip:{trip_id}"
 
     @handle_exception("Trip service", "Process new trip")
     def process_new_trip(
@@ -175,7 +178,6 @@ class TripService:
             return {"code": "not_found", "message": "image path not found"}, 400
         trip_id = data_from_cache.get("trip_id")
         if trip_id is None:
-            print(data_from_cache)
             raise ValueError("trip_id is none")
         image_path = self._generate_trip_cover_aws_s3_path(trip_id=trip_id)
 
@@ -254,10 +256,8 @@ class TripService:
             user_id (_type_): _description_
             etag (_type_): _description_
         """
-        # etag key
-        etag_key = self.TripEtagService.generate_etag_key(trip_id=trip_id)
         # -----------------------get from cache----------------------------
-        cache_key = self._generate_trip_data_cache_key(trip_id=trip_id)
+        cache_key = GetTripDataCacheKey(trip_id=trip_id)
         trip_data_row = None
         try:
             raw = self.cache_service.get(key=cache_key)
@@ -266,16 +266,12 @@ class TripService:
         except json.JSONDecodeError as e:
             trip_data_row = None
         if trip_data_row:
-            print(trip_data_row)
-
             if not self.trip_owner_validation(user_id=user_id, trip_data=trip_data_row):
                 raise TripPermissionError
             return {"code": "successfully", "trip_data": trip_data_row}, 200
         # ----------------------Cache miss----------------------------------
         # trip data from database
-        trip_data_row = self.TripDatabaseService.get_trip_data_from_trip_id(
-            trip_id=trip_id
-        )
+        trip_data_row = self.TripRepository.get_trip_data(trip_id=trip_id)
         # owner validation
         if not self.trip_owner_validation(user_id=user_id, trip_data=trip_data_row):
             raise TripPermissionError
@@ -283,31 +279,14 @@ class TripService:
         # if doesnt exist return nothing
         if trip_data_row is None or trip_data_row["event"] == "remove":
             raise TripNotFound
-        modified_time = trip_data_row["modified_time"]
-        hour_bucket = int(time.time() // 3600)
 
-        new_etag = self.TripEtagService.generate_etag(
-            trip_id=trip_id, modified_time=modified_time, bucket_hour=hour_bucket
-        )
-        if client_etag == new_etag and client_etag:
-            return {}, 304
-        # set etag to redis
-        self.TripEtagService._set_etag_to_cache(etag_key=etag_key, etag=new_etag)
-
-        trip_data_row["created_time"] = timestamptz_to_ms(trip_data_row["created_time"])
-        trip_data_row["ended_time"] = timestamptz_to_ms(trip_data_row["ended_time"])
-        trip_data_row["content_modified_time"] = timestamptz_to_ms(
-            trip_data_row["content_modified_time"]
-        )
-        trip_data_row["modified_time"] = timestamptz_to_ms(
-            trip_data_row["modified_time"]
-        )
+        # inject temp uri
         trip_data_row["image"] = (
             self.s3_service.generate_temp_uri(trip_data_row["image"])
             if trip_data_row["image"]
             else trip_data_row["image"]
         )
-
+        # special key for app
         trip_data_row["trip_id"] = trip_data_row["id"]
 
         # ----------------put to cache---------------------
@@ -352,9 +331,7 @@ class TripService:
         return ({"trip_data": trip_data, "etag": new_etag}, 200)
 
     @handle_exception("Trip service", "get trip list")
-    def get_all_trip_data(
-        self, user_id, want_images=False, client_etag=None
-    ) -> tuple[dict, int]:
+    def get_all_trip_data(self, user_id, client_etag=None) -> tuple[dict, int]:
         # ------------------------------Etag-------------------------
 
         # check etag that been generate
@@ -374,7 +351,7 @@ class TripService:
 
         # -----------------------------Cache---------------------------
         # get trips data
-        cache_key = self._generate_all_trips_metadata_cache_key(user_id=user_id)
+        cache_key = GetUserTripsDataCacheKey(user_id=user_id)
         cache_raw = self.cache_service.get(key=cache_key)
         if cache_raw:
             try:
@@ -385,9 +362,7 @@ class TripService:
                 print(e)
                 pass
         # ----------------------------Cache miss-----------------------
-        trip_data_row = self.TripDatabaseService.get_all_active_trips_from_user_id(
-            user_id=user_id
-        )
+        trip_data_row = self.TripRepository.get_all_trip_data(user_id=user_id)
         # early return
         if not trip_data_row:
             return {"code": "empty", "message": "There are no trips!"}, 200
@@ -396,21 +371,12 @@ class TripService:
         # loop through, convert time, generate image for each trip
         #
         for row in trip_data_row:
-            row["created_time"] = timestamptz_to_ms(row["created_time"])
-
-            row["ended_time"] = timestamptz_to_ms(row["ended_time"])
-
-            row["content_modified_time"] = timestamptz_to_ms(
-                row["content_modified_time"]
-            )
-            row["modified_time"] = timestamptz_to_ms(row["modified_time"])
-
-            if want_images:
-                default_image_path = row["image"]
-                # print('image',default_image_path)
-                if default_image_path:
-                    row["image"] = self.s3_service.generate_temp_uri(default_image_path)
+            # inject image
+            default_image_path = row["image"]
+            if default_image_path:
+                row["image"] = self.s3_service.generate_temp_uri(default_image_path)
             row_dict = dict(row)
+            # special key for app
             row_dict["trip_id"] = row_dict["id"]
             trip_data_list.append(row_dict)
 
@@ -566,13 +532,8 @@ class TripService:
             return {"code": "failed_to_update_trips_modified_time"}, 500
 
         # ---------------------------invalidate cache-------------------
-        all_trip_cache_key = self._generate_all_trips_metadata_cache_key(
-            user_id=user_id
-        )
-        self.cache_service.delete(key=all_trip_cache_key)
-
-        trip_cache_key = self._generate_trip_data_cache_key(trip_id=trip_id)
-        self.cache_service.delete(key=trip_cache_key)
+        self._invalidate_trip_cache(trip_id=trip_id)
+        self._invalidate_user_trip_list_cache(user_id=user_id)
 
         # -------------------------------------------------------
         return {"code": "successfully"}, 200
@@ -588,9 +549,11 @@ class TripService:
     def _invalidate_user_trip_list_cache(self, user_id: str):
         cache_key = self._generate_all_trips_metadata_cache_key(user_id=user_id)
         self.cache_service.delete(key=cache_key)
+        self.TripRepository.invalidate_user_trips_cache(user_id=user_id)
         return
 
     def _invalidate_trip_cache(self, trip_id: str):
         cache_key = self._generate_trip_data_cache_key(trip_id=trip_id)
         self.cache_service.delete(key=cache_key)
+        self.TripRepository.invalidate_trip_cache(trip_id=trip_id)
         return

@@ -4,7 +4,7 @@ from queue import Queue
 from src.database.s3.s3_client import ClientError, s3Client, s3Resource
 from src.error_handler.error_handler import ErrorHandler
 from src.server_config.config import Config
-from src.server_config.service.cache import Cache
+from src.utils.cache.cache import Cache
 
 MAX_CLOUD_UPLOAD_RETRY = 3
 WEB_PREFIX = "web_images/"

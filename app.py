@@ -19,7 +19,6 @@ from flask_mail import Mail, Message
 from werkzeug.exceptions import HTTPException
 
 from bootstraps.bootstrap_manager import bootstrap_manager
-from src.contents_sync.contents_sync_route import ContentsSyncRoute
 
 # from flask_admin import Admin
 from src.credential.credential_route import AuthServer
@@ -31,9 +30,9 @@ from src.server_config.discord_error_logs import (
     start_server_status_thread,
 )
 from src.trip_contents.trip_contents_routes import TripContentRoutes
-from src.trip_service.trip_contents.trip_contents_route import TripContentsRoute
 from src.trip_service.trip_route import TripRoute
 from src.user.user_route import UserRoute
+from src.user_setting.user_setting_route import UserSettingsRoutes
 from src.web.trip_view.trip_view_route import TripViewRoute
 from src.web.web_service import WebService
 
@@ -65,27 +64,27 @@ class Server:
     def _register_blueprints(self):
         auth_route = AuthServer()
         trip_route = TripRoute()
-        trip_contents_route = TripContentsRoute()
         user_route = UserRoute()
-        sync_route = ContentsSyncRoute()
+        user_settings_route = UserSettingsRoutes()
         trip_view_route = TripViewRoute()
         trip_content_routes = TripContentRoutes()
         internal_error_route = ErrorSSE()
+
         self.app.register_blueprint(auth_route.bp, url_prefix="/auth")
         self.app.register_blueprint(trip_route.bp, url_prefix="/trip")
 
-        self.app.register_blueprint(trip_contents_route.bp, url_prefix="/trip-contents")
         self.app.register_blueprint(trip_content_routes.bp, url_prefix="/trip-contents")
 
         self.app.register_blueprint(user_route.bp, url_prefix="/user")
-        self.app.register_blueprint(sync_route.bp, url_prefix="/sync")
         self.app.register_blueprint(trip_view_route.bp, url_prefix="/trip-view")
         self.app.register_blueprint(internal_error_route.bp, url_prefix="/internal")
+        self.app.register_blueprint(user_settings_route.bp, url_prefix="/user-settings")
+
         self.app.route("/", methods=["GET"])(self.landing)
         self.app.route("/app-version", methods=["GET"])(self.app_version)
         self.app.route("/privacy", methods=["GET"])(self.privacy)
         self.app.route("/policy-text", methods=["GET"])(self.policy_text)
-
+        self.app.route("/health", methods=["GET"])(self.health)
         # self.app.route("/testmap",methods =['GET'])(self.testmap)
 
         # self.app.route("/trip-view",methods =['GET'])(self.trip_view)
@@ -94,6 +93,9 @@ class Server:
         self.app.errorhandler(HTTPException)(self.error_exception_log)
         self.app.errorhandler(Exception)(self.error_exception_log)
         self.app.after_request(self.log_request)
+
+    def health(self):
+        return 200
 
     def testmap(self):
         return render_template("testmap.html")

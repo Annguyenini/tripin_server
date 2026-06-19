@@ -3,7 +3,7 @@ import json
 from werkzeug.http import generate_etag
 
 from src.database.database import Database
-from src.server_config.service.cache import Cache
+from src.utils.cache.cache import Cache
 
 
 class EtagService:

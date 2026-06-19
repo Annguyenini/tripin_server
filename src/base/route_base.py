@@ -29,6 +29,8 @@ class RouteBase:
     def _get_authenticated_user(self) -> tuple[dict | None, dict | None]:
         # verify jwt
         Ptoken = request.headers.get("Authorization")
+        if not Ptoken:
+            return None, {"message": "missing token", "code": "invalid_token"}
         token = Ptoken.replace("Bearer ", "")
         valid_token, message, code = self.tokenService.jwt_verify(token)
         # return if jwt in valid or expried
