@@ -47,8 +47,6 @@ services:
               python tests/scripts/create_test_user.py &&
               echo 'pytest version' &&
               pytest --version &&
-              echo 'trace config' &&
-              pytest --trace-config &&
               echo 'wait' &&
               sleep 10 &&
               echo 'run test'&&

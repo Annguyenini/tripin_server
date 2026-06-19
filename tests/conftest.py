@@ -1,3 +1,5 @@
+print("before import anything")
+
 import os
 import traceback
 
