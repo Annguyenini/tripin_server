@@ -51,6 +51,6 @@ services:
         pytest --version
 
         echo "run test"
-        python -X faulthandler -u -m pytest -vv -s --full-trace
+        python -m pytest -vv -s --full-trace
       '
     restart: "no"

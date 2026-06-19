@@ -60,7 +60,6 @@ jobs:
               cd tripin_server
               git fetch origin main
               git reset --hard origin/main
-
               mkdir -p ./logs/errorlogs
 
               docker compose up -d --build

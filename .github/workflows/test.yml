@@ -7,8 +7,6 @@ on:
         required: true
       PUBLIC_KEY:
         required: true
-      ENV_TEST:
-        required: true
       ENV_TEST_BASE_64:
         required: true
 
@@ -32,9 +30,6 @@ jobs:
         run: |
           echo "${{ secrets.ENV_TEST_BASE_64 }}" | base64 --decode > .env.test
 
-      - name: check env
-        run: |
-          cat .env.test
       - name: Set Up and Run Tests
         run: |
           docker compose -f docker-compose.test.yml down -v
