@@ -24,6 +24,11 @@ jobs:
           name: Set up env
           command: |
             echo "$ENV_TEST" >> .env.test
+
+      - run:
+          name: check env
+          command: |
+            echo "$ENV_TEST"
       - run:
           name: Build and run tests
           command: |
