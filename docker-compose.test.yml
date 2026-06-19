@@ -50,5 +50,5 @@ services:
               echo 'wait' &&
               sleep 10 &&
               echo 'run test'&&
-              python -m pytest -p no:all --collect-only -vv &&
+              python -m pytest -p no:all --collect-only -vv
     restart: "no"
