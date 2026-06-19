@@ -9,6 +9,8 @@ on:
         required: true
       ENV_TEST:
         required: true
+      ENV_TEST_BASE_64:
+        required: true
 
 jobs:
   test:
