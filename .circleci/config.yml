@@ -7,7 +7,7 @@ jobs:
   test-python:
     # Install dependencies and run tests
     machine:
-      image: ubuntu-2204
+      image: ubuntu-2204:current
     environment:
       DATABASE_URL: postgresql://testuser:testpass@test_db:5432/tripin
       FLASK_ENV: testing
@@ -38,7 +38,7 @@ jobs:
 
   deploy:
     machine:
-      image: ubuntu-2204
+      image: ubuntu-2204:current
 
     steps:
       - checkout
