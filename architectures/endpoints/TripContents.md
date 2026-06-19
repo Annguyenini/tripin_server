@@ -24,7 +24,9 @@ All routes require JWT authentication. The user's `user_id` is extracted from th
 
 ### `GET /get-all-contents/<trip_id>`
 
-Fetch all content cards for a trip. Supports ETag-based caching via the `If-None-Match` header.
+Fetch all content cards for a trip. Supports ETag-based caching via the `If-None-Match` header. Layer that access database from `TripContentsRepository` then generate and inject image url from s3
+
+Cache use - `trip_contents::{trip_id}`
 
 **Headers**
 - `Authorization` — JWT token
@@ -50,6 +52,7 @@ Media paths for `photo`/`video` types are replaced with temporary S3 presigned U
 Sync content cards from the client. Processes `add` and `remove` events in order.
 
 **Request Body**
+
 ```json
 {
   "trip_id": "string",
@@ -79,6 +82,8 @@ For `remove` events, also include:
 ```json
 { "modified_time": 1700000000000 }
 ```
+
+For `add` events, we assuming that contents been push to s3 and verified by app.
 
 **Response**
 
@@ -120,7 +125,7 @@ S3 key format: `trips/{trip_id}/{filename}`
 
 ### `POST /request-trip-contents-hash`
 
-Get the current MD5 hash of all content cards for a trip. Used by the client to check if a full pull is needed.
+Get the current MD5 hash of all content cards for a trip. Used by the client to check if a sync is needed.
 
 **Request Body**
 ```json
@@ -163,11 +168,11 @@ Fetch lightweight metadata for all content cards (no presigned URLs, no timestam
 
 Singleton. Depends on:
 - `TripContentsDatabaseService` — PostgreSQL queries
-- `TripDataBaseService` — trip ownership lookup
-- `ViewTripDatabaseService`
+- `TripPolicy` — trip ownership lookup
 - `S3Service` — presigned URL generation and media deletion
 - `TokenService`
 - `ErrorHandler`
+- `TripRepository` - access model from database 
 
 ---
 
@@ -200,14 +205,11 @@ Returns `{ hash }` from `TripContentsDatabase.generate_contents_hash`.
 #### `get_all_content_card_meta_data_from_trip_id(trip_id, user_id)`
 Returns raw content card rows without URL generation or timestamp conversion.
 
-#### `owner_validation_policy(user_id, trip_id)` *(private)*
-Raises `PermissionError` if `user_id` doesn't match the trip's owner. Called at the top of most service methods.
-
 ---
 
 ## Notes
 
-- `ms_to_timestamptz` / `timestamptz_to_ms` are imported from `trip_service` for timestamp conversion
+- `ms_to_timestamptz` / `timestamptz_to_ms` are imported from `utils` for timestamp conversion
 - S3 path format: `trips/{trip_id}/{media_path}`
 - Hash comparison uses `generate_contents_hash` (MD5 of sorted media IDs) — `null` hash on server always triggers full pull
 - `handle_sync` uses a shadow variable `request` inside the loop that shadows Flask's `request` — be careful if refactoring

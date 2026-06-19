@@ -12,8 +12,8 @@ from src.credential.auth.login_service import LoginService
 from src.credential.auth.reset_password import ResetPasswordService
 from src.credential.auth.signup_service import SignupService
 from src.credential.provider.provider_auth import ProviderAuth
-from src.server_config.service.cache import Cache
 from src.token.tokenservice import TokenService
+from src.utils.cache.cache import Cache
 
 
 class AuthServer(RouteBase):

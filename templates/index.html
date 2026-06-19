@@ -19,11 +19,13 @@
         <img
             class="globe-spin"
             src="{{ url_for('static', filename='icon.png') }}"
-            alt="/static/styles/index.css"
+            alt=""
             aria-hidden="true"
         />
+
         <!-- brand -->
         <div class="brand">{{ settings.get('brand_name', 'TRIPPING') }}</div>
+        <a href="/privacy" class="policy-link">Privacy Policy</a>
 
         <!-- hero -->
         <div class="hero">
@@ -34,23 +36,27 @@
             <div class="hero-sub">
                 {{ settings.get('hero_tagline', 'Explore · Capture · Share') }}
             </div>
+
+            <div class="bottom-container">
+                <a
+                    href="{{ settings.get('appstore_url', 'https://apps.apple.com/') }}"
+                    class="appstore-btn"
+                    target="_blank"
+                >
+                    {{ settings.get('appstore_label', 'Download on the App
+                    Store') }}
+                    <span class="badge"
+                        >{{ settings.get('appstore_badge', 'Beta (IOS
+                        TestFlight)') }}</span
+                    >
+                </a>
+            </div>
+
+            <div class="scroll-hint">Preview</div>
         </div>
 
-        <!-- bottom -->
-        <div class="bottom-container">
-            <a
-                href="{{ settings.get('appstore_url', 'https://apps.apple.com/') }}"
-                class="appstore-btn"
-                target="_blank"
-            >
-                {{ settings.get('appstore_label', 'Download on the App Store')
-                }}
-                <span class="badge"
-                    >{{ settings.get('appstore_badge', 'Beta (IOS TestFlight)')
-                    }}</span
-                >
-            </a>
-
+        <!-- gallery, revealed on scroll -->
+        <section class="image-section">
             <ul class="image-list">
                 {% for img in settings.images %}
                 <li>
@@ -60,27 +66,45 @@
                 <li>
                     <img
                         src="{{ url_for('static', filename='images/sample1.png') }}"
+                        alt="trip photo"
+                        loading="lazy"
                     />
                 </li>
                 <li>
                     <img
                         src="{{ url_for('static', filename='images/sample2.png') }}"
+                        alt="trip photo"
+                        loading="lazy"
                     />
                 </li>
                 <li>
                     <img
                         src="{{ url_for('static', filename='images/sample3.png') }}"
+                        alt="trip photo"
+                        loading="lazy"
                     />
                 </li>
                 {% endfor %}
             </ul>
-        </div>
+        </section>
 
         <div class="stamp">
             {{ settings.get('stamp_text', 'TRIPPING · 2026') }}
         </div>
-        <a href="/privacy" class="policy-link">Privacy Policy</a>
+
+        <!-- lightbox -->
+        <div class="lightbox" id="lightbox">
+            <button
+                class="lightbox-close"
+                id="lightboxClose"
+                aria-label="Close"
+            >
+                ✕
+            </button>
+            <img id="lightboxImg" src="" alt="" />
+        </div>
     </body>
+
     <script>
         const globe = document.querySelector(".globe-spin");
         document.addEventListener("mousemove", (e) => {
@@ -90,14 +114,55 @@
             globe.style.marginTop = `${my * 72}px`;
         });
     </script>
+
     <script>
         const setting = {{ settings | tojson }};
         const list = document.querySelector(".image-list");
-        list.innerHTML = "";
-        setting.images.forEach((img) => {
-            const li = document.createElement("li");
-            li.innerHTML = `<img src="${img.url}" alt="trip photo" loading="lazy" />`;
-            list.appendChild(li);
+        if (setting.images && setting.images.length) {
+            list.innerHTML = "";
+            setting.images.forEach((img) => {
+                const li = document.createElement("li");
+                li.innerHTML = `<img src="${img.url}" alt="trip photo" loading="lazy" />`;
+                list.appendChild(li);
+            });
+        }
+
+        // re-observe after dynamic content is injected
+        const observer = new IntersectionObserver(
+            (entries) => {
+                entries.forEach((entry) => {
+                    if (entry.isIntersecting) entry.target.classList.add("in-view");
+                });
+            },
+            { threshold: 0.15 }
+        );
+        document.querySelectorAll(".image-list li").forEach((li) => observer.observe(li));
+
+        // lightbox
+        const lightbox = document.getElementById("lightbox");
+        const lightboxImg = document.getElementById("lightboxImg");
+        const lightboxClose = document.getElementById("lightboxClose");
+
+        function openLightbox(src, alt) {
+            lightboxImg.src = src;
+            lightboxImg.alt = alt || "";
+            lightbox.classList.add("open");
+        }
+
+        function closeLightbox() {
+            lightbox.classList.remove("open");
+        }
+
+        document.querySelectorAll(".image-list li img").forEach((img) => {
+            img.addEventListener("click", () => openLightbox(img.src, img.alt));
+        });
+
+        lightboxClose.addEventListener("click", closeLightbox);
+        lightbox.addEventListener("click", (e) => {
+            if (e.target === lightbox) closeLightbox();
+        });
+        document.addEventListener("keydown", (e) => {
+            if (e.key === "Escape") closeLightbox();
         });
     </script>
 </html>

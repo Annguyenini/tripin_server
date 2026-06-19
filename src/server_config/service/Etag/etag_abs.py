@@ -1,7 +1,7 @@
 from abc import ABC, abstractmethod
 from typing import Any
 
-from src.server_config.service.cache import Cache
+from src.utils.cache.cache import Cache
 
 
 class EtagService(ABC):

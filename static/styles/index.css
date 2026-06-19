@@ -14,17 +14,14 @@
 
 html,
 body {
-    height: 100%;
     width: 100%;
-    overflow: hidden;
+    overflow-x: hidden;
 }
 
 body {
     display: flex;
     flex-direction: column;
     align-items: center;
-    justify-content: flex-end;
-    padding: 36px 24px;
     background: radial-gradient(
         ellipse 90% 90% at 55% 45%,
         #f0f0ec 0%,
@@ -94,14 +91,15 @@ body::before {
     font-size: 22px;
     color: var(--ink);
     letter-spacing: 0.04em;
-    z-index: 2;
+    z-index: 3;
     animation: fadeUp 0.6s cubic-bezier(0.16, 1, 0.3, 1) both;
 }
 
-/* hero */
+/* hero — takes exactly one viewport, then page scrolls past it */
 .hero {
-    position: fixed;
-    inset: 0;
+    position: relative;
+    height: 100vh;
+    width: 100%;
     display: flex;
     flex-direction: column;
     align-items: center;
@@ -139,7 +137,38 @@ body::before {
     margin-top: 18px;
 }
 
-/* bottom */
+.scroll-hint {
+    position: absolute;
+    bottom: 32px;
+    left: 50%;
+    transform: translateX(-50%);
+    font-size: 11px;
+    color: var(--muted);
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 6px;
+    animation: bounce 2s ease-in-out infinite;
+}
+
+.scroll-hint::after {
+    content: "↓";
+    font-size: 14px;
+}
+
+@keyframes bounce {
+    0%,
+    100% {
+        transform: translate(-50%, 0);
+    }
+    50% {
+        transform: translate(-50%, 6px);
+    }
+}
+
+/* bottom container — app store button, sits at the end of the hero */
 .bottom-container {
     position: relative;
     z-index: 2;
@@ -149,6 +178,7 @@ body::before {
     gap: 20px;
     width: 100%;
     max-width: 720px;
+    margin-top: 36px;
     animation: fadeUp 0.9s cubic-bezier(0.16, 1, 0.3, 1) 0.2s both;
 }
 
@@ -190,26 +220,45 @@ body::before {
     font-weight: 300;
 }
 
-/* image list */
+/* image gallery — revealed on scroll */
+.image-section {
+    position: relative;
+    z-index: 2;
+    width: 100%;
+    padding: 40px 24px 120px;
+    display: flex;
+    justify-content: center;
+}
+
 .image-list {
     display: grid;
-    grid-template-columns: repeat(3, 1fr);
-    gap: 12px;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 16px;
     width: 100%;
+    max-width: 1000px;
     list-style: none;
 }
 
 .image-list li {
-    height: 280px;
-    border: 6px solid var(--paper);
-    border-bottom: 22px solid var(--paper);
-    box-shadow: 4px 4px 0 rgba(0, 0, 0, 0.18);
+    position: relative;
+    isolation: isolate;
+    aspect-ratio: 2 / 4;
+    border-radius: 10px;
     overflow: hidden;
-    transition:
-        transform 0.15s,
-        box-shadow 0.15s;
     background: #ccc;
-    border-radius: 2px;
+    box-shadow: 0 2px 6px rgba(0, 0, 0, 0.15);
+    opacity: 0;
+    transform: translateY(24px);
+    transition:
+        opacity 0.6s cubic-bezier(0.16, 1, 0.3, 1),
+        transform 0.6s cubic-bezier(0.16, 1, 0.3, 1),
+        box-shadow 0.2s ease;
+    /* height: 500px;  ← removed, this is what broke phone sizing */
+}
+
+.image-list li.in-view {
+    opacity: 1;
+    transform: translateY(0);
 }
 
 .image-list li img {
@@ -221,27 +270,69 @@ body::before {
 }
 
 .image-list li:hover {
-    transform: translate(-3px, -3px) rotate(-1.5deg);
-    box-shadow: 7px 7px 0 rgba(0, 0, 0, 0.2);
+    transform: translateY(-4px);
+    box-shadow: 0 10px 20px rgba(0, 0, 0, 0.2);
 }
 
-.image-list li:nth-child(1) {
-    transform: rotate(-2deg);
+.image-list li img {
+    cursor: pointer;
 }
-.image-list li:nth-child(2) {
-    transform: rotate(1deg);
+
+/* lightbox */
+.lightbox {
+    position: fixed;
+    inset: 0;
+    z-index: 10;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: rgba(20, 18, 16, 0.86);
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 0.25s ease;
+    padding: 40px;
 }
-.image-list li:nth-child(3) {
-    transform: rotate(-1.5deg);
+
+.lightbox.open {
+    opacity: 1;
+    pointer-events: auto;
 }
-.image-list li:nth-child(4) {
-    transform: rotate(2deg);
+
+.lightbox img {
+    max-width: min(90vw, 720px);
+    max-height: 86vh;
+    object-fit: contain;
+    border-radius: 8px;
+    box-shadow: 0 20px 60px rgba(0, 0, 0, 0.5);
+    transform: scale(0.96);
+    transition: transform 0.25s ease;
 }
-.image-list li:nth-child(5) {
-    transform: rotate(-1deg);
+
+.lightbox.open img {
+    transform: scale(1);
 }
-.image-list li:nth-child(6) {
-    transform: rotate(1.5deg);
+
+.lightbox-close {
+    position: absolute;
+    top: 24px;
+    right: 28px;
+    width: 36px;
+    height: 36px;
+    border-radius: 50%;
+    background: rgba(255, 255, 255, 0.12);
+    color: #f0f0ec;
+    border: none;
+    font-size: 18px;
+    font-family: "DM Mono", monospace;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: background 0.15s;
+}
+
+.lightbox-close:hover {
+    background: rgba(255, 255, 255, 0.22);
 }
 
 /* stamp */
@@ -254,7 +345,7 @@ body::before {
     letter-spacing: 0.14em;
     text-transform: uppercase;
     transform: rotate(2deg);
-    z-index: 2;
+    z-index: 3;
 }
 
 @keyframes fadeUp {
@@ -268,18 +359,32 @@ body::before {
     }
 }
 
+@media (max-width: 900px) {
+    .image-list {
+        grid-template-columns: repeat(3, 1fr);
+    }
+}
+
 @media (max-width: 600px) {
     .hero-title {
         font-size: clamp(48px, 16vw, 80px);
-    }
-    .image-list li {
-        height: 140px;
     }
     .appstore-btn {
         font-size: 14px;
         padding: 12px 24px;
     }
+    .image-list {
+        grid-template-columns: repeat(2, 1fr);
+        gap: 10px;
+    }
+    .image-list li {
+        aspect-ratio: 3 / 4; /* less extreme ratio for narrow columns */
+    }
+    .image-section {
+        padding: 24px 16px 80px;
+    }
 }
+
 .globe-spin {
     position: fixed;
     top: 50%;
@@ -322,7 +427,7 @@ body::before {
     text-decoration: none;
     letter-spacing: 0.06em;
     transition: opacity 0.2s;
-    z-index: 2;
+    z-index: 3;
 }
 
 .policy-link:hover {

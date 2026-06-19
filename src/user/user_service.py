@@ -1,5 +1,4 @@
 import uuid
-from linecache import cache
 
 from src.audit.userdata_audit import UserdataAudit
 from src.database.database import Database
@@ -9,9 +8,9 @@ from src.database.s3.s3_dirs import AVATAR_DIR
 from src.database.s3.s3_service import S3Sevice
 from src.database.userdata_db_service import UserDataDataBaseService
 from src.error_handler.error_handler import ErrorHandler
-from src.server_config.service.cache import Cache
 from src.server_config.service.Etag.etag_services import UserdataEtag
 from src.trip_service.trip_service import ms_to_timestamptz
+from src.utils.cache.cache import Cache
 
 
 def GENERATE_RANDOM_PENDING_TOKEN(user_id: str):

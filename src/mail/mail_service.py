@@ -3,7 +3,7 @@ from operator import sub, truediv
 from flask_mail import Mail, Message
 
 from src.error_handler.error_handler import ErrorHandler
-from src.server_config.service.cache import Cache
+from src.utils.cache.cache import Cache
 
 mail = Mail()
 

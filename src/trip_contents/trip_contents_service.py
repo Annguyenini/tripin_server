@@ -1,3 +1,4 @@
+import json
 from datetime import datetime
 from types import SimpleNamespace
 from typing import Any
@@ -7,8 +8,16 @@ from src.database.trip_content_db_service import TripContentsDatabaseService
 from src.database.tripdata_db_service import TripDataBaseService
 from src.database.view_trip_db_service import ViewTripDatabaseService
 from src.error_handler.error_handler import ErrorHandler
+from src.repository.trip_contents_repository import TripContentsRepository
+from src.repository.trip_permission import TripPolicy
 from src.token.tokenservice import TokenService
-from src.trip_service.trip_service import ms_to_timestamptz, timestamptz_to_ms
+from src.trip_service.trip_service import (
+    TripService,
+    ms_to_timestamptz,
+    timestamptz_to_ms,
+)
+from src.utils.cache.cache import Cache
+from src.utils.cache.keys.cache_keys import GetTripContentsCacheKey
 from src.utils.handle_exception import handle_exception
 
 
@@ -41,6 +50,10 @@ class TripContentsService:
         self.ErrorHandler = ErrorHandler().logger("TripContentService")
         self.TokenService = TokenService()
         self.ViewTripDatabaseService = ViewTripDatabaseService()
+        self.TripService = TripService()
+        self.TripPolicy = TripPolicy()
+        self.TripContentsRepository = TripContentsRepository()
+        self.CacheService = Cache()
         self._init = True
         pass
 
@@ -104,8 +117,10 @@ class TripContentsService:
                 #     fail_requests.append(request)
 
         if fail_requests:
-            print(fail_requests)
             return {"code": "requests_failed", "request": fail_requests}, 500
+
+        # ---------------------------invalidate cache---------------------------
+        self._invalid_cache(trip_id=trip_id)
         return {"code": "successfully"}, 200
 
     def _insert_card_to_database(
@@ -125,7 +140,6 @@ class TripContentsService:
             media_path = self._generate_content_key_s3(
                 trip_id=trip_id, timestamp_ms=time_stamp, content_type=media_type
             )
-            print(media_path)
             media_id = card_data.get("media_id")
 
             # -----location data ---
@@ -235,56 +249,49 @@ class TripContentsService:
         except Exception as e:
             return {"code": "failed"}, 500
 
+    @handle_exception("Trip Content", "get all trip contents from trip")
     def get_all_content_card_from_trip_id(
         self, trip_id: str, user_id: str, client_hash: str = None
     ) -> tuple[list[dict], int]:
-        try:
-            # guard
-            assert trip_id, "trip id is empty"
-            assert user_id, "user id is empty"
+        # guard
 
-            #  owner validation
-            self.owner_validation_policy(user_id=user_id, trip_id=trip_id)
-
-            server_hash = self.TripContentsDatabase.generate_contents_hash(
-                trip_id=trip_id
-            )
-            if client_hash == server_hash and client_hash and server_hash:
-                return {"code": "match"}, 304
-            # content cards
-            contents = self.TripContentsDatabase.get_all_trip_add_content_cards(
-                trip_id=trip_id
-            )
-            if contents is None:
-                return {"code": "failed"}, 500
-
-            # loop through to convert data
-            for content in contents:
-                media_type = content.get("media_type")
-
-                # if media type is photo or video, genrate temp uri
-                if media_type == "photo" or media_type == "video":
-                    default_path = content["media_path"]
-                    media_path = self.s3Service.generate_temp_uri(
-                        get_s3_media_path(trip_id=trip_id, media_path=default_path)
-                    )
-                    content["media_path"] = media_path
-
-                # convert timestamp to ms
-                content["time_stamp"] = timestamptz_to_ms(
-                    timestamp=content["time_stamp"]
-                )
-                content["modified_time"] = timestamptz_to_ms(
-                    timestamp=content["modified_time"]
-                )
+        if not trip_id or not user_id:
+            raise ValueError("missing inputs")
+        #  owner validation
+        self.TripPolicy.trip_permission_policy(user_id=user_id, trip_id=trip_id)
+        # ------------------------------check cache------------------------------
+        cache_key = GetTripContentsCacheKey(trip_id=trip_id)
+        raw = self.CacheService.get(key=cache_key)
+        if raw:
+            contents = json.loads(raw)
             return {"code": "successfully", "content_cards": contents}, 200
-        except AssertionError as ass:
-            return {"code": "missing_require_inputs"}, 402
-        except PermissionError as e:
-            return {"code": "no_permission"}, 403
-        except Exception as e:
-            self.ErrorHandler.error("failed to get add trip contents", {e})
-            return {"code": "failed"}, 502
+        # ------------------------------cache miss---------------------------------
+        # check hash
+        server_hash = self.TripContentsDatabase.generate_contents_hash(trip_id=trip_id)
+        if client_hash == server_hash and client_hash and server_hash:
+            return {"code": "match"}, 304
+        # ------------------------------get contents------------------------------
+        # content cards
+        contents = self.TripContentsRepository.get_trip_content(trip_id=trip_id)
+        if contents is None:
+            return {"code": "failed"}, 500
+
+        # loop through to convert data
+        for content in contents:
+            if content["event"] == "remove":
+                continue
+            media_type = content.get("media_type")
+            # if media type is photo or video, genrate temp uri
+            if media_type == "photo" or media_type == "video":
+                default_path = content["media_path"]
+                media_path = self.s3Service.generate_temp_uri(
+                    get_s3_media_path(trip_id=trip_id, media_path=default_path)
+                )
+                content["media_path"] = media_path
+
+        # ----------------------------------put in cache--------------------------------
+        self.CacheService.set(key=cache_key, time=3600, data=json.dumps(contents))
+        return {"code": "successfully", "content_cards": contents}, 200
 
     def _trip_owner_validation(self, trip_id: str, user_id: str):
         try:
@@ -347,3 +354,8 @@ class TripContentsService:
     def owner_validation_policy(self, user_id: str, trip_id: str):
         if not self._trip_owner_validation(user_id=user_id, trip_id=trip_id):
             raise PermissionError("no_permission")
+
+    def _invalid_cache(self, trip_id: int):
+        cache_key = GetTripContentsCacheKey(trip_id=trip_id)
+        self.CacheService.delete(key=cache_key)
+        self.TripContentsRepository.invalid_trip_contents_cache(trip_id=trip_id)

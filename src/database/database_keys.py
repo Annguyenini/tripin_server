@@ -10,6 +10,7 @@ DATABASEKEYS = SimpleNamespace(
         TRIP_SHARED_LINKS="tripin_trips.trip_shared_links",
         USER_AUDIT="tripin_auth.user_audit",
         TRIP_CONTENT_CARDS="tripin_trips.content_cards",
+        USER_SETTINGS="tripin_auth.user_settings",
     ),
     USERDATA=SimpleNamespace(
         USER_ID="id",
@@ -128,5 +129,11 @@ DATABASEKEYS = SimpleNamespace(
         IP_ADDRESS="ip_address",
         NEW_VALUE="new_value",
         OLD_VALUE="old_value",
+    ),
+    USER_SETTINGS=SimpleNamespace(
+        USER_ID="user_id",
+        HAS_SEEN_ONBOARDING="has_seen_onboarding",
+        LANGUAGE="language",
+        UPDATE_AT="update_at",
     ),
 )

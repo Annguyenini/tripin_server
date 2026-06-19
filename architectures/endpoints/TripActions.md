@@ -2,253 +2,278 @@
 
 ## Overview
 
-Handles all core trip lifecycle operations — creating, fetching, updating, ending, and deleting trips.
+The **Trip Module** manages the full lifecycle of user trips, including
+creation, retrieval, updates, completion, and deletion.\
+It integrates PostgreSQL, Redis caching, ETag optimization, and AWS S3
+for media storage.
 
----
+------------------------------------------------------------------------
 
 ## Routes (`TripRoute`)
 
-All routes require JWT authentication unless otherwise noted.
+All routes require JWT authentication unless explicitly stated.
 
-| Method | Endpoint | Handler |
-|--------|----------|---------|
-| `POST` | `/new-trip` | `request_new_trip` |
-| `GET` | `/all-trips/full` | `request_all_trips_data` |
-| `GET` | `/current-trip-id` | `request_current_trip_id` |
-| `POST` | `/end-trip` | `end_trip` |
-| `POST` | `/trip` | `request_trip_data` |
-| `GET` | `/trip-by-token/<token>` | `request_trip_data_by_shared_links` |
-| `POST` | `/modify-trip-data` | `change_trip_data` |
-| `DELETE` | `/trip` | `request_remove_trip` |
+  ----------------------------------------------------------------------------------
+  Method             Endpoint                          Description
+  ------------------ --------------------------------- -----------------------------
+  POST               /new-trip                         Create a new trip
 
----
+  POST               /trip-cover-upload-verification   Verify uploaded trip cover
+                                                       image
 
-### `POST /new-trip`
+  GET                /all-trips/full                   Fetch all user trips
 
-Create a new trip. Uses `multipart/form-data` to support optional cover image.
+  GET                /current-trip-id                  Get active trip ID
 
-**Form Fields**
+  POST               /end-trip                         End an active trip
 
-| Field | Type | Required |
-|-------|------|----------|
-| `trip_name` | string | yes |
-| `created_time` | ms timestamp | yes |
-| `image` | file | no |
+  POST               /trip                             Fetch single trip
 
-**Response**
+  GET                /trip-by-token/`<token>`{=html}   Public shared trip access
 
-| Code | Body |
-|------|------|
-| `200` | `{ code: "successfully", trip_id }` |
-| `400` | `{ code: "active_trip" }` — already on a trip |
-| `400` | `{ code: "exists_trip_name" }` — name taken |
-| `401` | Auth error |
-| `500` | Cloud or DB failure |
+  POST               /modify-trip-data                 Update trip details
 
-If an image is provided and upload fails, the newly created trip is deleted via a rollback callback.
+  DELETE             /trip                             Soft delete trip
+  ----------------------------------------------------------------------------------
 
----
+------------------------------------------------------------------------
 
-### `GET /all-trips/full`
+## POST /new-trip
 
-Fetch all active trips for the authenticated user. Supports ETag caching.
+Creates a new trip with optional cover image.
 
-**Headers**
-- `If-None-Match` *(optional)* — client's cached ETag
+### Request
 
-**Response**
-
-| Code | Body |
-|------|------|
-| `200` | `{ all_trip_data: [...], etag }` |
-| `200` | `{ code: "empty" }` — no trips yet |
-| `304` | ETag matched, use cached data |
-| `401` | Auth error |
-| `500` | Server error |
-
-Each trip includes a temporary S3 URI for its cover image. Timestamps are in milliseconds.
-
----
-
-### `GET /current-trip-id`
-
-Returns the user's currently active trip ID, or `null` if not on a trip.
-
-**Response**
-
-| Code | Body |
-|------|------|
-| `200` | `{ current_trip_id: "string" \| null }` |
-| `401` | Auth error |
-
----
-
-### `POST /trip`
-
-Fetch a single trip's data by ID. Supports ETag caching.
-
-**Headers**
-- `If-None-Match` *(optional)*
-
-**Request Body**
-```json
-{ "trip_id": "string" }
+``` json
+{
+  "trip_name": "string",
+  "created_time": 1700000000000,
+  "image": true
+}
 ```
 
-**Response**
+### Responses
 
-| Code | Body |
-|------|------|
-| `200` | `{ trip_data: {...}, etag }` |
-| `304` | Not modified |
-| `400` | Trip not found or soft-deleted |
-| `401` | Auth error |
-| `403` | Not trip owner |
+``` json
+{
+  "trip_id": "int",
+  "presign_url": optional("string"),
+  "pending_token": int
+}
+```
+-   201: Trip created successfully - \
+-   400: Active trip exists / duplicate name / invalid input\
+-   401: Authentication error\
+-   500: Server or storage failure
 
-`trip_data` includes `trip_id` (alias of `id`), ms timestamps, and a temporary image URI.
+### Notes
 
----
+-   One active trip per user enforced
+-   Trip names must be unique per user
+-   Optional S3 upload via presigned URL
 
-### `GET /trip-by-token/<token>`
+------------------------------------------------------------------------
 
-Fetch trip data via a shared link token. No JWT required. Token must be a 64-character SHA-256 hex string.
+## POST /trip-cover-upload-verification
 
-**Headers**
-- `If-None-Match` *(optional)* — browser cache ETag
+Verifies S3 upload and attaches cover image.
 
-**Response**
+### Request
 
-| Code | Body |
-|------|------|
-| `200` | `{ trip_data }` + `ETag` header |
-| `304` | `{ etag }` — data unchanged |
-| `404` | Invalid or malformed token |
-| `500` | Server error |
+``` json
+{
+  "pending_token": "string",
+  "modified_time": 1700000000000
+}
+```
 
----
+### Responses
 
-### `POST /modify-trip-data`
+-   200: Image successfully linked\
+-   400: Invalid or missing token\
+-   500: Upload verification failure
 
-Update trip name and/or cover image. Uses `multipart/form-data`.
+------------------------------------------------------------------------
 
-**Form Fields**
+## GET /all-trips/full
 
-| Field | Type | Required |
-|-------|------|----------|
-| `trip_id` | string | yes |
-| `modified_time` | ms timestamp | yes |
-| `trip_name` | string | no |
-| `image` | file | no |
+Returns all trips for a user with caching and ETag support.
 
-At least one of `trip_name` or `image` must be provided.
+### Features
 
-**Response**
+-   Redis caching (1 hour TTL)
+-   ETag-based conditional responses
+-   S3 temporary image URLs injected
 
-| Code | Body |
-|------|------|
-| `200` | `{ code: "successfully" }` |
-| `400` | Trip not found, duplicate name, or missing inputs |
-| `401` | Auth error |
-| `403` | Not trip owner |
-| `500` | DB or cloud failure |
+### Responses
 
-If S3 upload fails after a name change, the name is rolled back.
+-   200: Trip list + ETag\
+-   304: Not modified\
+-   401: Authentication error\
+-   500: Server error
 
----
+------------------------------------------------------------------------
 
-### `DELETE /trip`
+## GET /current-trip-id
 
-Soft-delete a trip (sets `event = "remove"`). Cover image in S3 is NOT deleted.
+Returns currently active trip ID.
 
-**Request Body**
-```json
+``` json
+{
+  "current_trip_id": "string | null"
+}
+```
+
+------------------------------------------------------------------------
+
+## POST /trip
+
+Fetch a single trip by ID.
+
+### Request
+
+``` json
+{
+  "trip_id": "string"
+}
+```
+
+### Responses
+
+-   200: Trip data\
+-   304: Not modified (ETag match)\
+-   400: Trip not found or deleted\
+-   401: Authentication error\
+-   403: Unauthorized access
+
+------------------------------------------------------------------------
+
+## GET /trip-by-token/`<token>`{=html}
+
+Public access to trip via shared token.
+
+### Requirements
+
+-   64-character SHA256 token
+
+### Responses
+
+-   200: Trip data\
+-   304: Cached version valid\
+-   404: Invalid token\
+-   500: Server error
+
+------------------------------------------------------------------------
+
+## POST /modify-trip-data
+
+Updates trip name and/or cover image.
+
+### Request
+
+``` json
+{
+  "trip_id": "string",
+  "trip_name": "string (optional)",
+  "modified_time": 1700000000000,
+  "image": true
+}
+```
+
+### Responses
+
+-   201: Update successful\
+-   400: Invalid input or duplicate name\
+-   401: Authentication error\
+-   403: Unauthorized\
+-   500: Server failure
+
+------------------------------------------------------------------------
+
+## DELETE /trip
+
+Soft deletes a trip (S3 image retained).
+
+### Request
+
+``` json
 {
   "trip_id": "string",
   "deleted_time": 1700000000000
 }
 ```
 
-**Response**
+### Responses
 
-| Code | Body |
-|------|------|
-| `200` | `{ code: "successfully" }` |
-| `400` | Already removed or missing inputs |
-| `401` | Auth error |
-| `500` | DB failure |
+-   200: Deleted successfully\
+-   400: Already removed or invalid\
+-   401: Authentication error\
+-   500: Database failure
 
----
+------------------------------------------------------------------------
 
-### `POST /end-trip`
+## POST /end-trip
 
-Mark a trip as ended.
+Marks a trip as completed.
 
-**Request Body**
-```json
+### Request
+
+``` json
 {
   "trip_id": "string",
   "ended_time": 1700000000000
 }
 ```
 
-**Response**
+### Responses
 
-| Code | Body |
-|------|------|
-| `200` | `{ code: "successfully" }` or `{ code: "trip_ended" }` if already ended |
-| `400` | Trip not found |
-| `401` | Auth error |
-| `403` | Not trip owner |
-| `500` | DB failure |
+-   200: Success / already ended\
+-   400: Trip not found\
+-   401: Authentication error\
+-   403: Unauthorized\
+-   500: Server error
 
----
+------------------------------------------------------------------------
 
-## Service (`TripService`)
+## Architecture Notes
 
-Singleton. Depends on:
-- `TripDataBaseService` — primary trip CRUD
-- `TripDatabaseService` — secondary trip queries
-- `UserDataDataBaseService` — user-level `trips_modified_time` updates
-- `S3Service` — cover image upload and temp URI generation
-- `AllTripsDataEtag` / `TripDataEtag` — ETag generation and Redis caching
-- `EtagService`, `Cache`, `InputValidation`, `ErrorHandler`, `TokenService`
+### Services Used
 
----
+-   PostgreSQL (Trip storage)
+-   Redis (Caching layer)
+-   AWS S3 (Image storage)
+-   ETag Service (HTTP optimization)
 
-### Key Methods
+### Caching Strategy
 
-#### `process_new_trip(user_id, trip_name, created_time, image)`
-Validates no active trip exists and trip name is unique, inserts the trip, optionally uploads a cover image to S3. Rollback deletes the trip from DB if S3 fails.
+-   Trip list cached per user
+-   Individual trip cached per ID
+-   Invalidated on any mutation
 
-#### `end_a_trip(trip_id, user_id, ended_time)`
-Validates trip exists, is still active, and is owned by the user, then updates `ended_time` in the DB.
+### ETag Strategy
 
-#### `get_current_trip_id(user_id)`
-Returns `current_trip_id` from the DB (or `null`).
+-   Based on:
+    -   Modified timestamp
+    -   Hourly bucket system
+-   Used for conditional GET requests
 
-#### `get_trip_data(user_id, trip_id, client_etag)`
-Generates ETag from `modified_time` + hourly bucket. Returns `304` on match. Converts timestamps to ms and generates a temp S3 URI for the cover image.
+### Ownership Rule
 
-#### `get_trip_data_from_token(client_etag, token)`
-Same ETag logic as above but looks up trip via shared token. No ownership check.
+All modifications require:
 
-#### `get_all_trip_data(user_id, want_images, client_etag)`
-ETag is derived from `user.trips_modified_time` + hourly bucket. Converts all trips and optionally attaches temp image URIs.
+    trip.user_id == user_id
 
-#### `change_trip_data(new_trip_name, trip_id, user_id, modified_time, image)`
-Updates name and/or image with rollback on failure. Updates both `trip.modified_time` and `user.trips_modified_time` to invalidate ETags.
+------------------------------------------------------------------------
 
-#### `remove_trip(user_id, trip_id, deleted_time)`
-Soft-delete via `event = "remove"`. Updates `user.trips_modified_time`.
+## Storage Conventions
 
-#### `trip_owner_validation(user_id, trip_data)` *(private)*
-Returns `bool` — checks `trip_data["user_id"] == user_id`.
+-   Cover image path:
 
----
+```{=html}
+<!-- -->
+```
+    trips/{trip_id}/cover.jpg
 
-## Notes
-
-- ETag bucket resets hourly (`int(time.time() // 3600)`) to force S3 temp URL refresh
-- `ms_to_timestamptz` / `timestamptz_to_ms` are defined in this module and shared with `TripContentsService`
-- S3 cover image path is always `trips/{trip_id}/cover.jpg`
-- `remove_trip` is a ghost/soft delete — S3 cover image is intentionally left in place
+-   Soft delete:
+    -   Trips are marked as removed
+    -   Media is retained in S3

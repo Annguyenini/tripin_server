@@ -21,7 +21,7 @@ class TripDataBaseService(Database):
         super().__init__()
         self._init = True
 
-    def get_all_active_trips_from_user_id(self, user_id: str) -> list[dict] | None:
+    def get_all_trips_from_user_id(self, user_id: str) -> list[dict] | None:
         userdata = self.find_item_in_sql(
             table=DATABASEKEYS.TABLES.TRIPS,
             item=DATABASEKEYS.TRIPS.USER_ID,

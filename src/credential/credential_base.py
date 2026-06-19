@@ -7,9 +7,9 @@ from src.database.userdata_db_service import UserDataDataBaseService
 from src.error_code.error_code import INPUT_ERROR
 from src.error_handler.error_handler import ErrorHandler
 from src.mail.mail_service import CredentialEmailService, MailService
-from src.server_config.service.cache import Cache
 from src.server_config.service.input_validation import CredentialInputValidation
 from src.token.tokenservice import TokenService
+from src.utils.cache.cache import Cache
 
 
 class CredentialBase:
