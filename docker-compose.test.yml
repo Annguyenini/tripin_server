@@ -48,7 +48,7 @@ services:
               echo 'pytest version' &&
               pytest --version &&
               echo 'wait' &&
-              sleep (10) &&
+              sleep 10 &&
               echo 'run test'&&
               python -m pytest tests/ --collect-only -vv"
     restart: "no"
