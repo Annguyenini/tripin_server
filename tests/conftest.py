@@ -3,7 +3,10 @@ import os
 import pytest
 from redis import Redis
 
+print("import reached")
 from app import create_app
+
+print("after import")
 
 
 @pytest.fixture(scope="session")
