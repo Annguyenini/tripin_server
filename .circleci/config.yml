@@ -12,6 +12,7 @@ jobs:
       DATABASE_URL: postgresql://testuser:testpass@test_db:5432/tripin
       FLASK_ENV: testing
     steps:
+      - checkout
       - run:
           name: Set Up keys
           command: |
