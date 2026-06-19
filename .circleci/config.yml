@@ -1,0 +1,66 @@
+version: 2.1
+orbs:
+  python: circleci/python@2
+jobs:
+  test-python:
+    # Install dependencies and run tests
+    machine:
+      image: ubuntu-2204
+    environment:
+      DATABASE_URL: postgresql://testuser:testpass@test_db:5432/tripin
+      FLASK_ENV: testing
+    steps:
+      - run:
+          name: Set Up keys
+          command: |
+            mkdir -p src/assets/keys
+            echo "$PRIVATE_KEY" > src/assets/keys/private.pem
+            echo "$PUBLIC_KEY" > src/assets/keys/public.pem
+
+      - run:
+          name: Set up env
+          command: |
+            echo "$ENV_TEST" >> .env.test
+      - run:
+          name: Build and run tests
+          command: |
+            docker compose -f docker-compose.test.yml down -v
+            docker compose -f docker-compose.test.yml up --build --exit-code-from test_server
+
+      - run:
+          name: Clean Up
+          when: always
+          command: |
+            docker compose -f docker-compose.test.yml logs test_server
+            docker compose -f docker-compose.test.yml down -v --remove-orphans
+
+  deploy:
+    machine:
+      image: ubuntu-2204
+
+    steps:
+      - checkout
+
+      - run:
+          name: Deploy via SSH
+          command: |
+            mkdir -p ~/.ssh
+            echo "$VPS_SSH_KEY" > ~/.ssh/id_rsa
+            chmod 600 ~/.ssh/id_rsa
+
+            ssh -o StrictHostKeyChecking=no $VPS_USERNAME@$VPS_HOST << 'EOF'
+              cd tripin_server
+              git fetch origin main
+              git reset --hard origin/main
+
+              mkdir -p ./logs/errorlogs
+
+              docker compose up -d --build
+              docker image prune -f
+            EOF
+build-and-test:
+  jobs:
+    - test-python
+  # - deploy:
+  #     requires:
+  #       - test-python
