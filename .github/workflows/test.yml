@@ -28,7 +28,7 @@ jobs:
 
       - name: Set up env
         run: |
-          echo "${{ secrets.ENV_TEST_BASE_64 }}" | base64 -d > .env.test
+          echo "${{ secrets.ENV_TEST_BASE_64 }}" | base64 --decode > .env.test
 
       - name: check env
         run: |
