@@ -50,5 +50,5 @@ services:
               echo 'wait' &&
               sleep 10 &&
               echo 'run test'&&
-              python -m pytest -p no:all --collect-only -vv"
+              python -X faulthandler -u -m pytest -vv -s --full-trace"
     restart: "no"
