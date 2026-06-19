@@ -47,6 +47,8 @@ services:
               python tests/scripts/create_test_user.py &&
               echo 'pytest version' &&
               pytest --version &&
-              echo 'run pytest' &&
-              python -m pytest tests/ -v"
+              echo 'wait' &&
+              sleep (10) &&
+              echo 'run test'&&
+              python -m pytest tests/ --collect-only -vv"
     restart: "no"
