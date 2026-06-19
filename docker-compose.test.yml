@@ -47,6 +47,8 @@ services:
               python tests/scripts/create_test_user.py &&
               echo 'pytest version' &&
               pytest --version &&
+              echo 'run server' &&
+              python3 app.py &&
               echo 'wait' &&
               sleep 10 &&
               echo 'run test'&&
