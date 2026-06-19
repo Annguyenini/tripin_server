@@ -40,8 +40,13 @@ services:
     volumes:
       - ./src/assets/keys:/app/src/assets/keys
     command: >
-      sh -c "alembic upgrade head &&
+      sh -c "
+              echo 'migration database' &&
+              alembic upgrade head &&
+              echo 'create test user'&&
               python tests/scripts/create_test_user.py &&
+              echo 'pytest version' &&
               pytest --version &&
+              echo 'run pytest' &&
               python -m pytest tests/ -v"
     restart: "no"
