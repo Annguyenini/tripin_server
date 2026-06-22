@@ -55,13 +55,11 @@ jobs:
             mkdir -p ~/.ssh
             echo "$VPS_SSH_KEY" > ~/.ssh/id_rsa
             chmod 600 ~/.ssh/id_rsa
-
             ssh -o StrictHostKeyChecking=no $VPS_USERNAME@$VPS_HOST << 'EOF'
               cd tripin_server
               git fetch origin main
               git reset --hard origin/main
               mkdir -p ./logs/errorlogs
-
               docker compose up -d --build
               docker image prune -f
             EOF
