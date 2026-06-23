@@ -6,6 +6,7 @@ import re
 
 from flask import Blueprint, jsonify, request
 
+from middleware.rate_limiter import ClientProperties, RateLimiter, RateLimiterProperties
 from src.base.route_base import RouteBase
 from src.credential.auth.jwt_auth import JWTAuthenticationService
 from src.credential.auth.login_service import LoginService

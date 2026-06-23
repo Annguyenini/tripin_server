@@ -18,7 +18,7 @@ class Cache:
     def __init__(self):
         if self._init:
             return
-        dotenv.load_dotenv("src/assets/configs/.env")
+        dotenv.load_dotenv()
         host = os.getenv("REDIS_HOST")
         port = os.getenv("REDIS_PORT")
         self.redis_client = Redis(host=host, port=int(port), decode_responses=True)
