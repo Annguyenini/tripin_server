@@ -95,7 +95,7 @@ class Server:
         self.app.after_request(self.log_request)
 
     def health(self):
-        return 200
+        return {"ok": True}, 200
 
     def testmap(self):
         return render_template("testmap.html")
