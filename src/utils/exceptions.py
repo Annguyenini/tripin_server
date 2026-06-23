@@ -15,3 +15,8 @@ class TripPermissionError(TripException):
         super().__init__(
             "no_permission", "You dont have permission to complete this action!"
         )
+
+
+class TooManyRequest(Exception):
+    def __init__(self, *args: object) -> None:
+        super().__init__(*args)
