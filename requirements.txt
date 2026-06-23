@@ -37,7 +37,7 @@ Pygments==2.19.2
 PyJWT==2.10.1
 pyogrio==0.12.1
 pyproj==3.7.2
-pytest==9.0.2
+pytest==9.1.1
 python-dateutil==2.9.0.post0
 python-dotenv==1.2.1
 pytz==2025.2
@@ -54,4 +54,3 @@ tzdata==2025.3
 urllib3==2.6.2
 Werkzeug==3.1.4
 WTForms==3.2.1
-gevent>=24.10.1

@@ -56,7 +56,7 @@ def bootstrapping_credentials():
         for miss in OPTIONS:
             print(miss + "\n")
     if MISSING:
-        print("Missing critical credentials NEED to add to env: \n")
+        print("Missing critical credentials\nNEED to add to env: \n")
         for miss in MISSING:
             print(miss + "\n")
         os.kill(os.getppid(), signal.SIGTERM)  # kill the gunicorn master

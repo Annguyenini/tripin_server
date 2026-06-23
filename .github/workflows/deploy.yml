@@ -12,7 +12,7 @@ jobs:
     secrets:
       PRIVATE_KEY: ${{ secrets.PRIVATE_KEY }}
       PUBLIC_KEY: ${{ secrets.PUBLIC_KEY }}
-      ENV_TEST: ${{ secrets.ENV_TEST }}
+      ENV_TEST_BASE_64: ${{ secrets.ENV_TEST_BASE_64 }}
   deploy:
     needs: test
     runs-on: ubuntu-latest

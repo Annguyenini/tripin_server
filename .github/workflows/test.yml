@@ -7,7 +7,7 @@ on:
         required: true
       PUBLIC_KEY:
         required: true
-      ENV_TEST:
+      ENV_TEST_BASE_64:
         required: true
 
 jobs:
@@ -28,7 +28,7 @@ jobs:
 
       - name: Set up env
         run: |
-          echo "${{ secrets.ENV_TEST }}" >> .env.test
+          echo "${{ secrets.ENV_TEST_BASE_64 }}" | base64 --decode > .env.test
 
       - name: Set Up and Run Tests
         run: |

@@ -2,7 +2,7 @@
 services:
   test_db:
     image: postgres:15
-    container_name: test_tripin_db
+    # container_name: test_tripin_db
     environment:
       POSTGRES_USER: testuser
       POSTGRES_PASSWORD: testpass
@@ -20,14 +20,14 @@ services:
 
   test_redis:
     image: redis
-    container_name: test_tripin_redis
+    # container_name: test_tripin_redis
     ports:
       - "8995:6379"
     tmpfs:
       - /data
 
   test_server:
-    container_name: test_tripin_server
+    # container_name: test_tripin_server
     build: .
     ports:
       - "8985:8000"
@@ -39,8 +39,15 @@ services:
         condition: service_healthy
     volumes:
       - ./src/assets/keys:/app/src/assets/keys
-    command: >
-      sh -c "alembic upgrade head &&
-              python tests/scripts/create_test_user.py &&
-              python -m pytest tests/ --collect-only 2>&1"
+    command: |
+      sh -c '
+        echo "migration database"
+        alembic upgrade head
+
+        echo "create test user"
+        python tests/scripts/create_test_user.py
+
+        echo "run test"
+        python -m pytest -vv -s --full-trace
+      '
     restart: "no"

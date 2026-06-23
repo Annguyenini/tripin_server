@@ -36,7 +36,7 @@ from src.user_setting.user_setting_route import UserSettingsRoutes
 from src.web.trip_view.trip_view_route import TripViewRoute
 from src.web.web_service import WebService
 
-bootstrap_manager()
+# bootstrap_manager()
 mail = Mail()
 dotenv.load_dotenv(".env")
 

@@ -6,28 +6,63 @@ orbs:
 jobs:
   test-python:
     # Install dependencies and run tests
-    docker:
-      - image: cimg/python:3.8-node
+    machine:
+      image: ubuntu-2204:current
+    environment:
+      DATABASE_URL: postgresql://testuser:testpass@test_db:5432/tripin
+      FLASK_ENV: testing
     steps:
       - checkout
-      - python/install-packages
       - run:
-          name: Run tests
-          command: pytest --junitxml=junit.xml || ((($? == 5)) && echo 'Did not find any tests to run.')
-      - store_test_results:
-          path: junit.xml
+          name: Set Up keys
+          command: |
+            mkdir -p src/assets/keys
+            echo "$PRIVATE_KEY" > src/assets/keys/private.pem
+            echo "$PUBLIC_KEY" > src/assets/keys/public.pem
+
+      - run:
+          name: Set up env
+          command: |
+            echo "$ENV_TEST_BASE_64" | base64 -d > .env.test
+
+      - run:
+          name: check env
+          command: |
+            cat .env.test
+      - run:
+          name: Build and run tests
+          command: |
+            docker compose -f docker-compose.test.yml down -v
+            docker compose -f docker-compose.test.yml up --build --exit-code-from test_server
+
+      - run:
+          name: Clean Up
+          when: always
+          command: |
+            docker compose -f docker-compose.test.yml logs test_server
+            docker compose -f docker-compose.test.yml down -v --remove-orphans
+
   deploy:
-    # This is an example deploy job, not actually used by the workflow
-    docker:
-      - image: cimg/base:stable
+    machine:
+      image: ubuntu-2204:current
+
     steps:
-      # Replace this with steps to deploy to users
+      - checkout
+
       - run:
-          name: deploy
-          command: '#e.g. ./deploy.sh'
-      - run:
-          name: found github actions config
-          command: ':'
+          name: Deploy via SSH
+          command: |
+            mkdir -p ~/.ssh
+            echo "$VPS_SSH_KEY" > ~/.ssh/id_rsa
+            chmod 600 ~/.ssh/id_rsa
+            ssh -o StrictHostKeyChecking=no $VPS_USERNAME@$VPS_HOST << 'EOF'
+              cd tripin_server
+              git fetch origin main
+              git reset --hard origin/main
+              mkdir -p ./logs/errorlogs
+              docker compose up -d --build
+              docker image prune -f
+            EOF
 workflows:
   build-and-test:
     jobs:

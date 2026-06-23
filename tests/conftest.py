@@ -1,9 +1,20 @@
+print("before import anything")
+
 import os
+import traceback
 
 import pytest
 from redis import Redis
 
-from app import create_app
+print("before create_app import")
+try:
+    from app import create_app
+
+    print("import OK")
+except Exception:
+    print("IMPORT FAILED")
+    traceback.print_exc()
+    raise
 
 
 @pytest.fixture(scope="session")
