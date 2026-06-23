@@ -7,7 +7,7 @@ from bootstraps.redis_check import bootstrap_redis
 
 
 def bootstrap_manager():
-    if os.getenv("FLASK_ENV") == "testing":
+    if os.getenv("ENV") != "production":
         return  # skip bootstrap in CI
     credential = bootstrapping_credentials()
     print("Credential Bootstrap Pass!")

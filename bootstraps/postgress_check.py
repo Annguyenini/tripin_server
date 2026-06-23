@@ -20,5 +20,7 @@ def bootstrap_postgres():
         conn.cursor().execute("SELECT 1")
         return True
     except Exception as e:
+        print("fail to connect to postgress")
+
         os.kill(os.getppid(), signal.SIGTERM)  # kill the gunicorn master
         os._exit(1)

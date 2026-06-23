@@ -2,7 +2,10 @@ import os
 import signal
 
 import boto3
+import dotenv
 from botocore.exceptions import ClientError
+
+dotenv.load_dotenv()
 
 
 def bootstrap_aws():
@@ -16,6 +19,6 @@ def bootstrap_aws():
         s3.list_buckets()
         return True
     except Exception as e:
-        os.kill(os.getppid(), signal.SIGTERM)  # kill the gunicorn master
         print("fail to connect to AWS")
+        os.kill(os.getppid(), signal.SIGTERM)  # kill the gunicorn master
         os._exit(1)
