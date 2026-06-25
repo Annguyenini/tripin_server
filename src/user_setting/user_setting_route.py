@@ -5,6 +5,7 @@ from src.base.route_base import RouteBase
 from src.error_handler.error_handler import ErrorHandler
 from src.user_setting.user_setting_service import UserSettingsService
 from src.utils.handle_exception import handle_exception
+from src.utils.route_exception import route_exception
 
 
 class UserSettingsRoutes(RouteBase):
@@ -31,7 +32,13 @@ class UserSettingsRoutes(RouteBase):
         self.bp.route("/user-settings", methods=["GET"])(self.get_user_settings)
         self.bp.route("/user-settings", methods=["PATCH"])(self.update_user_settings)
 
-    @handle_exception("User Setting routes", "Get User Setting")
+    @route_exception(
+        service="User Setting Route",
+        endpoint="get_user_settings",
+        unit="minute",
+        unit_value=15,
+        max_requests=300,
+    )
     def get_user_settings(self):
         user_data, error = self._get_authenticated_user()
         if error or not user_data:
@@ -46,7 +53,13 @@ class UserSettingsRoutes(RouteBase):
 
         return jsonify(user_data), code
 
-    @handle_exception("user setting route", "update user settings")
+    @route_exception(
+        service="User Setting Route",
+        endpoint="update_user_settings",
+        unit="minute",
+        unit_value=15,
+        max_requests=45,
+    )
     def update_user_settings(self):
         user_data, error = self._get_authenticated_user()
         if error or not user_data:

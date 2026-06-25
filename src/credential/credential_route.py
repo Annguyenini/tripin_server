@@ -15,6 +15,7 @@ from src.credential.auth.signup_service import SignupService
 from src.credential.provider.provider_auth import ProviderAuth
 from src.token.tokenservice import TokenService
 from src.utils.cache.cache import Cache
+from src.utils.route_exception import route_exception
 
 
 class AuthServer(RouteBase):
@@ -72,6 +73,13 @@ class AuthServer(RouteBase):
         )
 
     # --------------JWT authentication---------------
+    @route_exception(
+        service="Auth Route",
+        endpoint="login",
+        unit="second",
+        unit_value=60,
+        max_requests=5,
+    )
     def login_via_token(self):
         """
         Docstring for login_via_token
@@ -85,6 +93,13 @@ class AuthServer(RouteBase):
         return jsonify(data), code
 
     # --------------Request new access token--------
+    @route_exception(
+        service="Auth Route",
+        endpoint="login",
+        unit="minute",
+        unit_value=15,
+        max_requests=5,
+    )
     def request_new_access_token(self):
         data = request.headers.get("Authorization")
         if not data:
@@ -101,6 +116,13 @@ class AuthServer(RouteBase):
         return jsonify(respond), code
 
     # ---------------Login-----------------------------
+    @route_exception(
+        service="Auth Route",
+        endpoint="login",
+        unit="minute",
+        unit_value=15,
+        max_requests=5,
+    )
     def login(self):
         data = request.json
         username = data.get("username")
@@ -111,6 +133,13 @@ class AuthServer(RouteBase):
         )
         return jsonify(data), code
 
+    @route_exception(
+        service="Auth Route",
+        endpoint="signup",
+        unit="minute",
+        unit_value=15,
+        max_requests=3,
+    )
     # --------------Sign up --------------------------
     def signup(self):
         data = request.json
@@ -127,6 +156,13 @@ class AuthServer(RouteBase):
         )
         return jsonify(respond), code
 
+    @route_exception(
+        service="Auth Route",
+        endpoint="signup-verify",
+        unit="minute",
+        unit_value=15,
+        max_requests=3,
+    )
     def verify_code(self):
         """User verify code, get user data and pass to a function to check the code"""
         data = request.json
@@ -142,12 +178,26 @@ class AuthServer(RouteBase):
 
     # ------reset password--------------
 
+    @route_exception(
+        service="Auth Route",
+        endpoint="reset password",
+        unit="minute",
+        unit_value=15,
+        max_requests=5,
+    )
     def request_reset_password(self):
         user_data = request.json
         email = user_data.get("email")
         data, code = self.ResetPasswordService.request_reset_password(email=email)
         return jsonify(data), code
 
+    @route_exception(
+        service="Auth Route",
+        endpoint="request_reset_password_verify",
+        unit="minute",
+        unit_value=15,
+        max_requests=5,
+    )
     def request_reset_password_verify(self):
         user_data = request.json
         email = user_data.get("email")
@@ -157,6 +207,13 @@ class AuthServer(RouteBase):
         )
         return jsonify(data), code
 
+    @route_exception(
+        service="Auth Route",
+        endpoint="request_reset_password_complete",
+        unit="minute",
+        unit_value=15,
+        max_requests=5,
+    )
     def request_reset_password_complete(self):
         user_data = request.json
         token = user_data.get("token")
@@ -170,6 +227,14 @@ class AuthServer(RouteBase):
         return jsonify(data), code
 
     # --------------Provider--------------------
+    #
+    @route_exception(
+        service="Auth Route",
+        endpoint="provider_verify",
+        unit="minute",
+        unit_value=15,
+        max_requests=3,
+    )
     def provider_verify(self, provider):
         user_data = request.json
         id_token = user_data["id_token"]
@@ -179,6 +244,13 @@ class AuthServer(RouteBase):
 
         return jsonify(data), code
 
+    @route_exception(
+        service="Auth Route",
+        endpoint="singup_provider",
+        unit="minute",
+        unit_value=15,
+        max_requests=3,
+    )
     def singup_provider(self):
         try:
             user_data = request.json

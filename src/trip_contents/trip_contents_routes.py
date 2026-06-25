@@ -5,6 +5,7 @@ from flask.json import jsonify
 
 from src.base.route_base import RouteBase
 from src.trip_contents.trip_contents_service import TripContentsService
+from src.utils.route_exception import route_exception
 
 
 class TripContentRoutes(RouteBase):
@@ -40,6 +41,13 @@ class TripContentRoutes(RouteBase):
             self.request_trip_contents_metadata_for_sync
         )
 
+    @route_exception(
+        service="Trip Content Route",
+        endpoint="get_trip_contents",
+        unit="minute",
+        unit_value=15,
+        max_requests=500,
+    )
     def get_trip_contents(self, trip_id: str):
         try:
             user_data_from_jwt, error = self._get_authenticated_user()
@@ -57,6 +65,13 @@ class TripContentRoutes(RouteBase):
             print(e)
             return 500
 
+    @route_exception(
+        service="Trip Content Route",
+        endpoint="sync_content_cards",
+        unit="minute",
+        unit_value=15,
+        max_requests=450,
+    )
     def sync_content_cards(self):
         try:
             user_data_from_jwt, error = self._get_authenticated_user()
@@ -74,6 +89,13 @@ class TripContentRoutes(RouteBase):
             print(e)
             return 500
 
+    @route_exception(
+        service="Trip Content Route",
+        endpoint="request_cloud_presign_url",
+        unit="minute",
+        unit_value=15,
+        max_requests=450,
+    )
     def request_cloud_presign_url(self):
         try:
             user_data_from_jwt, error = self._get_authenticated_user()
@@ -92,6 +114,13 @@ class TripContentRoutes(RouteBase):
             print(e)
             return 500
 
+    @route_exception(
+        service="Trip Content Route",
+        endpoint="request_trip_contents_hash",
+        unit="minute",
+        unit_value=15,
+        max_requests=500,
+    )
     def request_trip_contents_hash(self):
         try:
             user_data_from_jwt, error = self._get_authenticated_user()
@@ -109,6 +138,13 @@ class TripContentRoutes(RouteBase):
             print(e)
             return 500
 
+    @route_exception(
+        service="Trip Content Route",
+        endpoint="request-trip-contents-metadata",
+        unit="minute",
+        unit_value=15,
+        max_requests=500,
+    )
     def request_trip_contents_metadata_for_sync(self):
         try:
             user_data_from_jwt, error = self._get_authenticated_user()

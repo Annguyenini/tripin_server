@@ -11,6 +11,7 @@ from src.token.tokenservice import TokenService
 from src.trip_service.trip_service import TripService
 from src.utils.cache.cache import Cache
 from src.utils.handle_exception import handle_exception
+from src.utils.route_exception import route_exception
 
 
 class TripRoute(RouteBase):
@@ -51,6 +52,13 @@ class TripRoute(RouteBase):
         self.bp.route("/trip", methods=["DELETE"])(self.request_remove_trip)
 
     ## request new trip
+    @route_exception(
+        service="Trip Route",
+        endpoint="request_new_trip",
+        unit="minute",
+        unit_value=15,
+        max_requests=15,
+    )
     def request_new_trip(self):
         """take in user data to process new trip
 
@@ -94,6 +102,13 @@ class TripRoute(RouteBase):
         except Exception as e:
             return {"code": "server_failed"}, 500
 
+    @route_exception(
+        service="Trip Route",
+        endpoint="trip-cover-upload-verification",
+        unit="minute",
+        unit_value=15,
+        max_requests=15,
+    )
     def trip_cover_verification(self):
         """take in user data to process new trip
 
@@ -117,6 +132,13 @@ class TripRoute(RouteBase):
         print(data, code)
         return jsonify(data), code
 
+    @route_exception(
+        service="Trip Route",
+        endpoint="end-trip ",
+        unit="minute",
+        unit_value=15,
+        max_requests=15,
+    )
     def end_trip(self):
         """handle end trip
 
@@ -140,6 +162,13 @@ class TripRoute(RouteBase):
         )
         return jsonify(data), code
 
+    @route_exception(
+        service="Trip Route",
+        endpoint="current-trip-id ",
+        unit="minute",
+        unit_value=15,
+        max_requests=300,
+    )
     def request_current_trip_id(self):
         user_data, error = self._get_authenticated_user()
         if error:
@@ -148,7 +177,13 @@ class TripRoute(RouteBase):
         current_trip_id, code = self.trip_service.get_current_trip_id(user_id=user_id)
         return jsonify(current_trip_id), code
 
-    @handle_exception("Trip Route", "request trip data")
+    @route_exception(
+        service="Trip Route",
+        endpoint="request_trip_data",
+        unit="minute",
+        unit_value=15,
+        max_requests=450,
+    )
     def request_trip_data(self):
         """use for app api
             return tripd data
@@ -170,6 +205,13 @@ class TripRoute(RouteBase):
         )
         return jsonify(data), code
 
+    @route_exception(
+        service="Trip Route",
+        endpoint="request_trip_data_by_shared_links",
+        unit="minute",
+        unit_value=15,
+        max_requests=450,
+    )
     def request_trip_data_by_shared_links(self, token):
         # get etag from browser cache to check if data has changed
         client_etag = request.headers.get("If-None-Match")
@@ -194,6 +236,13 @@ class TripRoute(RouteBase):
         response.headers["ETag"] = etag
         return response, 200
 
+    @route_exception(
+        service="Trip Route",
+        endpoint="request_all_trips_data",
+        unit="minute",
+        unit_value=15,
+        max_requests=300,
+    )
     def request_all_trips_data(self):
         # print(request)
         user_data, error = self._get_authenticated_user()
@@ -215,6 +264,13 @@ class TripRoute(RouteBase):
         if error:
             return jsonify(error), 401
 
+    @route_exception(
+        service="Trip Route",
+        endpoint="modify_trip_data",
+        unit="minute",
+        unit_value=15,
+        max_requests=45,
+    )
     def change_trip_data(self):
         user_data_from_jwt, error = self._get_authenticated_user()
         if error:
@@ -236,7 +292,13 @@ class TripRoute(RouteBase):
 
         return jsonify(data), code
 
-    @handle_exception("Trip Service Route", "request remove trip")
+    @route_exception(
+        service="Trip Route",
+        endpoint="request_remove_trip",
+        unit="minute",
+        unit_value=15,
+        max_requests=45,
+    )
     def request_remove_trip(self):
         user_data_from_jwt, error = self._get_authenticated_user()
         if error:
