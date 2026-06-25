@@ -78,7 +78,7 @@ class AuthServer(RouteBase):
         endpoint="login",
         unit="second",
         unit_value=60,
-        max_requests=5,
+        max_requests=7,
     )
     def login_via_token(self):
         """
@@ -98,7 +98,7 @@ class AuthServer(RouteBase):
         endpoint="login",
         unit="minute",
         unit_value=15,
-        max_requests=5,
+        max_requests=7,
     )
     def request_new_access_token(self):
         data = request.headers.get("Authorization")
