@@ -1,3 +1,4 @@
+import os
 from functools import wraps
 
 from flask import make_response, request
@@ -20,26 +21,30 @@ def route_exception(
         @wraps(function)
         def wrapper(*args, **kwargs) -> tuple[dict, int]:
             try:
-                ip = request.remote_addr
-                client = ClientProperties(ip=ip)
-                rate_limiter_pro = RateLimiterProperties(
-                    service_name=service,
-                    endpoint_name=endpoint,
-                    unit=unit,
-                    unit_value=unit_value,
-                    max_requests=max_requests,
-                )
-                rate_limiter = RateLimiter()
-                current_request, retry_after_s = rate_limiter.is_allowed(
-                    rate_limiter_pro, client
-                )
-                response = make_response(function(*args, **kwargs))
-                response.headers["X-RateLimit-Limit"] = str(max_requests)
-                response.headers["X-RateLimit-Remaining"] = str(
-                    max_requests - current_request
-                )
-                response.headers["X-RateLimit-Reset"] = str(retry_after_s)
-                return response
+                if os.environ.get("ENV") == "production":
+                    ip = request.remote_addr
+                    client = ClientProperties(ip=ip)
+                    rate_limiter_pro = RateLimiterProperties(
+                        service_name=service,
+                        endpoint_name=endpoint,
+                        unit=unit,
+                        unit_value=unit_value,
+                        max_requests=max_requests,
+                    )
+                    rate_limiter = RateLimiter()
+                    current_request, retry_after_s = rate_limiter.is_allowed(
+                        rate_limiter_pro, client
+                    )
+                    response = make_response(function(*args, **kwargs))
+                    response.headers["X-RateLimit-Limit"] = str(max_requests)
+                    response.headers["X-RateLimit-Remaining"] = str(
+                        max_requests - current_request
+                    )
+                    response.headers["X-RateLimit-Reset"] = str(retry_after_s)
+                    return response
+                else:
+                    response = make_response(function(*args, **kwargs))
+                    return response
             except TripException as e:
                 return {"code": e.code, "message": e.message}
             except PermissionError as e:

@@ -68,7 +68,9 @@ class InputValidation:
         if len(trip_name) < 5 or len(trip_name) > 40:
             return False
 
-        return bool(re.fullmatch(r"[A-Za-z0-9][A-Za-z0-9 ]*", trip_name))
+        return trip_name[0].isalnum() and all(
+            c.isalnum() or c == " " for c in trip_name
+        )
 
     def _trip_image_validation(self, image_path: str):
         pattern = r"^trips/\d+/cover\.jpg$"
