@@ -9,6 +9,7 @@ from src.database.userdata_db_service import UserDataDataBaseService
 from src.error_handler.error_handler import ErrorHandler
 from src.token.tokenservice import TokenService
 from src.user.user_service import UserService
+from src.utils.route_exception import route_exception
 
 
 class UserRoute(RouteBase):
@@ -43,6 +44,13 @@ class UserRoute(RouteBase):
         )
         self.bp.route("/get-user-data", methods=["GET"])(self.get_user_data)
 
+    @route_exception(
+        service="User Route",
+        endpoint="get_user_data",
+        unit="minute",
+        unit_value=15,
+        max_requests=300,
+    )
     def get_user_data(self):
         try:
             user_data, error = self._get_authenticated_user()
@@ -67,6 +75,13 @@ class UserRoute(RouteBase):
             )
             return {"code": "failed"}, 500
 
+    @route_exception(
+        service="User Route",
+        endpoint="request_update_avatar_presign_url",
+        unit="minute",
+        unit_value=15,
+        max_requests=45,
+    )
     def request_update_avatar_presign_url(self):
         try:
             user_data = self._user_jwt_validation_policy()
@@ -84,6 +99,13 @@ class UserRoute(RouteBase):
             )
             return {"code": "server_failed"}, 500
 
+    @route_exception(
+        service="User Route",
+        endpoint="complete_update_user_avatar",
+        unit="minute",
+        unit_value=15,
+        max_requests=45,
+    )
     def complete_update_user_avatar(self):
         try:
             user_data_from_jwt = self._user_jwt_validation_policy()

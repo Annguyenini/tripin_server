@@ -2,6 +2,7 @@ from werkzeug.security import check_password_hash, generate_password_hash
 
 from src.credential.credential_base import CredentialBase
 from src.server_config.service.input_validation import CredentialInputValidation
+from src.utils.route_exception import route_exception
 
 
 class LoginService(CredentialBase):

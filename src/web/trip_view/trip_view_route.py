@@ -18,6 +18,7 @@ from src.server_config.service.Etag.etag_services import TripShareLinksEtag
 from src.server_config.service.smart_cast import smart_cast
 from src.trip_contents.trip_contents_service import TripContentsService
 from src.utils.cache.cache import Cache
+from src.utils.route_exception import route_exception
 
 load_dotenv(".env")
 MAPTOKEN = os.getenv("MAPBOX_PUBLIC_KEY")
@@ -57,6 +58,13 @@ class TripViewRoute(RouteBase):
             self.request_trip_contents_by_token
         )
 
+    @route_exception(
+        service="Trip View Route",
+        endpoint="generate_trip_view_link",
+        unit="minute",
+        unit_value=15,
+        max_requests=75,
+    )
     def generate_trip_view_link(self):
         """generate url using trip view
 
@@ -128,6 +136,13 @@ class TripViewRoute(RouteBase):
         self.TripDataBaseService.close_db(conn=con)
         return token if cur.rowcount >= 1 else None
 
+    @route_exception(
+        service="Trip View Route",
+        endpoint="request_trip_view",
+        unit="minute",
+        unit_value=15,
+        max_requests=300,
+    )
     def request_trip_view(self, token: str) -> tuple:
         try:
             print(token)
@@ -198,6 +213,13 @@ class TripViewRoute(RouteBase):
             ), 500
         # if pass we get ready to return template
 
+    @route_exception(
+        service="Trip View Route",
+        endpoint="request_trip_contents_by_token",
+        unit="minute",
+        unit_value=15,
+        max_requests=300,
+    )
     def request_trip_contents_by_token(self, token: str):
         try:
             assert token, "token empty"

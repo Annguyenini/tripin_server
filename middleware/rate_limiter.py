@@ -35,7 +35,6 @@ class RateLimiterProperties:
         unit: str,
         unit_value: int,
         max_requests: int,
-        window: int,
     ):
         if (
             not service_name
@@ -43,7 +42,6 @@ class RateLimiterProperties:
             or not unit_value
             or not max_requests
             or not unit
-            or not window
         ):
             raise ValueError("one or more param is null")
         if unit not in allowed_units:
@@ -53,7 +51,6 @@ class RateLimiterProperties:
         self.unit = unit
         self.unit_value = unit_value
         self.max_requests = max_requests
-        self.window = window
         self._convert()
 
     def _convert(self):
@@ -64,8 +61,11 @@ class RateLimiterProperties:
             case "minute":
                 self.unit_value = self.unit_value * 60
                 self.window = self.window * 60
+            case "second":
+                pass
             case _:
                 raise ValueError("Unexpected unit")
+        self.window = self.unit_value // 2
 
     def __repr__(self) -> str:
         return f"""Rate Limiter Config: (service name: {self.service_name},
@@ -83,6 +83,7 @@ class RateLimiter:
     def __new__(cls):
         if cls._instance is None:
             cls._instance = super().__new__(cls)
+        return cls._instance
 
     def __init__(self) -> None:
         if self._init:
@@ -95,6 +96,8 @@ class RateLimiter:
         self._init = True
 
     def is_allowed(self, property: RateLimiterProperties, client: ClientProperties):
+        if property is None or client is None:
+            raise ValueError("missing client or rate limit properties")
         # get current subwindow
         # get pass subwindow
         # if current subwindow count >= limit: return
@@ -136,5 +139,7 @@ class RateLimiter:
             # roll back if reject
             pipe.decr(current_subw_key)
             pipe.execute()
-            raise TooManyRequests(retry_after=property.window - s_pass_window)
-        return
+            raise TooManyRequests(
+                retry_after=current_time + (property.window - s_pass_window)
+            )
+        return current_count, current_time + (property.window - s_pass_window)
