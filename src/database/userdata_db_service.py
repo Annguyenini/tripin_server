@@ -147,6 +147,13 @@ class UserDataDataBaseService(Database):
             if con:
                 self.close_db(conn=con)
 
+    def delete_user_data(self, user_id):
+        return self.delete_from_table(
+            table=DATABASEKEYS.TABLES.USERDATA,
+            item=DATABASEKEYS.USERDATA.USER_ID,
+            value=(user_id),
+        )
+
     def update_user_password(self, user_id: str, new_hashed_password: str) -> bool:
         return self.update_db(
             table=DATABASEKEYS.TABLES.USERDATA,

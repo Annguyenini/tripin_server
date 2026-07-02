@@ -17,6 +17,8 @@ class TripPermissionError(TripException):
         )
 
 
-class TooManyRequest(Exception):
-    def __init__(self, *args: object) -> None:
-        super().__init__(*args)
+class UserNotFound(Exception):
+    def __init__(self) -> None:
+        self.code = "user_not_found"
+        self.message = "User Not Found!"
+        super().__init__()

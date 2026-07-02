@@ -228,13 +228,14 @@ class Database:
                     (value, second_value),
                 )
             else:
-                cur.execute(f"DELETE FROM {table} WHERE {item} = %s", (value))
+                cur.execute(f"DELETE FROM {table} WHERE {item} = %s", (value,))
             con.commit()
             if cur.rowcount <= 0:
                 return False
             else:
                 return True
         except Exception as e:
+            print(e)
             return False
         finally:
             if con:
