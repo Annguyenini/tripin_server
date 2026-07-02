@@ -1,3 +1,5 @@
+from crypt import methods
+
 from flask import Blueprint, jsonify, request
 
 from src.audit.userdata_audit import UserdataAudit
@@ -43,6 +45,11 @@ class UserRoute(RouteBase):
             self.complete_update_user_avatar
         )
         self.bp.route("/get-user-data", methods=["GET"])(self.get_user_data)
+
+        self.bp.route("/request-delete-user", methods=["POST"])(
+            self.request_delete_user
+        )
+        self.bp.route("/delete-user", methods=["POST"])(self.delete_user)
 
     @route_exception(
         service="User Route",
@@ -130,3 +137,36 @@ class UserRoute(RouteBase):
             return {"code": "token_invalid"}, 401
         except Exception as e:
             return {"code": "server_failed"}, 500
+
+    @route_exception(
+        service="User Route",
+        endpoint="Request Delete User",
+        unit="minute",
+        unit_value=15,
+        max_requests=15,
+    )
+    def request_delete_user(self):
+        user_data_from_jwt = self._user_jwt_validation_policy()
+        user_id = user_data_from_jwt.get("user_id")
+        reponse, code = self.UserService.request_delete_user(user_id=user_id)
+        return jsonify(reponse), code
+
+    @route_exception(
+        service="User Route",
+        endpoint="Delete User",
+        unit="minute",
+        unit_value=15,
+        max_requests=15,
+    )
+    def delete_user(self):
+        user_data_from_jwt = self._user_jwt_validation_policy()
+        user_id = user_data_from_jwt.get("user_id")
+        user_data = request.json
+        print(user_data)
+        code = int(user_data.get("code"))
+        print(code)
+
+        if not code:
+            raise ValueError("invalid code")
+        response, statuscode = self.UserService.delete_user(code=code, user_id=user_id)
+        return jsonify(response), statuscode

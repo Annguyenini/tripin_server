@@ -3,6 +3,7 @@ services:
   db:
     build: ./db
     container_name: tripin_db
+    restart: unless-stopped
     networks:
       - tripin_net
     environment:
@@ -17,6 +18,7 @@ services:
   redis:
     image: redis
     container_name: tripin_redis
+    restart: unless-stopped
     networks:
       - tripin_net
     ports:
@@ -25,6 +27,8 @@ services:
       - redisdata:/data
   flask:
     container_name: tripin_server
+    restart: unless-stopped
+
     networks:
       - tripin_net
     build: .

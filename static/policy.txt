@@ -1,31 +1,39 @@
 # Privacy Policy
 
-*Last updated: June 4, 2026*
+*Last updated: June 30, 2026*
+
+## TRIPPING ("we", "our", or "us") is committed to protecting your privacy. This policy explains what data we collect, how we use it, and your rights over it.
 
 ## Information We Collect
-- Account information (name, email) when you sign up
-- Your profile image(Your self or any that you decide to use)
-- Photos and media you upload within the app
-- Location data when you pin memories to a place
-- Basic usage data to improve the app
-
+- Account information (name, email address) when you sign up
+- Profile image if you choose to upload one
+- Photos and videos you capture or upload within the app
+- Location data when you take a photo, record a video, or pin a memory to a place
+- Basic usage data (such as app crash reports) to improve app performance
 
 ## How We Use Your Information
-- To provide and improve the TRIPPING experience
+- To provide and operate the TRIPPING experience
 - To store and display your trips and memories
-- To enable trip sharing with others you choose
+- To enable trip sharing with people you choose
+- To send account-related emails (e.g. password reset, account deletion confirmation)
+
+## Data Storage and Third Parties
+- Your data is stored securely on our servers. Media files (photos and videos) are stored using Amazon Web Services (AWS S3). AWS is used solely for secure file storage and delivery — your data is never shared with or sold to any third party for advertising or analytics purposes.
+
+## Your Rights
+- You have the right to:
+- Access the data we hold about you
+- Request correction of inaccurate data
+- Delete your account and all associated data directly within the app at any time (Settings → Delete Account)
+- Withdraw consent for location access at any time via your device settings
 
 ## We Do Not
 - Sell your data to third parties
-- Share your information without your consent
-- Use your data for advertising
-
-## Data Storage
-Your data is stored securely on our servers. You can delete your account and all associated data at any time by contacting us.
+- Share your data without your consent
+- Use your data for advertising or marketing purposes
+- Build profiles using anonymized or aggregated data for third-party use
 
 ## Contact
-If you have any questions, email us at: support@tripping.live
-
+- For questions or data requests, contact us at: support@tripping.live
 ---
-
 © 2026 An Nguyen

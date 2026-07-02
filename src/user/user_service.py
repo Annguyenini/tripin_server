@@ -1,3 +1,5 @@
+import json
+import secrets
 import uuid
 
 from src.audit.userdata_audit import UserdataAudit
@@ -6,11 +8,17 @@ from src.database.database_keys import DATABASEKEYS
 from src.database.s3.s3_client import ClientError
 from src.database.s3.s3_dirs import AVATAR_DIR
 from src.database.s3.s3_service import S3Sevice
+from src.database.s3.s3_trip_contents import TripContentS3Service
 from src.database.userdata_db_service import UserDataDataBaseService
 from src.error_handler.error_handler import ErrorHandler
+from src.mail.mail_service import CredentialEmailService
+from src.repository.trip_repository import TripRepository
+from src.repository.user_data_repository import UserDataRepository
 from src.server_config.service.Etag.etag_services import UserdataEtag
 from src.trip_service.trip_service import ms_to_timestamptz
 from src.utils.cache.cache import Cache
+from src.utils.exceptions import UserNotFound
+from src.utils.handle_exception import handle_exception
 
 
 def GENERATE_RANDOM_PENDING_TOKEN(user_id: str):
@@ -24,6 +32,10 @@ def GENERATE_AVATAR_S3_KEY(user_id: str):
 
 def GENERATE_AVATAR_PATH(user_id: str):
     return f"user{user_id}_avatar.jpg"
+
+
+def GENERATE_DELETE_USER_VERIFY_KEY(code: int):
+    return f"delete_user_code:{code}"
 
 
 class UserService:
@@ -46,6 +58,10 @@ class UserService:
         self.UserDataBaseService = UserDataDataBaseService()
         self.ErrorHandler = ErrorHandler().logger("User Service")
         self.UserdataAudit = UserdataAudit()
+        self.UserDataRepository = UserDataRepository()
+        self.CredentialMailService = CredentialEmailService()
+        self.TripRepository = TripRepository()
+        self.TripContentS3Service = TripContentS3Service()
         self._init = True
 
     def get_user_data_from_database(
@@ -166,3 +182,62 @@ class UserService:
         except Exception as e:
             self.ErrorHandler.error("failed to requets presignurl", {str(e)})
             return {"code": "failed"}, 500
+
+    @handle_exception("User Service", "request-delete-user")
+    def request_delete_user(self, user_id):
+        user_data = self.UserDataRepository.get_user_data(user_id=user_id)
+        print("user_data", user_data)
+        if not user_data:
+            raise UserNotFound
+
+        email = user_data.get("email")
+        rand_code = secrets.randbelow(900000) + 100000
+        verify_key = GENERATE_DELETE_USER_VERIFY_KEY(code=rand_code)
+        # set verify key to cache with data field user id for validation on future step
+        self.cacheService.set(
+            key=verify_key, data=json.dumps({"user_id": user_id}), time=300
+        )
+        # send code to email
+        self.CredentialMailService.send_email_confirmation_code(
+            code=rand_code, recipient=email
+        )
+        return {"code": "successfully"}, 200
+
+    @handle_exception("User Service", "delete user")
+    def delete_user(self, code, user_id):
+        # get and check verify code
+        verify_key = GENERATE_DELETE_USER_VERIFY_KEY(code=code)
+        raw_data_from_cache = self.cacheService.get(key=verify_key)
+        if not raw_data_from_cache:
+            return {"code": "invalid_code", "message": "invalid code"}, 400
+        data_from_cache = json.loads(raw_data_from_cache)
+        print(data_from_cache)
+        # permission check
+        if user_id != data_from_cache.get("user_id"):
+            raise PermissionError("no permission to complete this action")
+
+        # get trip list and to delete
+        trip_list_need_to_delete = self.TripRepository.get_all_trip_data(
+            user_id=user_id
+        )
+        print("reips", trip_list_need_to_delete)
+        # since all related data have contrain with user id in userdata, delete the main will result in all data realated to user in other table to be deleted
+        delete_from_database = self.UserDataRepository.delete_user(user_id=user_id)
+        print(delete_from_database)
+
+        if not delete_from_database:
+            return {
+                "code": "failed",
+                "message": "Faild to delete data from database",
+            }, 500
+        # after successfully delete the user data
+        # delete all media live in s3
+        if trip_list_need_to_delete:
+            for trip in trip_list_need_to_delete:
+                trip_id = trip.get("trip_id")
+                if not trip_id:
+                    continue
+                self.TripContentS3Service.delete_all_contents_in_trip(trip_id=trip_id)
+
+        self.cacheService.delete(key=verify_key)
+        return {"code": "successfully", "message": "successfully"}, 200
