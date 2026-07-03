@@ -33,6 +33,24 @@ class UserDataDataBaseService(Database):
         return dict(userdata)
         pass
 
+    def get_user_basic_data_by_id(self, user_id: int) -> dict:
+        con, cur = self.connect_db()
+        try:
+            cur.execute(f"""
+                SELECT {DATABASEKEYS.USERDATA.USER_ID},
+                {DATABASEKEYS.USERDATA.DISPLAY_NAME},
+                {DATABASEKEYS.USERDATA.USER_NAME},
+                {DATABASEKEYS.USERDATA.AVARTAR}
+                FROM {DATABASEKEYS.TABLES.USERDATA}
+                WHERE {DATABASEKEYS.USERDATA.USER_ID} =%s""")
+            result = cur.fetchone()
+            return result
+        except Exception as e:
+            self.ErrorHandler.error("Failed to get user basic data", str(e))
+            return None
+        finally:
+            self.close_db(conn=con)
+
     def get_user_data_by_username(self, user_name: str) -> dict | None:
         userdata = self.find_item_in_sql(
             table=DATABASEKEYS.TABLES.USERDATA,

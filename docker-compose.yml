@@ -46,6 +46,10 @@ services:
     volumes:
       - ./src/assets:/app/src/assets
       - shared_storage:/app/logs
+    command: |
+      sh -c '
+      alembic upgrade head &&
+      gunicorn -c gunicorn.conf.py app:app'
   # logs:
   #   image: 2axxaxx/nginx_logs:latest
   #   ports:

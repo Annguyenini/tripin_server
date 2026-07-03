@@ -7,6 +7,7 @@ from src.database.userdata_db_service import UserDataDataBaseService
 from src.error_handler.error_handler import ErrorHandler
 from src.utils.cache.cache import Cache
 from src.utils.cache.keys.cache_keys import (
+    GetBasicUserDataDomainCacheKey,
     GetUserDomainCacheKey,
 )
 from src.utils.time_convert import timestamptz_to_ms
@@ -61,6 +62,30 @@ class UserDataRepository:
             self.ErrorHandler.error("fail to get user data", str(e))
             print(e)
             return None
+
+    # def get_user_basic_data(self, user_id: int):
+    #     try:
+    #         # get data from cache
+    #         cache_key = GetBasicUserDataDomainCacheKey(user_id=user_id)
+    #         raw_data_from_cache = self.CacheService.get(key=cache_key)
+
+    #         # load data into dict
+    #         if raw_data_from_cache:
+    #             data_from_cache = json.loads(raw_data_from_cache)
+    #             return data_from_cache
+    #         # cache miss
+    #         user_data = self.UserDataDatabaseService.get_user_basic_data_by_id(
+    #             user_id=user_id
+    #         )
+    #         if not user_data:
+    #             return None
+    #         # put data to cache, 2hrs
+    #         self.CacheService.set(key=cache_key, data=json.dumps(user_data), time=7200)
+    #         return user_data
+    #     except Exception as e:
+    #         self.ErrorHandler.error("fail to get user data", str(e))
+    #         print(e)
+    #         return None
 
     def delete_user(self, user_id: int):
         try:

@@ -11,6 +11,7 @@ DATABASEKEYS = SimpleNamespace(
         USER_AUDIT="tripin_auth.user_audit",
         TRIP_CONTENT_CARDS="tripin_trips.content_cards",
         USER_SETTINGS="tripin_auth.user_settings",
+        FRIENDSHIPS="tripin_friendships.friendships_table",
     ),
     USERDATA=SimpleNamespace(
         USER_ID="id",
@@ -135,5 +136,11 @@ DATABASEKEYS = SimpleNamespace(
         HAS_SEEN_ONBOARDING="has_seen_onboarding",
         LANGUAGE="language",
         UPDATE_AT="update_at",
+    ),
+    FRIENDSHIPS=SimpleNamespace(
+        USER_ID1="user_id1",
+        USER_ID2="user_id2",
+        STATUS="status",
+        LAST_UPDATE="last_update",
     ),
 )
