@@ -303,11 +303,14 @@ class TripContentsService:
         """version are based on content last update time and total count"""
         last_update = 0
         trip_contents = self.TripContentsRepository.get_trip_content(trip_id=trip_id)
+        result =[]
         for content in trip_contents:
+            if content['event']!='add' :
+                continue
             if content["modified_time"] > last_update:
                 last_update = content["modified_time"]
-
-        version = f"trip:{trip_id}::{last_update}::{len(trip_contents)}"
+            result.append(content)
+        version = f"trip:{trip_id}::{last_update}::{len(result)}"
         return {"code": "successfully", "version": version}, 200
 
         pass

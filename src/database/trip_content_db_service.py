@@ -71,6 +71,9 @@ class TripContentsDatabaseService(Database):
             self.ErrorHandler.error("Failed to get trip all trip content!")
             return None
 
+
+
+
     def insert_content_to_database(
         self,
         trip_id: str,

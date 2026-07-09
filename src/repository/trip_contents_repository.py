@@ -3,6 +3,7 @@
 
 import json
 
+from src.repository.trip_repository import TripRepository
 from src.database.trip_content_db_service import TripContentsDatabaseService
 from src.database.tripdata_db_service import TripDataBaseService
 from src.utils.cache.cache import Cache
@@ -30,12 +31,14 @@ class TripContentsRepository:
             return
         self.TripContentsDatabaseService = TripContentsDatabaseService()
         self.CacheService = Cache()
+        self.TripRepository = TripRepository()
         self._init = True
 
     def get_trip_content(self, trip_id: int):
         # ----------------------data from cache------------------------
         cache_key = GetTripContentsDomainCacheKey(trip_id=trip_id)
         raw = self.CacheService.get(key=cache_key)
+        trip_data = self.TripRepository.get_trip_data(trip_id=trip_id)
         if raw:
             return json.loads(raw)
         # ----------------------cache miss------------------------------
@@ -46,6 +49,7 @@ class TripContentsRepository:
             return None
         for content in contents:
             # convert timestamp to ms
+            content['trip_name']=trip_data.get('trip_name')
             content["time_stamp"] = timestamptz_to_ms(timestamp=content["time_stamp"])
             content["modified_time"] = timestamptz_to_ms(
                 timestamp=content["modified_time"]
