@@ -51,7 +51,8 @@ services:
       # - shared_storage:/app/logs
     command: |
       sh -c '
-      alembic upgrade head'
+      alembic upgrade head &&
+      python tests/scripts/create_mock_relationship.py '
   # logs:
   #   image: 2axxaxx/nginx_logs:latest
   #   ports:

@@ -16,6 +16,8 @@ except Exception:
     traceback.print_exc()
     raise
 
+print(f'test in database :{os.environ.get("DB_HOST")} {os.environ.get("DB_HOST")} {os.environ.get("DB_USER")} {os.environ.get("DB_PASS")} {os.environ.get("DB_PORT")}')
+
 
 @pytest.fixture(scope="session")
 def redis_client():

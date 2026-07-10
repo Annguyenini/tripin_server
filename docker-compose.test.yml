@@ -3,6 +3,8 @@ services:
   test_db:
     image: postgres:15
     # container_name: test_tripin_db
+    networks:
+      - tripin_net_local
     environment:
       POSTGRES_USER: testuser
       POSTGRES_PASSWORD: testpass
@@ -21,6 +23,8 @@ services:
   test_redis:
     image: redis
     # container_name: test_tripin_redis
+    networks:
+      - tripin_net_local
     ports:
       - "8995:6379"
     tmpfs:
@@ -28,10 +32,13 @@ services:
 
   test_server:
     # container_name: test_tripin_server
+    #
     build: .
     ports:
       - "8985:8000"
       - "1515:1514"
+    networks:
+      - tripin_net_local
     env_file:
       - .env.test
     depends_on:
@@ -47,7 +54,14 @@ services:
         echo "create test user"
         python tests/scripts/create_test_user.py
 
+        echo "create mock relationships"
+        python tests/scripts/create_mock_relationship.py
+
         echo "run test"
         python -m pytest -vv -s --full-trace
       '
     restart: "no"
+
+networks:
+  tripin_net_local:
+    external: true
