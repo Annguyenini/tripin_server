@@ -7,8 +7,8 @@ from src.database.userdata_db_service import UserDataDataBaseService
 from src.error_handler.error_handler import ErrorHandler
 from src.utils.cache.cache import Cache
 from src.utils.cache.keys.cache_keys import (
-    GetBasicUserDataDomainCacheKey,
     GetUserDomainCacheKey,
+    GetUserSearchCacheKey,
 )
 from src.utils.time_convert import timestamptz_to_ms
 
@@ -63,6 +63,27 @@ class UserDataRepository:
             print(e)
             return None
 
+    def search_user(self,keywords:str):
+        try:
+            cache_key = GetUserSearchCacheKey(keywords=keywords.lower())
+            raw_data_from_cache = self.CacheService.get(key=cache_key)
+            if raw_data_from_cache:
+                return json.loads(raw_data_from_cache)
+            users = self.UserDataDatabaseService.search_userdata(keywords=keywords)
+            for user_data in users:
+                user_data["created_time"] = timestamptz_to_ms(user_data.get("created_time"))
+                user_data["modified_time"] = timestamptz_to_ms(
+                    user_data.get("modified_time")
+                )
+                user_data["trips_modified_time"] = timestamptz_to_ms(
+                    user_data.get("trips_modified_time")
+                )
+            self.CacheService.set(key=cache_key,data=json.dumps(users),time=7200)
+            return users
+        except Exception as e:
+            self.ErrorHandler.error("fail to search user data", str(e))
+            print(e)
+            return None
     # def get_user_basic_data(self, user_id: int):
     #     try:
     #         # get data from cache

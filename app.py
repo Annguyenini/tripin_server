@@ -36,6 +36,8 @@ from src.user_setting.user_setting_route import UserSettingsRoutes
 from src.web.trip_view.trip_view_route import TripViewRoute
 from src.web.web_service import WebService
 from src.friendships.friendships_routes import FriendShipRoutes
+from src.user.public.profiles_routes import ProfilesRoute
+
 # bootstrap_manager()
 mail = Mail()
 dotenv.load_dotenv(".env")
@@ -70,6 +72,7 @@ class Server:
         trip_content_routes = TripContentRoutes()
         internal_error_route = ErrorSSE()
         friendships_route = FriendShipRoutes()
+        profile_routes= ProfilesRoute()
         self.app.register_blueprint(auth_route.bp, url_prefix="/auth")
         self.app.register_blueprint(trip_route.bp, url_prefix="/trip")
 
@@ -80,6 +83,7 @@ class Server:
         self.app.register_blueprint(internal_error_route.bp, url_prefix="/internal")
         self.app.register_blueprint(user_settings_route.bp, url_prefix="/user-settings")
         self.app.register_blueprint(friendships_route.bp,url_prefix='/friend')
+        self.app.register_blueprint(profile_routes.bp,url_prefix='/profiles')
 
         self.app.route("/", methods=["GET"])(self.landing)
         self.app.route("/app-version", methods=["GET"])(self.app_version)

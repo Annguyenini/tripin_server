@@ -84,7 +84,29 @@ class UserDataDataBaseService(Database):
             userdata = cur.fetchone()
             return dict(userdata) if userdata else None
         except Exception as e:
-            self.Erro
+            self.ErrorHandler.error("failed to get user data by email or username ", {e})
+            return None
+        finally:
+            if con:
+                self.close_db(conn=con)
+
+
+    def search_userdata(self,keywords:str):
+        con,cur = self.connect_db('realDict')
+        try:
+            cur.execute(
+                f'''
+                SELECT *
+                FROM {DATABASEKEYS.TABLES.USERDATA}
+                WHERE {DATABASEKEYS.USERDATA.USER_NAME} ILIKE %s
+                ''',
+                (f'%{keywords}%',)
+            )
+            data = cur.fetchall()
+            return data
+        except Exception as e:
+            print(e)
+            self.ErrorHandler.error("failed to search user datas", {e})
             return None
         finally:
             if con:

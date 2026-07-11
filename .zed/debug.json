@@ -1,0 +1,23 @@
+[
+  {
+    "label": "Python: Flask",
+    "adapter": "Debugpy",
+    "request": "launch",
+    "module": "app",
+    "cwd": "$ZED_WORKTREE_ROOT",
+    "env": {
+      "FLASK_APP": "app",
+      "DEBUG": "1"
+    },
+    "args": [
+      "run",
+      "--reload",
+      "--debugger"
+    ],
+    "autoReload": {
+      "enable": true
+    },
+    "jinja": true,
+    "justMyCode": true
+  }
+]

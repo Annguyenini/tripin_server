@@ -35,11 +35,17 @@ class FriendShipRoutes(RouteBase):
         self.bp.route("/outcoming-friend-requests", methods=["GET"])(
             self.get_outcoming_friend_list
         )
+        self.bp.route("/get-relationship/<target_user_id>", methods=["GET"])(
+            self.get_relationship
+        )
         self.bp.route("/accept-friend-request", methods=["PATCH"])(
             self.accept_friend_request
         )
         self.bp.route("/request-friend", methods=["POST"])(
             self.request_friend
+        )
+        self.bp.route("/delete-relationship", methods=["DELETE"])(
+            self.delete_relationship
         )
 
     @route_exception(
@@ -116,7 +122,7 @@ class FriendShipRoutes(RouteBase):
         if not target_user_id:
             raise ValueError('invalid user id')
         data, code = self.FriendShipsService.accept_friend_request(
-            user_id=user_id,target_user_id=smart_cast(target_user_id)
+            user_id=user_id,target_user_id=target_user_id
         )
         return jsonify(data), code
 
@@ -137,6 +143,47 @@ class FriendShipRoutes(RouteBase):
         if not target_user_id:
             raise ValueError('invalid user id')
         data, code = self.FriendShipsService.request_friend(
+            user_id=user_id,target_user_id=smart_cast(target_user_id)
+        )
+        return jsonify(data), code
+
+    @route_exception(
+        service="Friend Ships Route",
+        endpoint="get-relationship",
+        unit="minute",
+        unit_value=15,
+        max_requests=300,
+    )
+    def get_relationship(self,target_user_id):
+        user_data_from_jwt, error = self._get_authenticated_user()
+        if error:
+            return jsonify(error), 401
+        user_id = user_data_from_jwt.get("user_id")
+
+        if not target_user_id:
+            raise ValueError('invalid user id')
+        data, code = self.FriendShipsService.get_relationship(
+            user_id=user_id,target_user_id=smart_cast(target_user_id)
+        )
+        return jsonify(data), code
+
+    @route_exception(
+        service="Friend Ships Route",
+        endpoint="delete-relationship",
+        unit="minute",
+        unit_value=15,
+        max_requests=300,
+    )
+    def delete_relationship(self):
+        user_data_from_jwt, error = self._get_authenticated_user()
+        if error:
+            return jsonify(error), 401
+        user_id = user_data_from_jwt.get("user_id")
+        body = request.json
+        target_user_id = body.get('target_user_id')
+        if not target_user_id:
+            raise ValueError('invalid user id')
+        data, code = self.FriendShipsService.delete_relationship(
             user_id=user_id,target_user_id=smart_cast(target_user_id)
         )
         return jsonify(data), code

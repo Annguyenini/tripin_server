@@ -4,7 +4,6 @@
 import json
 from datetime import datetime, timezone
 
-from numpy.ma.core import sort
 
 from src.database.friendships_db_service import FriendShipsDatabaseService
 from src.database.database_keys import DATABASEKEYS
@@ -40,6 +39,8 @@ class FriendShipsService:
 
     def _get_user_data_with_avatar(self, user_id: int):
         target = self.UserRepository.get_user_data(user_id)
+        if not target:
+            return None
         if target["avatar"]:
             target["avatar"] = S3Sevice.generate_temp_uri(key=target["avatar"])
         result = {
@@ -80,6 +81,7 @@ class FriendShipsService:
             outgoing_friend_requests = []
             ## loop through all the relationship and separate it into 3 types
             for relationship in relationships_list:
+                # print(relationship,type(relationship))
                 user1 = relationship.get(USER1)
                 user2 = relationship.get(USER2)
                 status = relationship.get(STATUS)
@@ -87,6 +89,8 @@ class FriendShipsService:
                 if user_id == user1:
                     target_id = user2
                     target = self._get_user_data_with_avatar(user_id=target_id)
+                    if not target:
+                        continue
                     if status == "FRIEND":
                         friends_list.append(target)
                     elif status == "REQ_1":
@@ -97,12 +101,16 @@ class FriendShipsService:
                 elif user_id == user2:
                     target_id = user1
                     target = self._get_user_data_with_avatar(user_id=target_id)
+                    if not target:
+                        continue
+
                     if status == "FRIEND":
                         friends_list.append(target)
                     elif status == "REQ_2":
                         outgoing_friend_requests.append(target)
                     elif status == "REQ_1":
                         incoming_friend_requests.append(target)
+
             result = {
                 "friends_list": friends_list,
                 "incoming_friend_requests": incoming_friend_requests,
@@ -143,18 +151,20 @@ class FriendShipsService:
     @handle_exception("Friendships service", "get-outcoming-request-list")
     def get_outcoming_requests(self, user_id: int):
         relationships = self._get_user_relationships(user_id=user_id)
+        if relationships is None:
+            return {"code": "failed", "message": "Fail to get relationship"}, 500
         outcoming_requests = relationships.get("outgoing_friend_requests")
         if outcoming_requests is None:
             return {"code": "failed", "message": "Fail to get friends list"}, 500
         return {
             "code": "successfully",
             "message": "successfully",
-            "outcoming_requests": outcoming_requests,
+            "outcoming_friend_requests": outcoming_requests,
         }, 200
 
     @handle_exception("friendship service", "accept friend request")
     def accept_friend_request(self, user_id: int, target_user_id: int):
-        user_id1, user_id2 = sort([user_id, target_user_id])
+        user_id1, user_id2 = sorted([user_id, target_user_id])
         relationship = self.FriendShipsRepository.get_relationship(
             user_id1=user_id1, user_id2=user_id2
         )
@@ -181,6 +191,7 @@ class FriendShipsService:
         # invalidate the domain data
         self.FriendShipsRepository.invalidate_cache(user_id=user_id)
         self.FriendShipsRepository.invalidate_cache(user_id=target_user_id)
+        self.FriendShipsRepository.invalidate_relationship_cache(user_id1=user_id1,user_id2=user_id2)
         # invalidate user relationship list
         self.invalid_user_relationship_list_cache(user_id=user_id)
         self.invalid_user_relationship_list_cache(user_id=target_user_id)
@@ -224,3 +235,29 @@ class FriendShipsService:
             self.CacheService.delete(key=cache_key)
         except Exception as e:
             print(e)
+
+    @handle_exception("friendship service", "get relationship")
+    def get_relationship(self,user_id,target_user_id):
+        user_id1, user_id2 = sorted([user_id, target_user_id])
+
+        relationship = self.FriendShipsRepository.get_relationship(user_id1=user_id1,user_id2=user_id2)
+        if relationship is None:
+            return {'code':'failed','message':'failed to get user relationship'},500
+        return {"code": "successfully", "message": "successfully",'relationship':relationship}, 200
+
+    @handle_exception("friendship service", "delete relationship")
+    def delete_relationship(self,user_id:int,target_user_id:int):
+        user_id1, user_id2 = sorted([user_id, target_user_id])
+        delete_relationship = self.FriendShipsRepository.delete_relationship(user_id1=user_id1,user_id2=user_id2)
+        if not delete_relationship:
+            return {'code':'failed','message':'Failed to delete relationship!'},500
+        # delete friend list cache for both users
+        self.invalid_user_relationship_list_cache(user_id=user_id)
+        self.invalid_user_relationship_list_cache(user_id=target_user_id)
+        # delete domain friend list cache for both users
+        self.FriendShipsRepository.invalidate_cache(user_id=user_id)
+        self.FriendShipsRepository.invalidate_cache(user_id=target_user_id)
+        # delete relationship
+        self.FriendShipsRepository.invalidate_relationship_cache(user_id1=user_id1,user_id2=user_id2)
+
+        return {'code':'successfully','message':'Successfully'},200

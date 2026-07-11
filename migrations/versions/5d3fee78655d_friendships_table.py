@@ -38,7 +38,9 @@ def upgrade() -> None:
     op.execute("""
         ALTER TABLE tripin_friendships.friendships_table ADD CONSTRAINT user_order_check CHECK (user_id1<user_id2);
         """)
-
+    op.execute("""
+        ALTER TABLE tripin_friendships.friendships_table ADD CONSTRAINT friend_ship_unique UNIQUE (user_id1,user_id2);
+        """)
     pass
 
 
@@ -57,5 +59,8 @@ def downgrade() -> None:
         """)
     op.execute("""
         ALTER TABLE tripin_friendships.friendships_table DROP CONSTRAINT user_order_check;
+        """)
+    op.execute("""
+        ALTER TABLE tripin_friendships.friendships_table DROP CONSTRAINT friend_ship_unique;
         """)
     pass

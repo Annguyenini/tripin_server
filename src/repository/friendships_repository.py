@@ -34,10 +34,10 @@ class FriendShipsRepository:
     def get_user_relationships(self, user_id: int):
         try:
             cache_key = GetUserRelationshipsDomainCacheKey(user_id=user_id)
-            raw_data_from_cache = self.CacheService.get(key=cache_key)
-            if raw_data_from_cache:
-                data_from_cache = json.loads(raw_data_from_cache)
-                return data_from_cache
+            # raw_data_from_cache = self.CacheService.get(key=cache_key)
+            # if raw_data_from_cache:
+            #     data_from_cache = json.loads(raw_data_from_cache)
+            #     return data_from_cache
             relationships = self.FriendshipsDatabaseService.get_user_relationships(
                 user_id=user_id
             )
@@ -45,7 +45,7 @@ class FriendShipsRepository:
                 relationship["last_update"] = timestamptz_to_ms(
                     relationship["last_update"]
                 )
-                relationship = dict(relationship)
+                dict(relationship)
 
             self.CacheService.set(
                 key=cache_key, data=json.dumps(relationships), time=7200
@@ -70,19 +70,38 @@ class FriendShipsRepository:
             )
             if relationship is None:
                 return None
+            if relationship.get('last_update'):
+                relationship['last_update'] = timestamptz_to_ms(relationship.get('last_update'))
             ## set new cache
             self.CacheService.set(
                 key=cache_key, data=json.dumps(relationship), time=7200
             )
-            return dict(relationship)
+            return relationship
         except Exception as e:
             print(e)
             self.ErrorHandler.error("failed to get relationship", str(e))
             return None
 
+    def delete_relationship(self,user_id1:int,user_id2:int):
+        try:
+            is_delete = self.FriendshipsDatabaseService.delete_relationship(user_id1=user_id1,user_id2=user_id2)
+            return is_delete
+        except Exception as e:
+            print(e)
+            self.ErrorHandler.error("failed to delete relationship", str(e))
+            return False
+
     def invalidate_cache(self, user_id: int):
         try:
             cache_key = GetUserRelationshipsDomainCacheKey(user_id=user_id)
+            self.CacheService.delete(key=cache_key)
+        except Exception as e:
+            print(e)
+            self.ErrorHandler.error("failed invalidate cache", str(e))
+
+    def invalidate_relationship_cache(self, user_id1: int,user_id2:int):
+        try:
+            cache_key = GetFriendshipCacheKey(user_id1=user_id1,user_id2=user_id2)
             self.CacheService.delete(key=cache_key)
         except Exception as e:
             print(e)

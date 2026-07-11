@@ -23,7 +23,7 @@ class FriendShipsDatabaseService(Database):
         self._init = True
 
     def get_user_relationships(self, user_id: int):
-        con, cur = self.connect_db()
+        con, cur = self.connect_db(cur_options='realDict')
         try:
             cur.execute(
                 f"""
@@ -49,7 +49,7 @@ class FriendShipsDatabaseService(Database):
 
     def get_relationship(self, user_id1: int, user_id2: int):
         """Require user_id1 < user_id2"""
-        con, cur = self.connect_db()
+        con, cur = self.connect_db(cur_options='realDict')
         try:
             cur.execute(
                 f"""
@@ -91,7 +91,7 @@ class FriendShipsDatabaseService(Database):
             return True
         except Exception as e:
             print(e)
-            self.ErrorHandler.error("Fail to get user friendships", str(e))
+            self.ErrorHandler.error("Fail to get insert friendships", str(e))
             return False
         finally:
             self.close_db(conn=con)
@@ -130,3 +130,13 @@ class FriendShipsDatabaseService(Database):
         finally:
             self.close_db(conn=con)
         pass
+
+
+    def delete_relationship(self,user_id1:int,user_id2:int):
+        is_delete = self.delete_from_table(
+            table=DATABASEKEYS.TABLES.FRIENDSHIPS,
+            item=DATABASEKEYS.FRIENDSHIPS.USER_ID1,
+            value=user_id1,second_condition=True,
+            second_item=DATABASEKEYS.FRIENDSHIPS.USER_ID2,
+            second_value=user_id2)
+        return is_delete

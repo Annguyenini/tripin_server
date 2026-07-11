@@ -4,7 +4,7 @@ import dotenv
 import psycopg2
 from werkzeug.security import generate_password_hash
 
-# dotenv.load_dotenv()
+dotenv.load_dotenv()
 
 conn = psycopg2.connect(
     host=os.environ.get("DB_HOST"),
@@ -15,8 +15,8 @@ conn = psycopg2.connect(
 )
 cur = conn.cursor()
 
-username = os.getenv("TEST_USER")
-password = os.getenv("TEST_PASS")
+username = os.environ.get("TEST_USER")
+password = os.environ.get("TEST_PASS")
 hashed = generate_password_hash(password)
 
 # Assumes your TEST_USER account has id = 1. Change if it doesn't.
@@ -26,7 +26,6 @@ TEST_USER_ID = 1
 # relation is either "FRIEND", or a tuple ("PENDING", initiator_id)
 # initiator_id tells you who sent the request (used to derive REQ_1/REQ_2)
 mock_relations = [
-    (2, "FRIEND"),                      # already friends
     (3, "FRIEND"),                      # already friends
     (4, ("PENDING", 4)),                # user 4 requested TEST_USER -> incoming
     (5, ("PENDING", 5)),                # user 5 requested TEST_USER -> incoming
