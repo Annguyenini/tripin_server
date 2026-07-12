@@ -78,7 +78,7 @@ class UserDataRepository:
                 user_data["trips_modified_time"] = timestamptz_to_ms(
                     user_data.get("trips_modified_time")
                 )
-            self.CacheService.set(key=cache_key,data=json.dumps(users),time=7200)
+            self.CacheService.set(key=cache_key,data=json.dumps(users),time=120)
             return users
         except Exception as e:
             self.ErrorHandler.error("fail to search user data", str(e))

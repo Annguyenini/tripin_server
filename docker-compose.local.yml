@@ -52,7 +52,7 @@ services:
     command: |
       sh -c '
       alembic upgrade head &&
-      python tests/scripts/create_mock_relationship.py '
+      python tests/scripts/create_test_user.py && gunicorn -c gunicorn.conf.py app:app'
   # logs:
   #   image: 2axxaxx/nginx_logs:latest
   #   ports:

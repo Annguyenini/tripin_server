@@ -112,6 +112,28 @@ class UserDataDataBaseService(Database):
             if con:
                 self.close_db(conn=con)
 
+    def search_userdata_with_relationship(self,user_id:int,keywords:str):
+        con,cur = self.connect_db('realDict')
+        try:
+            cur.execute(
+                f'''
+                SELECT u.*,f.*
+                FROM {DATABASEKEYS.TABLES.USERDATA} u JOIN {DATABASEKEYS.TABLES.FRIENDSHIPS} f
+                ON (u.{DATABASEKEYS.USERDATA.USER_ID} = f.{DATABASEKEYS.FRIENDSHIPS.USER_ID1} AND
+                WHERE {DATABASEKEYS.USERDATA.USER_NAME} ILIKE %s
+                ''',
+                (f'%{keywords}%',)
+            )
+            data = cur.fetchall()
+            return data
+        except Exception as e:
+            print(e)
+            self.ErrorHandler.error("failed to search user datas", {e})
+            return None
+        finally:
+            if con:
+                self.close_db(conn=con)
+
     def insert_new_userdata(
         self, email: str, display_name: str, username: str, password: str
     ) -> bool:

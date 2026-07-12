@@ -1,6 +1,7 @@
 import os
+import random
 import sys
-
+import string
 import dotenv
 import psycopg2
 from werkzeug.security import generate_password_hash
@@ -23,6 +24,15 @@ for i in range(10):
     cur.execute(
         "INSERT INTO tripin_auth.userdata (email, display_name, user_name, password, created_time, role) VALUES (%s, %s, %s, %s, NOW(), 'user')",
         (f"test@tripping{i}.com", username, username+f'{i}', hashed),
+    )
+
+
+for i in range(1000):
+
+    random_user = random.choice(string.ascii_uppercase)+''.join(random.choices(string.ascii_lowercase,k=10))
+    cur.execute(
+        "INSERT INTO tripin_auth.userdata (email, display_name, user_name, password, created_time, role) VALUES (%s, %s, %s, %s, NOW(), 'user')",
+        (f"test@tripping{i}.com", username, random_user, hashed),
     )
 
 conn.commit()
