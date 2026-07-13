@@ -70,6 +70,5 @@ services:
 #     external: true
 networks:
   tripin_net_local:
-    external: true
 
 # version: '3.8'
