@@ -42,7 +42,7 @@ class FriendShipsService:
         if not target:
             return None
         if target["avatar"]:
-            target["avatar"] = S3Sevice.generate_temp_uri(key=target["avatar"])
+            target["avatar"] = self.S3Service.generate_temp_uri(key=target["avatar"])
         result = {
             "avatar": target["avatar"],
             "display_name": target["display_name"],

@@ -59,5 +59,9 @@ def GetFriendshipCacheKey(user_id1: int, user_id2: int):
 def GetUserSearchCacheKey(keywords:str):
     return f"search::user:{keywords}"
 
+def GetUserSearchCacheWithRelationshipKey(keywords:str):
+    return f"search::user:{keywords}"
+
+
 def GetUserSearchDomainCacheKey(keywords:str):
     return f"search::domain:user:{keywords}"

@@ -9,6 +9,7 @@ from src.utils.cache.cache import Cache
 from src.utils.cache.keys.cache_keys import (
     GetUserDomainCacheKey,
     GetUserSearchCacheKey,
+    GetUserSearchCacheWithRelationshipKey,
 )
 from src.utils.time_convert import timestamptz_to_ms
 
@@ -78,6 +79,24 @@ class UserDataRepository:
                 user_data["trips_modified_time"] = timestamptz_to_ms(
                     user_data.get("trips_modified_time")
                 )
+            self.CacheService.set(key=cache_key,data=json.dumps(users),time=120)
+            return users
+        except Exception as e:
+            self.ErrorHandler.error("fail to search user data", str(e))
+            print(e)
+            return None
+
+    def search_user_with_relationship(self,user_id:int,keywords:str):
+        try:
+            cache_key = GetUserSearchCacheWithRelationshipKey(keywords=keywords.lower())
+            raw_data_from_cache = self.CacheService.get(key=cache_key)
+            if raw_data_from_cache:
+                return json.loads(raw_data_from_cache)
+            users = self.UserDataDatabaseService.search_userdata_with_relationship(user_id= user_id, keywords=keywords)
+            print(users)
+            # for user_data in users:
+            #     if user_data.get('last_update'):
+            #         user_data["last_update"] = timestamptz_to_ms(user_data.get('last_update'))
             self.CacheService.set(key=cache_key,data=json.dumps(users),time=120)
             return users
         except Exception as e:

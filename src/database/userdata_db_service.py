@@ -117,12 +117,20 @@ class UserDataDataBaseService(Database):
         try:
             cur.execute(
                 f'''
-                SELECT u.*,f.*
-                FROM {DATABASEKEYS.TABLES.USERDATA} u JOIN {DATABASEKEYS.TABLES.FRIENDSHIPS} f
-                ON (u.{DATABASEKEYS.USERDATA.USER_ID} = f.{DATABASEKEYS.FRIENDSHIPS.USER_ID1} AND
-                WHERE {DATABASEKEYS.USERDATA.USER_NAME} ILIKE %s
+                SELECT u.{DATABASEKEYS.USERDATA.USER_NAME},
+                u.{DATABASEKEYS.USERDATA.DISPLAY_NAME},
+                u.{DATABASEKEYS.USERDATA.USER_ID},
+                u.{DATABASEKEYS.USERDATA.AVARTAR},
+                f.{DATABASEKEYS.FRIENDSHIPS.USER_ID1},
+                f.{DATABASEKEYS.FRIENDSHIPS.USER_ID2},
+                f.{DATABASEKEYS.FRIENDSHIPS.STATUS}
+                FROM {DATABASEKEYS.TABLES.USERDATA} u LEFT JOIN {DATABASEKEYS.TABLES.FRIENDSHIPS} f
+                ON (u.{DATABASEKEYS.USERDATA.USER_ID} = f.{DATABASEKEYS.FRIENDSHIPS.USER_ID1}
+                OR u.{DATABASEKEYS.USERDATA.USER_ID} = f.{DATABASEKEYS.FRIENDSHIPS.USER_ID2})
+                AND (f.{DATABASEKEYS.FRIENDSHIPS.USER_ID1} = %s OR f.{DATABASEKEYS.FRIENDSHIPS.USER_ID2} = %s )
+                WHERE u.{DATABASEKEYS.USERDATA.USER_NAME} ILIKE %s
                 ''',
-                (f'%{keywords}%',)
+                (user_id,user_id,f'%{keywords}%',)
             )
             data = cur.fetchall()
             return data

@@ -76,9 +76,9 @@ class UsersService :
         # however, data recived from postgres and s3 did get cache
         if not keywords or len(keywords) <3:
             raise ValueError('Invalid Keywords')
-        users = self.UserDataRepository.search_user(keywords=keywords)
+        users = self.UserDataRepository.search_user_with_relationship(user_id=user_id, keywords=keywords)
+        print(users)
         result =[]
-        relationships = self.FriendShipsRepository.get_user_relationships(user_id=user_id)
         for user in users:
             if user.get('id')== user_id:continue
             if user.get('avatar'):
@@ -87,13 +87,13 @@ class UsersService :
                 'user_id':user.get('id'),
                 'display_name':user.get('display_name'),
                 'user_name':user.get('user_name'),
-                'avatar':user.get('avatar')
+                'avatar':user.get('avatar'),
+                'user_id1':user.get('user_id1'),
+                'user_id2':user.get('user_id2'),
+                'status':user.get('status'),
             }
 
-            for relationship in relationships:
-                if relationship.get('user_id1') ==user.get('id') or relationship.get('user_id2') ==user.get('id'):
-                    allowed_data = {**allowed_data,**relationship}
-                    break
+
 
             # user_id1,user_id2 = sorted([user_id,user.get('id')])
             # relationship = self.FriendShipsRepository.get_relationship(user_id1=user_id1,user_id2=user_id2)
