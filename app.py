@@ -38,7 +38,7 @@ from src.web.web_service import WebService
 from src.friendships.friendships_routes import FriendShipRoutes
 from src.user.public.users_routes import UsersRoutes
 
-# bootstrap_manager()
+bootstrap_manager()
 mail = Mail()
 dotenv.load_dotenv(".env")
 
