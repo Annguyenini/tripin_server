@@ -38,5 +38,6 @@ jobs:
       - name: Clean Up
         if: always()
         run: |
+          docker network create tripin_net_local
           docker compose -f docker-compose.test.yml logs test_server
           docker compose -f docker-compose.test.yml down -v --remove-orphans
