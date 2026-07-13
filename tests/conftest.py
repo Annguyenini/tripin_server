@@ -16,6 +16,8 @@ except Exception:
     traceback.print_exc()
     raise
 
+print(f'test in database :{os.environ.get("DB_HOST")} {os.environ.get("DB_HOST")} {os.environ.get("DB_USER")} {os.environ.get("DB_PASS")} {os.environ.get("DB_PORT")}')
+
 
 @pytest.fixture(scope="session")
 def redis_client():
@@ -35,13 +37,29 @@ def client():
 @pytest.fixture(scope="session")
 def user_credential():
     return {
-        "username": "TestUser",
+        "username": "TestUser0",
         "password": "Testpass11234@",
         "invalid_username": "Testting",
         "invalid_password": "Testting7749@",
     }
 
+@pytest.fixture(scope="session")
+def user_credential2():
+    return {
+        "username": "TestUser1",
+        "password": "Testpass11234@",
+        "invalid_username": "Testting",
+        "invalid_password": "Testting7749@",
+    }
 
+@pytest.fixture(scope="session")
+def user_credential5():
+    return {
+        "username": "TestUser4",
+        "password": "Testpass11234@",
+        "invalid_username": "Testting",
+        "invalid_password": "Testting7749@",
+    }
 @pytest.fixture(scope="session")
 def invalid_jwt():
     return {
@@ -62,7 +80,26 @@ def get_auth(client, user_credential):
     assert response.get_json()["tokens"] is not None
     return response.get_json()
 
+@pytest.fixture(scope="session")
+def get_auth2(client, user_credential2):
+    print("\n=== trying login ===")
+    response = client.post("/auth/login", json=user_credential2)
+    print(f"=== login response: {response.status_code} ===")
+    print(f"=== login data: {response.get_json()} ===")
+    assert response.get_json() is not None
+    assert response.get_json()["tokens"] is not None
+    return response.get_json()
 
+
+@pytest.fixture(scope="session")
+def get_auth5(client, user_credential5):
+    print("\n=== trying login ===")
+    response = client.post("/auth/login", json=user_credential5)
+    print(f"=== login response: {response.status_code} ===")
+    print(f"=== login data: {response.get_json()} ===")
+    assert response.get_json() is not None
+    assert response.get_json()["tokens"] is not None
+    return response.get_json()
 @pytest.fixture(scope="session")
 def user_data(client, user_credential, get_auth):
     print("\n=== trying get user data ===")

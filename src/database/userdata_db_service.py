@@ -33,6 +33,24 @@ class UserDataDataBaseService(Database):
         return dict(userdata)
         pass
 
+    def get_user_basic_data_by_id(self, user_id: int) -> dict:
+        con, cur = self.connect_db()
+        try:
+            cur.execute(f"""
+                SELECT {DATABASEKEYS.USERDATA.USER_ID},
+                {DATABASEKEYS.USERDATA.DISPLAY_NAME},
+                {DATABASEKEYS.USERDATA.USER_NAME},
+                {DATABASEKEYS.USERDATA.AVARTAR}
+                FROM {DATABASEKEYS.TABLES.USERDATA}
+                WHERE {DATABASEKEYS.USERDATA.USER_ID} =%s""")
+            result = cur.fetchone()
+            return result
+        except Exception as e:
+            self.ErrorHandler.error("Failed to get user basic data", str(e))
+            return None
+        finally:
+            self.close_db(conn=con)
+
     def get_user_data_by_username(self, user_name: str) -> dict | None:
         userdata = self.find_item_in_sql(
             table=DATABASEKEYS.TABLES.USERDATA,
@@ -66,7 +84,59 @@ class UserDataDataBaseService(Database):
             userdata = cur.fetchone()
             return dict(userdata) if userdata else None
         except Exception as e:
-            self.Erro
+            self.ErrorHandler.error("failed to get user data by email or username ", {e})
+            return None
+        finally:
+            if con:
+                self.close_db(conn=con)
+
+
+    def search_userdata(self,keywords:str):
+        con,cur = self.connect_db('realDict')
+        try:
+            cur.execute(
+                f'''
+                SELECT *
+                FROM {DATABASEKEYS.TABLES.USERDATA}
+                WHERE {DATABASEKEYS.USERDATA.USER_NAME} ILIKE %s
+                ''',
+                (f'%{keywords}%',)
+            )
+            data = cur.fetchall()
+            return data
+        except Exception as e:
+            print(e)
+            self.ErrorHandler.error("failed to search user datas", {e})
+            return None
+        finally:
+            if con:
+                self.close_db(conn=con)
+
+    def search_userdata_with_relationship(self,user_id:int,keywords:str):
+        con,cur = self.connect_db('realDict')
+        try:
+            cur.execute(
+                f'''
+                SELECT u.{DATABASEKEYS.USERDATA.USER_NAME},
+                u.{DATABASEKEYS.USERDATA.DISPLAY_NAME},
+                u.{DATABASEKEYS.USERDATA.USER_ID},
+                u.{DATABASEKEYS.USERDATA.AVARTAR},
+                f.{DATABASEKEYS.FRIENDSHIPS.USER_ID1},
+                f.{DATABASEKEYS.FRIENDSHIPS.USER_ID2},
+                f.{DATABASEKEYS.FRIENDSHIPS.STATUS}
+                FROM {DATABASEKEYS.TABLES.USERDATA} u LEFT JOIN {DATABASEKEYS.TABLES.FRIENDSHIPS} f
+                ON (u.{DATABASEKEYS.USERDATA.USER_ID} = f.{DATABASEKEYS.FRIENDSHIPS.USER_ID1}
+                OR u.{DATABASEKEYS.USERDATA.USER_ID} = f.{DATABASEKEYS.FRIENDSHIPS.USER_ID2})
+                AND (f.{DATABASEKEYS.FRIENDSHIPS.USER_ID1} = %s OR f.{DATABASEKEYS.FRIENDSHIPS.USER_ID2} = %s )
+                WHERE u.{DATABASEKEYS.USERDATA.USER_NAME} ILIKE %s
+                ''',
+                (user_id,user_id,f'%{keywords}%',)
+            )
+            data = cur.fetchall()
+            return data
+        except Exception as e:
+            print(e)
+            self.ErrorHandler.error("failed to search user datas", {e})
             return None
         finally:
             if con:

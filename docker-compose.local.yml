@@ -2,31 +2,37 @@
 services:
   db:
     build: ./db
-    container_name: tripin_db
+    container_name: tripin_db_local_env
     networks:
-      - tripin_net
+      - tripin_net_local
     environment:
       POSTGRES_USER: ${DB_USER}
       POSTGRES_PASSWORD: ${DB_PASS}
       POSTGRES_DB: ${DB_NAME}
     ports:
       - "5433:5432"
-    volumes:
-      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U testuser -d tripin"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+      start_period: 10s
+    # volumes:
+    #   - pgdata:/var/lib/postgresql/data
 
   redis:
     image: redis
-    container_name: tripin_redis
+    container_name: tripin_redis_local_env
     networks:
-      - tripin_net
+      - tripin_net_local
     ports:
       - "8993:6379"
-    volumes:
-      - redisdata:/data
+    # volumes:
+    #   - redisdata:/data
   flask:
     container_name: tripin_server
     networks:
-      - tripin_net
+      - tripin_net_local
     build: .
     ports:
       - "8992:8000"
@@ -37,28 +43,33 @@ services:
     env_file:
       - .env.docker
     depends_on:
-      - db
-      - redis
+      db:
+        condition: service_healthy
+
     volumes:
       - ./src/assets:/app/src/assets
-      - shared_storage:/app/logs
+      # - shared_storage:/app/logs
+    command: |
+      sh -c '
+      alembic upgrade head &&
+      python tests/scripts/create_test_user.py && gunicorn -c gunicorn.conf.py app:app'
   # logs:
   #   image: 2axxaxx/nginx_logs:latest
   #   ports:
-  #     - '12345:12345/udp'
+  #     - "12345:12345/udp"
   #   env_file:
-  #     - '.env'
+  #     - ".env"
   #   environment:
   #     - LOG_DIR=/app/logs
   #   volumes:
   #     - ./logs:/app/logs
-volumes:
-  pgdata:
-  redisdata:
-  shared_storage:
-    external: true
+# volumes:
+#   pgdata:
+#   redisdata:
+#   shared_storage:
+#     external: true
 networks:
-  tripin_net:
+  tripin_net_local:
     external: true
 
 # version: '3.8'

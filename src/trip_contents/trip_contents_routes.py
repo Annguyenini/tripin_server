@@ -40,6 +40,9 @@ class TripContentRoutes(RouteBase):
         self.bp.route("/request-trip-contents-metadata", methods=["POST"])(
             self.request_trip_contents_metadata_for_sync
         )
+        self.bp.route("/request-trip-contents-version/<trip_id>", methods=["GET"])(
+            self.request_trip_contents_version
+        )
 
     @route_exception(
         service="Trip Content Route",
@@ -157,6 +160,28 @@ class TripContentRoutes(RouteBase):
                 self.TripContentsService.get_all_content_card_meta_data_from_trip_id(
                     user_id=user_id, trip_id=trip_id
                 )
+            )
+
+            return jsonify(respond), code
+        except Exception as e:
+            print(e)
+            return 500
+
+    @route_exception(
+        service="Trip Content Route",
+        endpoint="request-trip-contents-metadata",
+        unit="minute",
+        unit_value=15,
+        max_requests=500,
+    )
+    def request_trip_contents_version(self, trip_id):
+        try:
+            user_data_from_jwt, error = self._get_authenticated_user()
+            if error:
+                return jsonify(error), 401
+            user_id = user_data_from_jwt.get("user_id")
+            respond, code = self.TripContentsService.get_content_version(
+                user_id=user_id, trip_id=int(trip_id)
             )
 
             return jsonify(respond), code

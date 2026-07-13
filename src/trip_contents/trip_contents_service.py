@@ -3,6 +3,8 @@ from datetime import datetime
 from types import SimpleNamespace
 from typing import Any
 
+from flask.json import jsonify
+
 from src.database.s3.s3_service import S3Sevice
 from src.database.trip_content_db_service import TripContentsDatabaseService
 from src.database.tripdata_db_service import TripDataBaseService
@@ -10,6 +12,7 @@ from src.database.view_trip_db_service import ViewTripDatabaseService
 from src.error_handler.error_handler import ErrorHandler
 from src.repository.trip_contents_repository import TripContentsRepository
 from src.repository.trip_permission import TripPolicy
+from src.repository.trip_repository import TripRepository
 from src.token.tokenservice import TokenService
 from src.trip_service.trip_service import (
     TripService,
@@ -18,6 +21,7 @@ from src.trip_service.trip_service import (
 )
 from src.utils.cache.cache import Cache
 from src.utils.cache.keys.cache_keys import GetTripContentsCacheKey
+from src.utils.exceptions import TripNotFound
 from src.utils.handle_exception import handle_exception
 
 
@@ -53,6 +57,7 @@ class TripContentsService:
         self.TripService = TripService()
         self.TripPolicy = TripPolicy()
         self.TripContentsRepository = TripContentsRepository()
+        self.TripRepository = TripRepository()
         self.CacheService = Cache()
         self._init = True
         pass
@@ -293,11 +298,28 @@ class TripContentsService:
         self.CacheService.set(key=cache_key, time=3600, data=json.dumps(contents))
         return {"code": "successfully", "content_cards": contents}, 200
 
+    @handle_exception("Trip Content", "get content version")
+    def get_content_version(self, user_id: int, trip_id: int):
+        """version are based on content last update time and total count"""
+        last_update = 0
+        trip_contents = self.TripContentsRepository.get_trip_content(trip_id=trip_id)
+        result =[]
+        for content in trip_contents:
+            if content['event']!='add' :
+                continue
+            if content["modified_time"] > last_update:
+                last_update = content["modified_time"]
+            result.append(content)
+        version = f"trip:{trip_id}::{last_update}::{len(result)}"
+        return {"code": "successfully", "version": version}, 200
+
+        pass
+
+    # def get_current_trip_contents_version(self,trip_id:int):
+
     def _trip_owner_validation(self, trip_id: str, user_id: str):
         try:
-            trip_data = self.TripDatabaseService.get_trip_data_from_trip_id(
-                trip_id=trip_id
-            )
+            trip_data = self.TripRepository.get_trip_data(trip_id=trip_id)
             if not trip_data:
                 return False
             return trip_data.get("user_id") == user_id
@@ -329,7 +351,7 @@ class TripContentsService:
             assert user_id, "user id is empty"
 
             #  owner validation
-            self.owner_validation_policy(user_id=user_id, trip_id=trip_id)
+            self.TripPolicy.trip_permission_policy(user_id=user_id, trip_id=trip_id)
 
             # content cards
             contents = self.TripContentsDatabase.get_all_trip_content_cards(

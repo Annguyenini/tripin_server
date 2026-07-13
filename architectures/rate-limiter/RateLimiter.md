@@ -90,3 +90,14 @@
 ------------------ --------------------------------- -----------------------------
   PATCH             /user-settings                    45/15mins 
   GET               /user-settings                    300/15mins
+
+
+## FriendShips endpoints (5 endpoints)
+----------------------------------------------------------------------------------
+  Method             Endpoint                          Per IP
+------------------ --------------------------------- -----------------------------
+  GET               /friends                          300/15mins 
+  GET               /incoming-friend-list             300/15mins
+  GET               /outcoming-friend-list            300/15mins
+  UPDATE            /accept-friend-request            300/15mins
+  POST              /request-friend                   300/15mins
