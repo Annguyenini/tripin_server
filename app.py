@@ -1,3 +1,4 @@
+
 import datetime
 import os
 import traceback
@@ -40,7 +41,12 @@ from src.users.users_routes import UsersRoutes
 from src.web.trip_view.trip_view_route import TripViewRoute
 from src.web.web_service import WebService
 from src.websocket.connection import NotificationRedisPubSub, Socket
+<<<<<<< HEAD
 
+=======
+# import eventlet
+# eventlet.monkey_patch()
+>>>>>>> c352977 (socket io)
 bootstrap_manager()
 mail = Mail()
 dotenv.load_dotenv(".env")
@@ -165,7 +171,11 @@ server = Server()
 
 start_server_status_thread()
 app = server.app
+<<<<<<< HEAD
 socket = Socket(app=app)
+=======
+socket = Socket(app)
+>>>>>>> c352977 (socket io)
 redisnotification = NotificationRedisPubSub(socketIO=socket)
 DEBUG = os.getenv("DEBUG") or False
 
@@ -185,4 +195,7 @@ if __name__ == "__main__":
     # socket.init_app(app=app)
     # run_tasks()
     app.run(host="0.0.0.0", port=8000, debug=DEBUG)
+
+
+    # socket.socketIO.run(app,host="0.0.0.0",port=8000)
     # app.run( host ="0.0.0.0", port =8000,ssl_context=("src/assets/https/cert.pem", "src/assets/https/key.pem"))
