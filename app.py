@@ -16,6 +16,7 @@ from flask import (
 )
 from flask_cors import CORS
 from flask_mail import Mail, Message
+from flask_socketio import SocketIO
 from werkzeug.exceptions import HTTPException
 
 from bootstraps.bootstrap_manager import bootstrap_manager
@@ -23,6 +24,7 @@ from bootstraps.bootstrap_manager import bootstrap_manager
 # from flask_admin import Admin
 from src.credential.credential_route import AuthServer
 from src.error_handler.error_handler import ErrorHandler, ErrorSSE
+from src.friendships.friendships_routes import FriendShipRoutes
 from src.mail.mail_config import MailConfig
 from src.server_config.discord_error_logs import (
     discord_error_logs,
@@ -33,11 +35,12 @@ from src.trip_contents.trip_contents_routes import TripContentRoutes
 from src.trip_service.trip_route import TripRoute
 from src.user.user_route import UserRoute
 from src.user_setting.user_setting_route import UserSettingsRoutes
+from src.users.trips.trip_routes import UsersTripDataRoutes
+from src.users.users_routes import UsersRoutes
 from src.web.trip_view.trip_view_route import TripViewRoute
 from src.web.web_service import WebService
-from src.friendships.friendships_routes import FriendShipRoutes
-from src.users.users_routes import UsersRoutes
-from src.users.trips.trip_routes import UsersTripDataRoutes
+from src.websocket.connection import NotificationRedisPubSub, Socket
+
 bootstrap_manager()
 mail = Mail()
 dotenv.load_dotenv(".env")
@@ -72,7 +75,7 @@ class Server:
         trip_content_routes = TripContentRoutes()
         internal_error_route = ErrorSSE()
         friendships_route = FriendShipRoutes()
-        profile_routes= UsersRoutes()
+        profile_routes = UsersRoutes()
         users_trip = UsersTripDataRoutes()
         self.app.register_blueprint(auth_route.bp, url_prefix="/auth")
         self.app.register_blueprint(trip_route.bp, url_prefix="/trip")
@@ -83,9 +86,9 @@ class Server:
         self.app.register_blueprint(trip_view_route.bp, url_prefix="/trip-view")
         self.app.register_blueprint(internal_error_route.bp, url_prefix="/internal")
         self.app.register_blueprint(user_settings_route.bp, url_prefix="/user-settings")
-        self.app.register_blueprint(friendships_route.bp,url_prefix='/friend')
-        self.app.register_blueprint(profile_routes.bp,url_prefix='/users')
-        self.app.register_blueprint(users_trip.bp,url_prefix='/users')
+        self.app.register_blueprint(friendships_route.bp, url_prefix="/friend")
+        self.app.register_blueprint(profile_routes.bp, url_prefix="/users")
+        self.app.register_blueprint(users_trip.bp, url_prefix="/users")
 
         self.app.route("/", methods=["GET"])(self.landing)
         self.app.route("/app-version", methods=["GET"])(self.app_version)
@@ -102,7 +105,7 @@ class Server:
         self.app.after_request(self.log_request)
 
     def health(self):
-        return {'ok':'okeluon okela'},200
+        return {"ok": "okeluon okela"}, 200
 
     def testmap(self):
         return render_template("testmap.html")
@@ -160,12 +163,10 @@ class Server:
 
 server = Server()
 
-
 start_server_status_thread()
-
-
 app = server.app
-
+socket = Socket(app=app)
+redisnotification = NotificationRedisPubSub(socketIO=socket)
 DEBUG = os.getenv("DEBUG") or False
 
 
@@ -173,11 +174,15 @@ def create_app():
     return server.app
 
 
+# socket = SocketIO
+
 if __name__ == "__main__":
     print("initialize s3")
     print(app.url_map)
     print("ver 5")
 
+    # socket
+    # socket.init_app(app=app)
     # run_tasks()
     app.run(host="0.0.0.0", port=8000, debug=DEBUG)
     # app.run( host ="0.0.0.0", port =8000,ssl_context=("src/assets/https/cert.pem", "src/assets/https/key.pem"))
