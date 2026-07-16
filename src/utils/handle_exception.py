@@ -18,15 +18,15 @@ def handle_exception(name: str, service: str):
                 return function(*args, **kwargs)
 
             except TripException as e:
-                return {"code": e.code, "message": e.message}
+                return {"code": e.code, "message": e.message},403
             except PermissionError as e:
-                return {"code": "no_permission", "message": str(e)}, 403
+                return {"code": "no_permission", "message": 'No Permission'}, 403
 
             except AssertionError as e:
                 print(e)
-                return {"code": "missing_input", "message": str(e)}, 400
+                return {"code": "missing_input", "message": 'Invalid inputs'}, 400
             except ValueError as e:
-                return {"code": "invalid_input", "message": str(e)}, 400
+                return {"code": "invalid_input", "message": 'Invalid inputs'}, 400
             except Conflict as e:
                 return {
                     "code": e.description["code"],
@@ -35,7 +35,7 @@ def handle_exception(name: str, service: str):
             except Exception as e:
                 print(e)
                 _get_ErrorHandler().logger(name).error(f"failed at {service}", str(e))
-                return {"code": "server_fail", "message": str(e)}, 500
+                return {"code": "server_fail", "message": 'Something wrong in out end, please try again later'}, 500
 
         return wrapper
 
