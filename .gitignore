@@ -15,3 +15,7 @@ logs/
 .env.act
 zed/
 .env.docker
+
+.sync_*.db
+.sync_*.db-wal
+.sync_*.db-shm
