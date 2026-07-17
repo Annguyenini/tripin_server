@@ -1,4 +1,4 @@
-
+import json
 import datetime
 import os
 import traceback
@@ -41,12 +41,7 @@ from src.users.users_routes import UsersRoutes
 from src.web.trip_view.trip_view_route import TripViewRoute
 from src.web.web_service import WebService
 from src.websocket.connection import NotificationRedisPubSub, Socket
-<<<<<<< HEAD
-
-=======
-# import eventlet
-# eventlet.monkey_patch()
->>>>>>> c352977 (socket io)
+import redis
 bootstrap_manager()
 mail = Mail()
 dotenv.load_dotenv(".env")
@@ -101,6 +96,8 @@ class Server:
         self.app.route("/privacy", methods=["GET"])(self.privacy)
         self.app.route("/policy-text", methods=["GET"])(self.policy_text)
         self.app.route("/health", methods=["GET"])(self.health)
+        self.app.route("/testsocket", methods=["GET"])(self.test_socket)
+
         # self.app.route("/testmap",methods =['GET'])(self.testmap)
 
         # self.app.route("/trip-view",methods =['GET'])(self.trip_view)
@@ -166,17 +163,24 @@ class Server:
         )
         return response
 
+    def test_socket(self):
+
+        self.redis = redis.Redis(
+            host=os.environ.get("REDIS_HOST"),
+            port=os.environ.get("REDIS_PORT"),
+            decode_responses=True,
+        )
+        self.redis.publish('notifications', json.dumps({'room_id':'user:1','data':'data','event_type':'friendships'}))
+        return {'code':'code'},200
+
 
 server = Server()
 
 start_server_status_thread()
 app = server.app
-<<<<<<< HEAD
 socket = Socket(app=app)
-=======
-socket = Socket(app)
->>>>>>> c352977 (socket io)
 redisnotification = NotificationRedisPubSub(socketIO=socket)
+redisnotification.start_listener_thread()
 DEBUG = os.getenv("DEBUG") or False
 
 
