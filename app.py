@@ -96,7 +96,7 @@ class Server:
         self.app.route("/privacy", methods=["GET"])(self.privacy)
         self.app.route("/policy-text", methods=["GET"])(self.policy_text)
         self.app.route("/health", methods=["GET"])(self.health)
-        self.app.route("/testsocket", methods=["GET"])(self.test_socket)
+        # self.app.route("/testsocket", methods=["GET"])(self.test_socket)
 
         # self.app.route("/testmap",methods =['GET'])(self.testmap)
 
