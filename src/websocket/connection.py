@@ -55,7 +55,7 @@ class Socket:
             )
 
 ## we can use mem to do this instead on redis, but in the future we could have 2 server running in parrallel, so make redis as central
-class NotificationRedisPubSub:
+class Notification:
     def __init__(self, socketIO) -> None:
         self.redis = redis.Redis(
             host=os.environ.get("REDIS_HOST"),
@@ -67,17 +67,43 @@ class NotificationRedisPubSub:
     ## listener for notifications
 
     def redis_listener(self):
+        print("REDIS LISTENER STARTED", id(self))
+
         pubsub = self.redis.pubsub()
         pubsub.subscribe("notifications")
+
         for message in pubsub.listen():
             if message["type"] != "message":
                 continue
-            data = json.loads(message["data"])
-            print(data)
-            room_id = data.get("room_id")
-            event_type = data.get('event_type')
-            self.socket.socketIO.emit(event_type, data, to=room_id)
 
+            try:
+                data = json.loads(message["data"])
+
+                room_id = data.get("room_id")
+                event_type = data.get("event_type")
+
+                if not room_id or not event_type:
+                    continue
+
+                print(
+                    "EMIT",
+                    event_type,
+                    room_id,
+                    data
+                )
+                self.socket.socketIO.emit(
+                    event_type,
+                    data,
+                    to=room_id
+                )
+
+            except Exception as e:
+                print(f"Redis listener error: {e}")
+
+
+    def notificationSender(self,event_type:str,user_id:str, data:dict):
+        room_id = f'user:{user_id}'
+        self.redis.publish('notifications', json.dumps({'room_id':room_id,**data,'event_type':event_type}))
 
 
     def start_listener_thread(self):

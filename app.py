@@ -40,7 +40,7 @@ from src.users.trips.trip_routes import UsersTripDataRoutes
 from src.users.users_routes import UsersRoutes
 from src.web.trip_view.trip_view_route import TripViewRoute
 from src.web.web_service import WebService
-from src.websocket.connection import NotificationRedisPubSub, Socket
+from src.websocket.connection import Notification, Socket
 import redis
 bootstrap_manager()
 mail = Mail()
@@ -96,7 +96,7 @@ class Server:
         self.app.route("/privacy", methods=["GET"])(self.privacy)
         self.app.route("/policy-text", methods=["GET"])(self.policy_text)
         self.app.route("/health", methods=["GET"])(self.health)
-        # self.app.route("/testsocket", methods=["GET"])(self.test_socket)
+        self.app.route("/testsocket", methods=["GET"])(self.test_socket)
 
         # self.app.route("/testmap",methods =['GET'])(self.testmap)
 
@@ -106,6 +106,11 @@ class Server:
         self.app.errorhandler(HTTPException)(self.error_exception_log)
         self.app.errorhandler(Exception)(self.error_exception_log)
         self.app.after_request(self.log_request)
+        self.redis = redis.Redis(
+            host=os.environ.get("REDIS_HOST"),
+            port=os.environ.get("REDIS_PORT"),
+            decode_responses=True,
+        )
 
     def health(self):
         return {"ok": "okeluon okela"}, 200
@@ -165,12 +170,8 @@ class Server:
 
     def test_socket(self):
 
-        self.redis = redis.Redis(
-            host=os.environ.get("REDIS_HOST"),
-            port=os.environ.get("REDIS_PORT"),
-            decode_responses=True,
-        )
-        self.redis.publish('notifications', json.dumps({'room_id':'user:1','data':'data','event_type':'friendships'}))
+
+        self.redis.publish('notifications', json.dumps({'room_id':'user:1','data':'data','event_type':'friend_removed'}))
         return {'code':'code'},200
 
 
@@ -178,9 +179,9 @@ server = Server()
 
 start_server_status_thread()
 app = server.app
-socket = Socket(app=app)
-redisnotification = NotificationRedisPubSub(socketIO=socket)
-redisnotification.start_listener_thread()
+# socket = Socket(app=app)
+# redisnotification = Notification(socketIO=socket)
+# redisnotification.start_listener_thread()
 DEBUG = os.getenv("DEBUG") or False
 
 
@@ -198,7 +199,7 @@ if __name__ == "__main__":
     # socket
     # socket.init_app(app=app)
     # run_tasks()
-    app.run(host="0.0.0.0", port=8000, debug=DEBUG)
+    app.run(host="0.0.0.0", port=8000,debug=DEBUG)
 
 
     # socket.socketIO.run(app,host="0.0.0.0",port=8000)

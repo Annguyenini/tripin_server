@@ -40,7 +40,7 @@ type StoredUserData = {
 ## Other User Data Shape
 
 ```ts
-type OtherUserData = {
+type PublicUserData = {
   avatar: string | null;          // Avatar path prefix
   display_name: string;
   user_name: string;

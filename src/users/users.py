@@ -39,7 +39,7 @@ class UsersService :
         if user_data is None:
             return {'code':'empty','message':'Empty'},200
         if user_data['avatar']:
-            user_data['avatar']=S3Sevice.generate_temp_uri(key=user_data['avatar'])
+            user_data['avatar']=self.S3Service.generate_temp_uri(key=user_data['avatar'])
         public_data  = {
             'user_id':user_data.get('id'),
             'display_name':user_data.get('display_name'),

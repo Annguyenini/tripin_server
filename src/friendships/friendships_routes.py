@@ -47,6 +47,16 @@ class FriendShipRoutes(RouteBase):
         self.bp.route("/delete-relationship", methods=["DELETE"])(
             self.delete_relationship
         )
+        self.bp.route("/remove-friend", methods=["POST"])(
+            self.remove_friend
+        )
+        self.bp.route("/reject-friend-request", methods=["POST"])(
+            self.reject_friend_request
+        )
+        self.bp.route("/cancel-friend-request", methods=["POST"])(
+            self.cancel_friend_request
+        )
+        self.bp.route('/overview',methods=['GET'])(self.get_overview)
 
     @route_exception(
         service="Friend Ships Route",
@@ -100,6 +110,24 @@ class FriendShipRoutes(RouteBase):
         user_id = user_data_from_jwt.get("user_id")
 
         data, code = self.FriendShipsService.get_outcoming_requests(
+            user_id=user_id
+        )
+        return jsonify(data), code
+
+    @route_exception(
+        service="Friend Ships Route",
+        endpoint="get-overview",
+        unit="minute",
+        unit_value=15,
+        max_requests=300,
+    )
+    def get_overview(self):
+        user_data_from_jwt, error = self._get_authenticated_user()
+        if error:
+            return jsonify(error), 401
+        user_id = user_data_from_jwt.get("user_id")
+
+        data, code = self.FriendShipsService.get_overview(
             user_id=user_id
         )
         return jsonify(data), code
@@ -167,6 +195,8 @@ class FriendShipRoutes(RouteBase):
         )
         return jsonify(data), code
 
+
+
     @route_exception(
         service="Friend Ships Route",
         endpoint="delete-relationship",
@@ -184,6 +214,70 @@ class FriendShipRoutes(RouteBase):
         if not target_user_id:
             raise ValueError('invalid user id')
         data, code = self.FriendShipsService.delete_relationship(
+            user_id=user_id,target_user_id=smart_cast(target_user_id)
+        )
+        return jsonify(data), code
+
+
+    @route_exception(
+        service="Friend Ships Route",
+        endpoint="remove-friend",
+        unit="minute",
+        unit_value=15,
+        max_requests=300,
+    )
+    def remove_friend(self):
+        user_data_from_jwt, error = self._get_authenticated_user()
+        if error:
+            return jsonify(error), 401
+        user_id = user_data_from_jwt.get("user_id")
+        body = request.json
+        target_user_id = body.get('target_user_id')
+        if not target_user_id:
+            raise ValueError('invalid user id')
+        data, code = self.FriendShipsService.remove_friend(
+            user_id=user_id,target_user_id=smart_cast(target_user_id)
+        )
+        return jsonify(data), code
+
+    @route_exception(
+        service="Friend Ships Route",
+        endpoint="reject-friend-request",
+        unit="minute",
+        unit_value=15,
+        max_requests=300,
+    )
+    def reject_friend_request(self):
+        user_data_from_jwt, error = self._get_authenticated_user()
+        if error:
+            return jsonify(error), 401
+        user_id = user_data_from_jwt.get("user_id")
+        body = request.json
+        target_user_id = body.get('target_user_id')
+        if not target_user_id:
+            raise ValueError('invalid user id')
+        data, code = self.FriendShipsService.reject_friend_request(
+            user_id=user_id,target_user_id=smart_cast(target_user_id)
+        )
+        return jsonify(data), code
+
+    @route_exception(
+        service="Friend Ships Route",
+        endpoint="cancel-friend-request",
+        unit="minute",
+        unit_value=15,
+        max_requests=300,
+    )
+    def cancel_friend_request(self):
+        user_data_from_jwt, error = self._get_authenticated_user()
+        if error:
+            return jsonify(error), 401
+        user_id = user_data_from_jwt.get("user_id")
+        body = request.json
+        target_user_id = body.get('target_user_id')
+        if not target_user_id:
+            raise ValueError('invalid user id')
+        data, code = self.FriendShipsService.cancel_friend_request(
             user_id=user_id,target_user_id=smart_cast(target_user_id)
         )
         return jsonify(data), code
