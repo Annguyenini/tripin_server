@@ -151,3 +151,8 @@ class TripInputValidation(InputValidation):
         if not self._trip_image_validation(image_path=image_path):
             print(image_path)
             raise ValueError(INPUT_ERROR.TRIP_IMAGE)
+
+    def trip_privacy_validation(self,privacy:str):
+        allow_privacy = ['private','public','friend']
+        if privacy not in allow_privacy:
+            raise ValueError(INPUT_ERROR.TRIP_PRIVACY)

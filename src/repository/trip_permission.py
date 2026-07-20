@@ -3,7 +3,6 @@
 #
 from src.repository.friendships_repository import FriendShipsRepository
 from src.repository.trip_repository import TripRepository
-from src.trip_service.trip_service import TripService
 from src.utils.exceptions import TripNotFound, TripPermissionError
 
 
@@ -19,7 +18,6 @@ class TripPolicy:
     def __init__(self) -> None:
         if self._init:
             return
-        self.TripService = TripService()
         self.TripRepository = TripRepository()
         self.FriendShipsRepository = FriendShipsRepository()
         self._init = True
@@ -36,6 +34,7 @@ class TripPolicy:
                 return
             case 'friend':
                 target_id = trip_data.get('user_id')
+                if target_id == request_id:return
                 if not request_id or not target_id:
                     raise TripPermissionError
                 user_id1,user_id2 = sorted([request_id,target_id])

@@ -23,4 +23,5 @@ INPUT_ERROR = SimpleNamespace(
     VERIFY_CODE="Only containt 6 digits",
     PROVIDER="Provider must be one of: google",
     PROVIDER_ID="Provider ID is required",
+    TRIP_PRIVACY ='privacy must be one of private, public, friend'
 )
