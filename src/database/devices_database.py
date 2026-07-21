@@ -63,6 +63,15 @@ class DevicesDatabaseService(Database):
         finally:
             self.close_db(conn=con)
 
+
+    def update_device_token(self,device_id:str,token:str):
+        update = self.update_db(table={DATABASEKEYS.TABLES.DEVICES},item={DATABASEKEYS.DEVICES.DEVICE_ID},value= device_id, item_to_update={DATABASEKEYS.DEVICES.TOKEN}, value_to_update=token)
+        return update
+
+    def get_device(self,device_id:str):
+        device = self.find_item_in_sql(table={DATABASEKEYS.TABLES.DEVICES},item={DATABASEKEYS.DEVICES.DEVICE_ID},value=device_id)
+        return device
+
     def get_user_devices(self,user_id:int):
         devices = self.find_item_in_sql(table={DATABASEKEYS.TABLES.DEVICES}, item={DATABASEKEYS.DEVICES.USER_ID}, value=user_id,return_option='fetchall')
         return devices
