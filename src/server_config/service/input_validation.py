@@ -76,7 +76,48 @@ class InputValidation:
         pattern = r"^trips/\d+/cover\.jpg$"
         return bool(re.match(pattern, image_path))
 
+    def _device_token_validation(self, token: str) -> bool:
+        if not token or not isinstance(token, str):
+            return False
 
+        # token length check
+        if len(token) < 10 or len(token) > 512:
+            return False
+
+        # allow common token characters
+        check = re.match(r"^[a-zA-Z0-9._\-]+$", token)
+        return True if check else False
+
+    def _device_id_validation(self, device_id: str) -> bool:
+        if not device_id or not isinstance(device_id, str):
+            return False
+
+        if len(device_id) < 5 or len(device_id) > 128:
+            return False
+
+        check = re.match(r"^[a-zA-Z0-9\-_]+$", device_id)
+        return True if check else False
+
+    def _platform_validation(self, platform: str) -> bool:
+        ALLOWED_PLATFORM = {"ios", "android", "web"}
+
+        if not platform or not isinstance(platform, str):
+            return False
+
+        return platform.lower() in ALLOWED_PLATFORM
+
+    def _lastseen_validation(self, lastseen: int) -> bool:
+        if lastseen is None:
+            return False
+
+        if not isinstance(lastseen, int):
+            return False
+
+        # milliseconds timestamp should be positive
+        if lastseen <= 0:
+            return False
+
+        return True
 class CredentialInputValidation(InputValidation):
     def __init__(self) -> None:
         super().__init__()
@@ -156,3 +197,30 @@ class TripInputValidation(InputValidation):
         allow_privacy = ['private','public','friend']
         if privacy not in allow_privacy:
             raise ValueError(INPUT_ERROR.TRIP_PRIVACY)
+
+
+
+
+class DeviceInputValidation(InputValidation):
+    def __init__(self) -> None:
+        super().__init__()
+
+    def device_input_validation(
+        self,
+        token: str,
+        device_id: str,
+        platform: str,
+        lastseen: int
+    ) -> None:
+
+        if not self._device_token_validation(token=token):
+            raise ValueError(INPUT_ERROR.DEVICE_TOKEN)
+
+        if not self._device_id_validation(device_id=device_id):
+            raise ValueError(INPUT_ERROR.DEVICE_ID)
+
+        if not self._platform_validation(platform=platform):
+            raise ValueError(INPUT_ERROR.PLATFORM)
+
+        if not self._lastseen_validation(lastseen=lastseen):
+            raise ValueError(INPUT_ERROR.LASTSEEN)

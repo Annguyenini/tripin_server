@@ -23,5 +23,9 @@ INPUT_ERROR = SimpleNamespace(
     VERIFY_CODE="Only containt 6 digits",
     PROVIDER="Provider must be one of: google",
     PROVIDER_ID="Provider ID is required",
-    TRIP_PRIVACY ='privacy must be one of private, public, friend'
+    TRIP_PRIVACY ='privacy must be one of private, public, friend',
+    DEVICE_TOKEN = "Invalid token",
+    DEVICE_ID = "Invalid device id",
+    PLATFORM = "Invalid platform",
+    LASTSEEN = "Invalid last seen timestamp"
 )

@@ -1,9 +1,11 @@
 ## the purpose is to let the main server trigger the events server, make the events server notify the user
 
+from src.notification.push_notification_payload import PushNotificationPayload
 from src.error_handler.error_handler import ErrorHandler
 import redis
 import os
 import json
+import requests
 def GENERATE_SINGLE_ROOM(user_id:int):
     return f'user:{user_id}'
 
@@ -38,3 +40,14 @@ class NotififcationService:
             print(e)
             self.ErrorService.error(str(e))
             return False
+
+    def push_notify(self,payload:PushNotificationPayload):
+
+        response = requests.post(
+            "https://exp.host/--/api/v2/push/send",
+            json=payload,
+            headers={"Content-Type": "application/json"}
+        )
+
+        print(response.json())
+        return s
