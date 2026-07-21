@@ -87,24 +87,3 @@ class UserSettingsService:
             "code": "successfully",
             "message": "Successfully",
         }, 200
-
-    @handle_exception("User Setting", "insert device")
-
-    def insert_device(self,device:Device)->tuple[dict,int]:
-
-        ## input validation
-        self.DeviceInputValidation.device_input_validation(token=device.token,device_id=device.device_id,platform=device.platform,lastseen=device.last_seen)
-
-        ## convert last_seen to date time
-        formated_time = ms_to_timestamptz(device.last_seen)
-
-        if not formated_time or not isinstance(formated_time,datetime):
-            raise ValueError('Time not correctly formated')
-
-        database_device = DatabaseDevice(user_id=device.user_id,device_id=device.device_id,token=device.token,platform=device.platform,last_seen=formated_time)
-        ## insert into database
-        insert = self.DevicesDatabase.insert_new_device(device=database_device)
-        if not insert:
-            return {'code':'failed','message':'Failed to insert new device'},500
-
-        return {'code':'successfully'},200

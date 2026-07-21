@@ -40,7 +40,7 @@ from src.users.trips.trip_routes import UsersTripDataRoutes
 from src.users.users_routes import UsersRoutes
 from src.web.trip_view.trip_view_route import TripViewRoute
 from src.web.web_service import WebService
-from src.websocket.connection import Notification, Socket
+from src.devices.devices_routes import DevicesRoutes
 import redis
 bootstrap_manager()
 mail = Mail()
@@ -78,6 +78,7 @@ class Server:
         friendships_route = FriendShipRoutes()
         profile_routes = UsersRoutes()
         users_trip = UsersTripDataRoutes()
+        devices_routes = DevicesRoutes()
         self.app.register_blueprint(auth_route.bp, url_prefix="/auth")
         self.app.register_blueprint(trip_route.bp, url_prefix="/trip")
 
@@ -90,6 +91,7 @@ class Server:
         self.app.register_blueprint(friendships_route.bp, url_prefix="/friend")
         self.app.register_blueprint(profile_routes.bp, url_prefix="/users")
         self.app.register_blueprint(users_trip.bp, url_prefix="/users")
+        self.app.register_blueprint(devices_routes.bp, url_prefix="/devices")
 
         self.app.route("/", methods=["GET"])(self.landing)
         self.app.route("/app-version", methods=["GET"])(self.app_version)

@@ -3,10 +3,13 @@
 
 from datetime import datetime
 
+from werkzeug.exceptions import Conflict
+
 from src.database.database import Database
 from src.database.database_keys import DATABASEKEYS
 from src.error_handler.error_handler import ErrorHandler
 from src.types.device_types import DatabaseDevice
+from psycopg2.errors import UniqueViolation
 
 
 class DevicesDatabaseService(Database):
@@ -49,9 +52,14 @@ class DevicesDatabaseService(Database):
             if cur.rowcount >= 1:
                 return True
             return False
+        except UniqueViolation:
+            con.rollback()
+            print("Device already exists")
+            raise Conflict(description={'code':'duplicate','message':'Device duplicate'})
         except Exception as e:
             print(e)
             self.ErrorHandler.error('failed to insert device',str(e))
+            return False
         finally:
             self.close_db(conn=con)
 
