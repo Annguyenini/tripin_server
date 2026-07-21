@@ -29,7 +29,7 @@ def handle_exception(name: str, service: str):
                 print(e)
                 return {'code':'bad_request','message':'Bad Request'},400
             except ValueError as e:
-                return {"code": "invalid_input", "message": 'Invalid inputs'}, 400
+                return {"code": "invalid_input", "message": f'Invalid inputs: {e}'}, 400
             except Conflict as e:
                 return {
                     "code": e.description["code"],

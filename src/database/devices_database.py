@@ -6,6 +6,7 @@ from datetime import datetime
 from src.database.database import Database
 from src.database.database_keys import DATABASEKEYS
 from src.error_handler.error_handler import ErrorHandler
+from src.types.device_types import DatabaseDevice
 
 
 class DevicesDatabaseService(Database):
@@ -24,23 +25,23 @@ class DevicesDatabaseService(Database):
         self.ErrorHandler = ErrorHandler().logger("Friendship Database Service")
         self._init = True
 
-    def insert_new_device(self,user_id:int,device_id:str,token:str,platform:str,last_seen:datetime):
+    def insert_new_device(self,device:DatabaseDevice):
         con,cur = self.connect_db()
         try:
             cur.execute(
                 f"""INSERT INTO {DATABASEKEYS.TABLES.DEVICES} (
-                        {DATABASEKEYS.TOKENS.USER_ID},
-                        {DATABASEKEYS.TOKENS.DEVICE_ID},
-                        {DATABASEKEYS.TOKENS.TOKEN},
-                        {DATABASEKEYS.TOKENS.PLATFORM},
-                        {DATABASEKEYS.TOKENS.LAST_SEEN})
+                        {DATABASEKEYS.DEVICES.USER_ID},
+                        {DATABASEKEYS.DEVICES.DEVICE_ID},
+                        {DATABASEKEYS.DEVICES.TOKEN},
+                        {DATABASEKEYS.DEVICES.PLATFORM},
+                        {DATABASEKEYS.DEVICES.LAST_SEEN})
                         VALUES ( %s, %s, %s, %s, %s)""",
                 (
-                    user_id,
-                    device_id,
-                    token,
-                    platform,
-                    last_seen
+                    device.user_id,
+                    device.device_id,
+                    device.token,
+                    device.platform,
+                    device.last_seen
                 ),
             )
             con.commit()

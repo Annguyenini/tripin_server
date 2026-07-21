@@ -6,7 +6,7 @@ from src.error_handler.error_handler import ErrorHandler
 from src.user_setting.user_setting_service import UserSettingsService
 from src.utils.handle_exception import handle_exception
 from src.utils.route_exception import route_exception
-from types.device_types import Device
+from src.types.device_types import Device
 
 
 class UserSettingsRoutes(RouteBase):
@@ -32,6 +32,7 @@ class UserSettingsRoutes(RouteBase):
     def _register_route(self):
         self.bp.route("/user-settings", methods=["GET"])(self.get_user_settings)
         self.bp.route("/user-settings", methods=["PATCH"])(self.update_user_settings)
+        self.bp.route("/insert-device", methods=["POST"])(self.insert_device)
 
     @route_exception(
         service="User Setting Route",
@@ -77,7 +78,13 @@ class UserSettingsRoutes(RouteBase):
         return jsonify(user_data), code
 
 
-
+    @route_exception(
+        service="User Setting Route",
+        endpoint="insert-device",
+        unit="minute",
+        unit_value=15,
+        max_requests=45,
+    )
     def insert_device(self):
         user_data, error = self._get_authenticated_user()
         if error or not user_data:
