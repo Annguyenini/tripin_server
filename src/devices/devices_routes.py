@@ -27,7 +27,7 @@ class DevicesRoutes(RouteBase):
 
     def _register_route(self):
 
-        self.bp.route("/insert-device", methods=["POST"])(self.insert_device)
+        self.bp.route("/sync-device", methods=["POST"])(self.insert_device)
     @route_exception(
         service="Devices Route",
         endpoint="insert-device",
@@ -44,7 +44,7 @@ class DevicesRoutes(RouteBase):
             raise ValueError("Missing user_id in JWT")
 
         body = request.get_json()
-        device = Device(user_id=user_id_from_jwt,device_id=body.get('device_id'),token=body.get('token'),platform=body.get('platform'),last_seen=body.get('last_seen'))
+        device = Device(user_id=user_id_from_jwt,device_id=body.get('device_id'),push_token=body.get('push_token'),platform=body.get('platform'),last_seen=body.get('last_seen'))
 
         data,code = self.DevicesService.insert_device(device=device)
 

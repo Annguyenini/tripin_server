@@ -25,7 +25,7 @@ def upgrade() -> None:
             id SERIAL PRIMARY KEY,
             user_id INTEGER NOT NULL REFERENCES tripin_auth.userdata(id) ON DELETE CASCADE,
             device_id TEXT NOT NULL UNIQUE,
-            token TEXT NOT NULL UNIQUE,
+            push_token TEXT DEFAULT NULL UNIQUE,
             platform TEXT NOT NULL,
             last_seen TIMESTAMPTZ DEFAULT NOW()
         );

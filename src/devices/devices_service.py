@@ -27,15 +27,16 @@ class DevicesService:
     def insert_device(self,device:Device)->tuple[dict,int]:
 
         ## input validation
-        self.DeviceInputValidation.device_input_validation(token=device.token,device_id=device.device_id,platform=device.platform,lastseen=device.last_seen)
-
+        self.DeviceInputValidation.device_input_validation(device_id=device.device_id,platform=device.platform,lastseen=device.last_seen)
+        if device.push_token:
+            self.DeviceInputValidation.push_token_input_validation(push_token=device.push_token)
         ## convert last_seen to date time
         formated_time = ms_to_timestamptz(device.last_seen)
 
         if not formated_time or not isinstance(formated_time,datetime):
             raise ValueError('Time not correctly formated')
 
-        database_device = DatabaseDevice(user_id=device.user_id,device_id=device.device_id,token=device.token,platform=device.platform,last_seen=formated_time)
+        database_device = DatabaseDevice(user_id=device.user_id,device_id=device.device_id,push_token=device.push_token,platform=device.platform,last_seen=formated_time)
         ## insert into database
         insert = self.DevicesDatabase.insert_new_device(device=database_device)
         if not insert:

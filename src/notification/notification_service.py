@@ -41,8 +41,9 @@ class NotififcationService:
             self.ErrorService.error(str(e))
             return False
 
-    def push_notify(self,payload:PushNotificationPayload):
+    def push_notify(self,payload:PushNotificationPayload | list[PushNotificationPayload]):
 
+        print(payload)
         response = requests.post(
             "https://exp.host/--/api/v2/push/send",
             json=payload,
@@ -50,4 +51,4 @@ class NotififcationService:
         )
 
         print(response.json())
-        return s
+        return response

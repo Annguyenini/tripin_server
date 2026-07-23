@@ -32,23 +32,36 @@ class DevicesDatabaseService(Database):
         con,cur = self.connect_db()
         try:
             cur.execute(
+                ## insert in to database, if conflict on user id and device id,
+                # update all columns with the lastest value
                 f"""INSERT INTO {DATABASEKEYS.TABLES.DEVICES} (
                         {DATABASEKEYS.DEVICES.USER_ID},
                         {DATABASEKEYS.DEVICES.DEVICE_ID},
-                        {DATABASEKEYS.DEVICES.TOKEN},
+                        {DATABASEKEYS.DEVICES.PUSH_TOKEN},
                         {DATABASEKEYS.DEVICES.PLATFORM},
                         {DATABASEKEYS.DEVICES.LAST_SEEN})
-                        VALUES ( %s, %s, %s, %s, %s)""",
+                        VALUES ( %s, %s, %s, %s, %s)
+                        ON CONFLICT (device_id)
+                        DO UPDATE SET
+                        {DATABASEKEYS.DEVICES.LAST_SEEN} = EXCLUDED.{DATABASEKEYS.DEVICES.LAST_SEEN},
+                        {DATABASEKEYS.DEVICES.PLATFORM}= EXCLUDED.{DATABASEKEYS.DEVICES.PLATFORM},
+                        {DATABASEKEYS.DEVICES.PUSH_TOKEN} = EXCLUDED.{DATABASEKEYS.DEVICES.PUSH_TOKEN}
+                        WHERE {DATABASEKEYS.TABLES.DEVICES}.{DATABASEKEYS.DEVICES.LAST_SEEN}
+                        IS DISTINCT FROM EXCLUDED.{DATABASEKEYS.DEVICES.LAST_SEEN}
+                        OR {DATABASEKEYS.TABLES.DEVICES}.{DATABASEKEYS.DEVICES.PLATFORM}
+                        IS DISTINCT FROM EXCLUDED.{DATABASEKEYS.DEVICES.PLATFORM}
+                        OR {DATABASEKEYS.TABLES.DEVICES}.{DATABASEKEYS.DEVICES.PUSH_TOKEN}
+                        IS DISTINCT FROM EXCLUDED.{DATABASEKEYS.DEVICES.PUSH_TOKEN}
+                        """,
                 (
                     device.user_id,
                     device.device_id,
-                    device.token,
+                    device.push_token,
                     device.platform,
                     device.last_seen
                 ),
             )
             con.commit()
-            self.close_db(conn=con)
             if cur.rowcount >= 1:
                 return True
             return False
@@ -64,14 +77,14 @@ class DevicesDatabaseService(Database):
             self.close_db(conn=con)
 
 
-    def update_device_token(self,device_id:str,token:str):
-        update = self.update_db(table={DATABASEKEYS.TABLES.DEVICES},item={DATABASEKEYS.DEVICES.DEVICE_ID},value= device_id, item_to_update={DATABASEKEYS.DEVICES.TOKEN}, value_to_update=token)
+    def update_device_token(self,device_id:str,push_token:str):
+        update = self.update_db(table=DATABASEKEYS.TABLES.DEVICES,item=DATABASEKEYS.DEVICES.DEVICE_ID,value= device_id, item_to_update=DATABASEKEYS.DEVICES.PUSH_TOKEN, value_to_update=push_token)
         return update
 
     def get_device(self,device_id:str):
-        device = self.find_item_in_sql(table={DATABASEKEYS.TABLES.DEVICES},item={DATABASEKEYS.DEVICES.DEVICE_ID},value=device_id)
+        device = self.find_item_in_sql(table=DATABASEKEYS.TABLES.DEVICES,item=DATABASEKEYS.DEVICES.DEVICE_ID,value=device_id)
         return device
 
     def get_user_devices(self,user_id:int):
-        devices = self.find_item_in_sql(table={DATABASEKEYS.TABLES.DEVICES}, item={DATABASEKEYS.DEVICES.USER_ID}, value=user_id,return_option='fetchall')
+        devices = self.find_item_in_sql(table=DATABASEKEYS.TABLES.DEVICES, item=DATABASEKEYS.DEVICES.USER_ID, value=user_id,return_option='fetchall')
         return devices

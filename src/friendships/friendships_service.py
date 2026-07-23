@@ -3,14 +3,17 @@
 
 import json
 from datetime import datetime, timezone
+from this import d
 
 
+from src.database.devices_database import DevicesDatabaseService
 from src.notification.notification_events import EVENT_TYPES
 from src.notification.notification_service import GENERATE_SINGLE_ROOM, NotififcationService
 from src.database.friendships_db_service import FriendShipsDatabaseService
 from src.database.database_keys import DATABASEKEYS
 from src.database.s3.s3_service import S3Sevice
 from src.error_handler.error_handler import ErrorHandler
+from src.notification.push_notification_payload_generator import FRIEND_ACCEPT_PUSH_NOTIFICATION_PAYLOAD, FRIEND_REQUEST_PUSH_NOTIFICATION_PAYLOAD
 from src.repository.friendships_repository import FriendShipsRepository
 from src.repository.user_data_repository import UserDataRepository
 from src.utils.cache.cache import Cache
@@ -38,6 +41,7 @@ class FriendShipsService:
         self.ErrorHandler = ErrorHandler().logger("Friendships service")
         self.FriendShipsDatabaseService = FriendShipsDatabaseService()
         self.NotificationService = NotififcationService()
+        self.DevicesDatabase = DevicesDatabaseService()
         self._init = True
 
     def _get_user_data_with_avatar(self, user_id: int):
@@ -312,6 +316,7 @@ class FriendShipsService:
         target user id  - user that receipt the data
         event_type - see docs '''
         ## get user data
+        allow_push_notification_events =['friend_request','friend_accept']
         try:
             target_user_data = self.UserRepository.get_user_data(user_id=user_id)
             if target_user_data is None:
@@ -327,6 +332,21 @@ class FriendShipsService:
                 'avatar':target_user_data.get('avatar')}
             ## notify
             notify = self.NotificationService.notify(room_id= GENERATE_SINGLE_ROOM(user_id=target_user_id),event_type=event_type,data= public_data)
+            ## push notification
+            if event_type in allow_push_notification_events:
+                ## get all user devices
+                target_devices = self.DevicesDatabase.get_user_devices(user_id=target_user_id)
+                payloads = []
+                ## loop through and generate payloads
+                for device in target_devices:
+                    if device.get('push_token') and event_type == 'friend_accept':
+                        push_notification_payload = FRIEND_ACCEPT_PUSH_NOTIFICATION_PAYLOAD(to=device.get('push_token'),send_id=user_id,sender_name=target_user_data.get('user_name'))
+                        payloads.append(push_notification_payload)
+                    elif device.get('push_token') and event_type == 'friend_request':
+                        push_notification_payload = FRIEND_REQUEST_PUSH_NOTIFICATION_PAYLOAD(to=device.get('push_token'),send_id=user_id,sender_name=target_user_data.get('user_name'))
+                        payloads.append(push_notification_payload)
+                ## notify
+                self.NotificationService.push_notify(payload=payloads)
             ## ignore send error
             # can implement send queue or retry later
             return True

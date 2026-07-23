@@ -76,30 +76,26 @@ class InputValidation:
         pattern = r"^trips/\d+/cover\.jpg$"
         return bool(re.match(pattern, image_path))
 
-    def _device_token_validation(self, token: str) -> bool:
-        if not token or not isinstance(token, str):
-            return False
-
-        # token length check
-        if len(token) < 10 or len(token) > 512:
-            return False
-
-        # allow common token characters
-        check = re.match(r"^[a-zA-Z0-9._\-]+$", token)
-        return True if check else False
+    def _device_push_token_validation(self, token: str) -> bool:
+       if not token or not isinstance(token, str):
+           return False
+       if len(token) < 10 or len(token) > 512:
+           return False
+       # allow alphanumeric, dot, underscore, hyphen, and brackets (Expo push tokens: "ExponentPushToken[...]")
+       check = re.match(r"^[a-zA-Z0-9._\-\[\]]+$", token)
+       return True if check else False
 
     def _device_id_validation(self, device_id: str) -> bool:
-        if not device_id or not isinstance(device_id, str):
-            return False
-
-        if len(device_id) < 5 or len(device_id) > 128:
-            return False
-
-        check = re.match(r"^[a-zA-Z0-9\-_]+$", device_id)
-        return True if check else False
-
+       if not device_id or not isinstance(device_id, str):
+           return False
+       if len(device_id) < 5 or len(device_id) > 128:
+           return False
+       # allow alphanumeric, colon, space, parentheses, hyphen, underscore
+       # (format: "Brand:Model (variant):uuid")
+       # check = re.match(r"^[a-zA-Z0-9:\s()\-_]+$", device_id)
+       return True
     def _platform_validation(self, platform: str) -> bool:
-        ALLOWED_PLATFORM = {"ios", "android", "web"}
+        ALLOWED_PLATFORM = {"ios", "android", "web",'ipados'}
 
         if not platform or not isinstance(platform, str):
             return False
@@ -207,14 +203,12 @@ class DeviceInputValidation(InputValidation):
 
     def device_input_validation(
         self,
-        token: str,
         device_id: str,
         platform: str,
         lastseen: int
     ) -> None:
 
-        if not self._device_token_validation(token=token):
-            raise ValueError(INPUT_ERROR.DEVICE_TOKEN)
+
 
         if not self._device_id_validation(device_id=device_id):
             raise ValueError(INPUT_ERROR.DEVICE_ID)
@@ -224,3 +218,8 @@ class DeviceInputValidation(InputValidation):
 
         if not self._lastseen_validation(lastseen=lastseen):
             raise ValueError(INPUT_ERROR.LASTSEEN)
+
+    def push_token_input_validation(self,push_token:str):
+
+        if not self._device_push_token_validation(token=push_token):
+            raise ValueError(INPUT_ERROR.DEVICE_PUSH_TOKEN)

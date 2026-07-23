@@ -149,7 +149,7 @@ DATABASEKEYS = SimpleNamespace(
         ID="id",
         USER_ID="user_id",
         DEVICE_ID="device_id",
-        TOKEN="token",
+        PUSH_TOKEN="push_token",
         PLATFORM="platform",
         LAST_SEEN="last_seen",
     )
