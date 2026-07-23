@@ -83,6 +83,15 @@ class TripDataBaseService(Database):
             value_to_update=modified_time,
         )
 
+    def update_trip_privacy(self, trip_id: str, privacy: str) -> bool:
+        return self.update_db(
+            table=DATABASEKEYS.TABLES.TRIPS,
+            item=DATABASEKEYS.TRIPS.TRIP_ID,
+            value=trip_id,
+            item_to_update=DATABASEKEYS.TRIPS.PRIVACY,
+            value_to_update=privacy,
+        )
+
     def remove_trip(self, trip_id: str) -> bool:
         return self.update_db(
             table=DATABASEKEYS.TABLES.TRIPS,
@@ -108,6 +117,7 @@ class TripDataBaseService(Database):
         user_id: str,
         created_time: int,
         trip_name: str,
+        privacy: str = 'private'
     ) -> str | None:
         con, cur = self.connect_db()
         try:
@@ -117,8 +127,9 @@ class TripDataBaseService(Database):
                 {DATABASEKEYS.TRIPS.TRIP_NAME},
                 {DATABASEKEYS.TRIPS.CREATED_TIME},
                 {DATABASEKEYS.TRIPS.ACTIVE},
-                {DATABASEKEYS.TRIPS.MODIFIED_TIME}) VALUES (%s,%s,%s,%s,%s) RETURNING id""",
-                (user_id, trip_name, created_time, True, created_time),
+                {DATABASEKEYS.TRIPS.MODIFIED_TIME},
+                {DATABASEKEYS.TRIPS.PRIVACY}) VALUES (%s,%s,%s,%s,%s,%s) RETURNING id""",
+                (user_id, trip_name, created_time, True, created_time, privacy),
             )
             trip_id = cur.fetchone()["id"]
             con.commit()

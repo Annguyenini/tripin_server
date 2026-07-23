@@ -3,12 +3,17 @@
 
 import json
 from datetime import datetime, timezone
+from this import d
 
 
+from src.database.devices_database import DevicesDatabaseService
+from src.notification.notification_events import EVENT_TYPES
+from src.notification.notification_service import GENERATE_SINGLE_ROOM, NotififcationService
 from src.database.friendships_db_service import FriendShipsDatabaseService
 from src.database.database_keys import DATABASEKEYS
 from src.database.s3.s3_service import S3Sevice
 from src.error_handler.error_handler import ErrorHandler
+from src.notification.push_notification_payload_generator import FRIEND_ACCEPT_PUSH_NOTIFICATION_PAYLOAD, FRIEND_REQUEST_PUSH_NOTIFICATION_PAYLOAD
 from src.repository.friendships_repository import FriendShipsRepository
 from src.repository.user_data_repository import UserDataRepository
 from src.utils.cache.cache import Cache
@@ -35,6 +40,8 @@ class FriendShipsService:
         self.S3Service = S3Sevice()
         self.ErrorHandler = ErrorHandler().logger("Friendships service")
         self.FriendShipsDatabaseService = FriendShipsDatabaseService()
+        self.NotificationService = NotififcationService()
+        self.DevicesDatabase = DevicesDatabaseService()
         self._init = True
 
     def _get_user_data_with_avatar(self, user_id: int):
@@ -124,6 +131,17 @@ class FriendShipsService:
             self.ErrorHandler.error("fail to get user relationships", str(e))
             return None
 
+    @handle_exception("Friendships service", "get-overview")
+    def get_overview(self,user_id:int):
+        relationships = self._get_user_relationships(user_id=user_id)
+        if relationships is None:
+            return {"code": "failed", "message": "Fail to get friends list"}, 500
+        return {
+            "code": "successfully",
+            "message": "successfully",
+            "overview": relationships
+        }, 200
+
     @handle_exception("Friendships service", "get-friends-list")
     def get_friends_list(self, user_id: int):
         relationships = self._get_user_relationships(user_id=user_id)
@@ -195,6 +213,9 @@ class FriendShipsService:
         # invalidate user relationship list
         self.invalid_user_relationship_list_cache(user_id=user_id)
         self.invalid_user_relationship_list_cache(user_id=target_user_id)
+
+        ## notify target
+        self._notify_friend_status(user_id=user_id,target_user_id=target_user_id,event_type=EVENT_TYPES.FRIENDSHIP_EVENTS.FRIEND_ACCEPT)
         return {"code": "successfully", "message": "successfully",'status':'FRIEND'}, 200
         pass
 
@@ -226,15 +247,13 @@ class FriendShipsService:
         # invalidate user relationship list
         self.invalid_user_relationship_list_cache(user_id=user_id)
         self.invalid_user_relationship_list_cache(user_id=target_user_id)
+
+        self._notify_friend_status(user_id=user_id,target_user_id=target_user_id,event_type=EVENT_TYPES.FRIENDSHIP_EVENTS.FRIEND_REQUEST)
+
         return {"code": "successfully", "message": "successfully",'status':status}, 200
         pass
 
-    def invalid_user_relationship_list_cache(self, user_id):
-        try:
-            cache_key = GetUserRelationshipsCacheKey(user_id=user_id)
-            self.CacheService.delete(key=cache_key)
-        except Exception as e:
-            print(e)
+
 
     @handle_exception("friendship service", "get relationship")
     def get_relationship(self,user_id,target_user_id):
@@ -245,10 +264,37 @@ class FriendShipsService:
             return {'code':'failed','message':'failed to get user relationship'},500
         return {"code": "successfully", "message": "successfully",'relationship':relationship}, 200
 
+
+    @handle_exception("friendship service", "remove friend")
+    def remove_friend(self,user_id:int,target_user_id:int):
+        ## delete relationship
+        data, code = self.delete_relationship(user_id=user_id,target_user_id=target_user_id)
+        ## notify target
+        if code ==200:
+            self._notify_friend_status(user_id=user_id,target_user_id=target_user_id,event_type=EVENT_TYPES.FRIENDSHIP_EVENTS.FRIEND_REMOVED)
+        return data,code
+    @handle_exception("friendship service", "reject friend request")
+    def reject_friend_request(self,user_id:int,target_user_id:int):
+        ## delete relationship
+        data,code = self.delete_relationship(user_id=user_id,target_user_id=target_user_id)
+        ## notify target
+        if code ==200:
+            self._notify_friend_status(user_id=user_id,target_user_id=target_user_id,event_type=EVENT_TYPES.FRIENDSHIP_EVENTS.FRIEND_REJECT)
+        return data,code
+    @handle_exception("friendship service", "cancel friend request")
+    def cancel_friend_request(self,user_id:int,target_user_id:int):
+        ## delete relationship
+        data,code = self.delete_relationship(user_id=user_id,target_user_id=target_user_id)
+        ## notify target
+        if code ==200:
+            self._notify_friend_status(user_id=user_id,target_user_id=target_user_id,event_type=EVENT_TYPES.FRIENDSHIP_EVENTS.FRIEND_CANCEL)
+        return data,code
+
     @handle_exception("friendship service", "delete relationship")
     def delete_relationship(self,user_id:int,target_user_id:int):
         user_id1, user_id2 = sorted([user_id, target_user_id])
         delete_relationship = self.FriendShipsRepository.delete_relationship(user_id1=user_id1,user_id2=user_id2)
+        print(delete_relationship)
         if not delete_relationship:
             return {'code':'failed','message':'Failed to delete relationship!'},500
         # delete friend list cache for both users
@@ -261,3 +307,55 @@ class FriendShipsService:
         self.FriendShipsRepository.invalidate_relationship_cache(user_id1=user_id1,user_id2=user_id2)
 
         return {'code':'successfully','message':'Successfully'},200
+
+
+
+    def _notify_friend_status(self,user_id:int,target_user_id:int,event_type:str):
+        '''
+        user_id - user's data that want to send to target_user_id
+        target user id  - user that receipt the data
+        event_type - see docs '''
+        ## get user data
+        allow_push_notification_events =['friend_request','friend_accept']
+        try:
+            target_user_data = self.UserRepository.get_user_data(user_id=user_id)
+            if target_user_data is None:
+                return False
+            if target_user_data['avatar']:
+                target_user_data['avatar']=self.S3Service.generate_temp_uri(key=target_user_data['avatar'])
+            ## filter data
+            print(target_user_data,type(target_user_data))
+            public_data  = {
+                'user_id':target_user_data.get('id'),
+                'display_name':target_user_data.get('display_name'),
+                'user_name':target_user_data.get('user_name'),
+                'avatar':target_user_data.get('avatar')}
+            ## notify
+            notify = self.NotificationService.notify(room_id= GENERATE_SINGLE_ROOM(user_id=target_user_id),event_type=event_type,data= public_data)
+            ## push notification
+            if event_type in allow_push_notification_events:
+                ## get all user devices
+                target_devices = self.DevicesDatabase.get_user_devices(user_id=target_user_id)
+                payloads = []
+                ## loop through and generate payloads
+                for device in target_devices:
+                    if device.get('push_token') and event_type == 'friend_accept':
+                        push_notification_payload = FRIEND_ACCEPT_PUSH_NOTIFICATION_PAYLOAD(to=device.get('push_token'),send_id=user_id,sender_name=target_user_data.get('user_name'))
+                        payloads.append(push_notification_payload)
+                    elif device.get('push_token') and event_type == 'friend_request':
+                        push_notification_payload = FRIEND_REQUEST_PUSH_NOTIFICATION_PAYLOAD(to=device.get('push_token'),send_id=user_id,sender_name=target_user_data.get('user_name'))
+                        payloads.append(push_notification_payload)
+                ## notify
+                self.NotificationService.push_notify(payload=payloads)
+            ## ignore send error
+            # can implement send queue or retry later
+            return True
+        except Exception as e:
+            print(e)
+            return False
+    def invalid_user_relationship_list_cache(self, user_id):
+        try:
+            cache_key = GetUserRelationshipsCacheKey(user_id=user_id)
+            self.CacheService.delete(key=cache_key)
+        except Exception as e:
+            print(e)

@@ -20,13 +20,14 @@ from src.utils.route_exception import route_exception
 
 class AuthServer(RouteBase):
     _instance = None
-
+    _init = False
     def __new__(cls, *args, **kwargs):
         if cls._instance is None:
             cls._instance = super().__new__(cls)
         return cls._instance
 
     def __init__(self):
+        if self._init:return
         super().__init__()
         self.bp = Blueprint("auth", __name__)
         self.token_service = TokenService()
@@ -37,6 +38,7 @@ class AuthServer(RouteBase):
         self.SignupService = SignupService()
         self.ProviderService = ProviderAuth()
         self._register_routes()
+        self._init = True
 
     def _register_routes(self):
         """Auth Route

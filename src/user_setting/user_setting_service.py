@@ -1,7 +1,7 @@
+from datetime import datetime
 import uuid
 
-from psycopg2.extensions import Boolean
-
+from src.database.devices_database import DevicesDatabaseService
 from src.audit.userdata_audit import UserdataAudit
 from src.database.database import Database
 from src.database.database_keys import DATABASEKEYS
@@ -15,7 +15,8 @@ from src.server_config.service.Etag.etag_services import UserdataEtag
 from src.trip_service.trip_service import ms_to_timestamptz
 from src.utils.cache.cache import Cache
 from src.utils.handle_exception import handle_exception
-
+from src.server_config.service.input_validation import DeviceInputValidation
+from src.types.device_types import DatabaseDevice, Device
 
 class UserSettingsService:
     _instace = None
@@ -38,6 +39,8 @@ class UserSettingsService:
         self.ErrorHandler = ErrorHandler().logger("User Setting `Service")
         self.UserdataAudit = UserdataAudit()
         self.UserSettingDatabaseService = UserSettingsDataBaseService()
+        self.DevicesDatabase = DevicesDatabaseService()
+        self.DeviceInputValidation = DeviceInputValidation()
         self._init = True
 
     @handle_exception("User Setting", "Get User Settings")

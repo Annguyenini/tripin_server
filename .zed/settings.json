@@ -5,9 +5,9 @@
         "basedpyright": {
           "exclude": ["venv", ".venv", "__pycache__", "node_modules", ".expo"],
           "analysis": {
-            "typeCheckingMode": "off",
+            "typeCheckingMode": "recommended",
             "diagnosticMode": "openFilesOnly",
-            "autoImportCompletions": false,
+            "autoImportCompletions": true,
             "indexing": false,
             "reportReturnType": "none",
             "reportUnknownVariableType": "none",
