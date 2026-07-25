@@ -262,8 +262,11 @@ class TripContentsService:
 
         if not trip_id or not user_id:
             raise ValueError("missing inputs")
-        #  owner validation
-        self.TripPolicy.trip_permission_policy(user_id=user_id, trip_id=trip_id)
+        #  permission  validation
+        self.TripPolicy.trip_permission_policy(request_id=user_id, trip_id=trip_id)
+        # for future if want to implement single content privacy level
+
+
         # ------------------------------check cache------------------------------
         cache_key = GetTripContentsCacheKey(trip_id=trip_id)
         raw = self.CacheService.get(key=cache_key)
@@ -351,7 +354,7 @@ class TripContentsService:
             assert user_id, "user id is empty"
 
             #  owner validation
-            self.TripPolicy.trip_permission_policy(user_id=user_id, trip_id=trip_id)
+            self.TripPolicy.trip_permission_policy(request_id=user_id, trip_id=trip_id)
 
             # content cards
             contents = self.TripContentsDatabase.get_all_trip_content_cards(

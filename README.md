@@ -1,59 +1,323 @@
 # tripin_server
 
-Backend server for the **Tripping** app. Built with Python/Flask, handles all client requests for trip management, content sync, user data, and authentication.
+Backend server for the **Tripping** application.
 
-Architectures and service diagrams can be found in `/architectures`.
+The server is responsible for:
+
+- User authentication and authorization
+- Trip management
+- Trip content management
+- Data synchronization
+- Friendships
+- Real-time event triggering
+- Caching and rate limiting
+- User data management
+
+Architecture diagrams and technical documentation can be found in the `/architectures` directory.
 
 ---
 
-## Tech Stack
+# Tech Stack
 
 | Layer | Technology |
-|-------|-----------|
-| Server | Python, Flask |
-| Database | PostgreSQL, AWS S3 |
+|---------|---------|
+| Language | Python |
+| Framework | Flask |
+| Database | PostgreSQL |
+| Object Storage | AWS S3 |
 | Cache | Redis |
-| Deploy | GitHub Actions, Docker |
-| Tests | pytest |
-| Monitor | internal tool can be found the repo https://github.com/Annguyenini/server_log
-**Containers:** 3 — PostgreSQL, Redis, Server
+| CI/CD | GitHub Actions |
+| Containerization | Docker |
+| Testing | pytest |
+| Monitoring | Internal logging service |
+
+Monitoring service:
+
+:contentReference[oaicite:0]{index=0}
 
 ---
 
-## Environment Variables
+# Infrastructure
 
-example env file can be found in `/architectures`
+## Containers
 
+The application runs using the following containers:
+
+1. PostgreSQL
+2. Redis
+3. tripin_server
 
 ---
 
-## Auth
+# Environment Variables
 
-All protected routes require a JWT access token in the `Authorization` header:
+An example environment configuration can be found in:
 
+```text
+/architectures
 ```
+
+---
+
+# Authentication
+
+Most endpoints require a valid JWT access token.
+
+## Authorization Header
+
+```http
 Authorization: Bearer <access_token>
 ```
 
-Tokens are refreshed via `/auth/request-access-token` using a refresh token. ETag-based caching is supported on most `GET` endpoints via the `If-None-Match` header.
+---
+
+## Token Refresh
+
+Access tokens can be refreshed through:
+
+```http
+POST /auth/request-access-token
+```
+
+using a valid refresh token.
 
 ---
 
-## Endpoints
+## ETag Support
 
-### Auth `/auth`
+Most `GET` endpoints support ETag caching.
 
+Example:
 
-### Trip `/trip`
+```http
+If-None-Match: "<etag>"
+```
 
+When the resource has not changed, the server responds with:
 
-### Trip Contents `/trip-contents`
+```http
+304 Not Modified
+```
 
+---
 
-### User `/user`
+# API Modules
 
-### Sync `/sync`
+## Authentication
 
-### Trip View `/trip-view`
+Base path:
 
-### All endpoints docs can be found in `/architectures`
+```text
+/auth
+```
+
+Handles:
+
+- Login
+- Registration
+- Access token refresh
+- Logout
+- Account verification
+
+---
+
+## Trips
+
+Base path:
+
+```text
+/trip
+```
+
+Handles:
+
+- Create trip
+- Update trip
+- Delete trip
+- Trip permissions
+- Trip metadata
+
+---
+
+## Trip Contents
+
+Base path:
+
+```text
+/trip-contents
+```
+
+Handles:
+
+- Activities
+- Notes
+- Locations
+- Media references
+- Content management
+
+---
+
+## Users
+
+Base path:
+
+```text
+/user
+```
+
+Handles:
+
+- User profile
+- User settings
+- User data
+
+---
+
+## Synchronization
+
+Base path:
+
+```text
+/ sync
+```
+
+Handles:
+
+- Client synchronization
+- Incremental updates
+- Conflict resolution
+
+---
+
+## Trip View
+
+Base path:
+
+```text
+/trip-view
+```
+
+Handles:
+
+- Read-only trip access
+- Public trip data
+- Shared trip views
+
+---
+
+# Documentation
+
+## API Documentation
+
+Detailed endpoint documentation can be found in:
+
+```text
+/architectures
+```
+
+---
+
+## Friendships
+
+Friendship architecture and data model:
+
+```text
+/architectures/friendships
+```
+
+Includes:
+
+- Database schema
+- Relationship lifecycle
+- Friend request flow
+- Event integration
+
+---
+
+## Rate Limiting
+
+Rate limiter architecture and limits:
+
+```text
+/architectures/ratelimiter
+```
+
+Includes:
+
+- Per-endpoint limits
+- Redis implementation
+- Enforcement strategy
+
+---
+
+## Caching
+
+Caching architecture:
+
+```text
+/architectures/caching
+```
+
+Includes:
+
+- ETag generation
+- Redis caching
+- Cache invalidation
+
+---
+
+## Data Shapes
+
+Shared request and response schemas:
+
+```text
+/architectures/data_shapes
+```
+
+---
+
+# Event System
+
+A dedicated microservice is responsible for WebSocket communication and event delivery.
+
+## Stack
+
+- FastAPI
+- Redis Pub/Sub
+- Socketio
+
+## Responsibilities
+
+- Maintain WebSocket connections
+- Subscribe to Redis events
+- Deliver events to connected users
+- Handle real-time notifications
+
+The main Flask server publishes events, while the event server distributes them to clients.
+
+Documentation:
+
+```text
+/architectures/events
+```
+
+---
+
+# Architecture Documentation
+
+All architecture diagrams, flowcharts, schemas, and service documentation are available in:
+
+```text
+/architectures
+```
+
+This includes:
+
+- API documentation
+- Database designs
+- Friendships
+- Events
+- Rate limiting
+- Caching
+- Data shapes
+- Service communication diagrams

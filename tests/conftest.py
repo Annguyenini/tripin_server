@@ -52,6 +52,13 @@ def user_credential2():
         "invalid_password": "Testting7749@",
     }
 
+def gen_user_credential(user_id:int):
+    return {
+        "username": f"TestUser{user_id-1}",
+        "password": "Testpass11234@",
+        "invalid_username": "Testting",
+        "invalid_password": "Testting7749@",
+    }
 @pytest.fixture(scope="session")
 def user_credential5():
     return {
@@ -100,6 +107,21 @@ def get_auth5(client, user_credential5):
     assert response.get_json() is not None
     assert response.get_json()["tokens"] is not None
     return response.get_json()
+
+@pytest.fixture(scope="session")
+def gen_auth(client):
+    def _gen_auth(user_id: int):
+           print("\n=== trying login ===")
+           payload = gen_user_credential(user_id)
+           response = client.post("/auth/login", json=payload)
+           print(f"=== login response: {response.status_code} ===")
+           print(f"=== login data: {response.get_json()} ===")
+           assert response.get_json() is not None
+           assert response.get_json()["tokens"] is not None
+           return response.get_json()
+    return _gen_auth
+
+
 @pytest.fixture(scope="session")
 def user_data(client, user_credential, get_auth):
     print("\n=== trying get user data ===")

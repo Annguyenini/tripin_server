@@ -65,3 +65,9 @@ def GetUserSearchCacheWithRelationshipKey(keywords:str):
 
 def GetUserSearchDomainCacheKey(keywords:str):
     return f"search::domain:user:{keywords}"
+
+
+## users trip data cache key
+#
+def GetUsersTripDataCacheKey(user_id:int):
+    return f"user:{user_id}::public_trips"

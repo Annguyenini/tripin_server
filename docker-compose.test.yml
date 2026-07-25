@@ -57,8 +57,11 @@ services:
         echo "create mock relationships"
         python tests/scripts/create_mock_relationship.py
 
+        echo "create mock trips"
+        python tests/scripts/create_mock_trips.py
+
         echo "run test"
-        python -m pytest -vv -s --full-trace
+        python -m pytest -s
       '
     restart: "no"
 

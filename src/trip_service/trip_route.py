@@ -78,6 +78,7 @@ class TripRoute(RouteBase):
                 ), 400
 
             trip_name = body.get("trip_name")
+            privacy = body.get("privacy",None)
             created_time = body.get("created_time")
             image = bool(body.get("image"))
 
@@ -94,6 +95,7 @@ class TripRoute(RouteBase):
                 trip_name=trip_name,
                 created_time=created_time,
                 image=image,
+                privacy=privacy
             )
 
             return jsonify(data), code
@@ -281,13 +283,17 @@ class TripRoute(RouteBase):
         trip_id = user_data.get("trip_id")
         new_trip_name = user_data.get("trip_name", None)
         modified_time = user_data.get("modified_time")
+        privacy = user_data.get("privacy",None)
+
         image = bool(user_data.get("image"))
+
         data, code = self.trip_service.change_trip_data(
             new_trip_name=new_trip_name,
             trip_id=trip_id,
             user_id=user_id,
             modified_time=modified_time,
             image=image,
+            privacy=privacy
         )
 
         return jsonify(data), code

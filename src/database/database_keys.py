@@ -12,6 +12,7 @@ DATABASEKEYS = SimpleNamespace(
         TRIP_CONTENT_CARDS="tripin_trips.content_cards",
         USER_SETTINGS="tripin_auth.user_settings",
         FRIENDSHIPS="tripin_friendships.friendships_table",
+        DEVICES ="tripin_auth.devices"
     ),
     USERDATA=SimpleNamespace(
         USER_ID="id",
@@ -57,6 +58,7 @@ DATABASEKEYS = SimpleNamespace(
         MODIFIED_TIME="modified_time",
         CONTENT_MODIFIED_TIME="content_modified_time",
         EVENT="event",
+        PRIVACY = 'privacy'
     ),
     TRIP_MEDIAS=SimpleNamespace(
         # MEDIA_ID ='id',
@@ -143,4 +145,12 @@ DATABASEKEYS = SimpleNamespace(
         STATUS="status",
         LAST_UPDATE="last_update",
     ),
+    DEVICES = SimpleNamespace(
+        ID="id",
+        USER_ID="user_id",
+        DEVICE_ID="device_id",
+        PUSH_TOKEN="push_token",
+        PLATFORM="platform",
+        LAST_SEEN="last_seen",
+    )
 )

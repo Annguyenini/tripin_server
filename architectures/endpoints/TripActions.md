@@ -48,7 +48,8 @@ Creates a new trip with optional cover image.
 {
   "trip_name": "string",
   "created_time": 1700000000000,
-  "image": true
+  "image": true,
+  "privacy":"..."
 }
 ```
 
@@ -176,7 +177,8 @@ Updates trip name and/or cover image.
   "trip_id": "string",
   "trip_name": "string (optional)",
   "modified_time": 1700000000000,
-  "image": true
+  "image": true,
+  "privacy":"..."
 }
 ```
 

@@ -5,6 +5,7 @@ from typing import Any
 
 from werkzeug.exceptions import Conflict
 
+from src.repository.trip_permission import TripPolicy
 from src.database.database import Database
 from src.database.s3.s3_service import S3Sevice
 from src.database.trip_db_service import TripDatabaseService
@@ -63,6 +64,7 @@ class TripService:
             self.AllTripEtagService = AllTripsDataEtag()
             self.TripEtagService = TripDataEtag()
             self.TripRepository = TripRepository()
+            self.TripPolicy = TripPolicy()
             self._init = True
 
     def _generate_trip_cover_upload_verification_token(self, trip_id: str) -> str:
@@ -84,6 +86,7 @@ class TripService:
         trip_name: str,
         created_time: str,
         image: bool,
+        privacy:str = 'private'
     ) -> tuple[dict, int]:
 
         # -------------------check if user on an active trip
@@ -100,6 +103,7 @@ class TripService:
 
         # -----------------------input validation----------------------
         self.TripInputValidation.trip_name_validation(trip_name=trip_name)
+        self.TripInputValidation.trip_privacy_validation(privacy=privacy)
         format_time = ms_to_timestamptz(int(created_time))
         assert format_time and isinstance(format_time, datetime), (
             "format time is null or not format correctly"
@@ -122,6 +126,7 @@ class TripService:
             user_id=user_id,
             created_time=format_time,
             trip_name=trip_name,
+            privacy=privacy
         )
         if not trip_id:
             raise Exception("Error occur while creating trip")
@@ -221,8 +226,8 @@ class TripService:
         if not trip_data["active"]:
             return {"code": "successfully"}, 200
         # ----------------------owner validation----------------------
-        if not self.trip_owner_validation(user_id=user_id, trip_data=trip_data):
-            raise TripPermissionError
+        self.TripPolicy.trip_permission_policy(request_id=user_id,trip_id=trip_id)
+
         # --------------------update columns in database-----------------
         format_time = ms_to_timestamptz(int(ended_time))
         assert format_time is not None, "format time must not none"
@@ -266,15 +271,14 @@ class TripService:
         except json.JSONDecodeError as e:
             trip_data_row = None
         if trip_data_row:
-            if not self.trip_owner_validation(user_id=user_id, trip_data=trip_data_row):
-                raise TripPermissionError
+            self.TripPolicy.trip_permission_policy(request_id=user_id,trip_id=trip_id)
             return {"code": "successfully", "trip_data": trip_data_row}, 200
         # ----------------------Cache miss----------------------------------
         # trip data from database
         trip_data_row = self.TripRepository.get_trip_data(trip_id=trip_id)
         # owner validation
-        if not self.trip_owner_validation(user_id=user_id, trip_data=trip_data_row):
-            raise TripPermissionError
+        self.TripPolicy.trip_permission_policy(request_id=user_id,trip_id=trip_id)
+
 
         # if doesnt exist return nothing
         if trip_data_row is None or trip_data_row["event"] == "remove":
@@ -397,46 +401,60 @@ class TripService:
         user_id: str,
         modified_time: str,
         image: bool,
+        privacy: str,
     ) -> tuple[dict | None, int]:
 
         assert user_id, "user_id is empty"
-        assert new_trip_name or image, "Missing new trip name or image"
+        assert new_trip_name or image or privacy, "Missing new trip name, image, or privacy"
+
         format_time = ms_to_timestamptz(modified_time)
         assert format_time and isinstance(format_time, datetime), (
             "modified_time is empty or not formated correctly"
         )
 
         # --------------------- trip_data before change-----------------------
-        old_trip_data = self.TripDatabaseService.get_trip_data_from_trip_id(
+        old_trip_data = self.TripRepository.get_trip_data(
             trip_id=trip_id
         )
         if not old_trip_data:
             return {"code": "trip_not_found", "message": "Trip not found"}, 400
+
         # ----------------------owner validation----------------------------
-        if not self.trip_owner_validation(user_id=user_id, trip_data=old_trip_data):
-            raise TripPermissionError
+        self.TripPolicy.trip_permission_policy(request_id=user_id,trip_id=trip_id)
 
         presign_url = None
         pending_token = None
-        # ----------------------modify new trip---------------------------
+
+        # -----------------------modify privacy------------------------
+        if privacy and privacy != old_trip_data["privacy"]:
+            allowed_privacy = {"private", "public", "friend"}
+            assert privacy in allowed_privacy, "Invalid privacy value"
+            update_privacy = self.TripDatabaseService.update_trip_privacy(
+                trip_id=trip_id,
+                privacy=privacy
+            )
+
+            if not update_privacy:
+                raise Exception("Fail to update trip privacy")
+
+        # -----------------------trip name logic-------------------
         if new_trip_name:
             self.TripInputValidation.trip_name_validation(trip_name=new_trip_name)
-            # check if new trip name same with the old one
+
             if new_trip_name != old_trip_data["trip_name"]:
                 exist_trip_name = (
                     self.TripDatabaseService.get_trip_data_from_trip_name_and_user_id(
-                        trip_name=new_trip_name, user_id=user_id
+                        trip_name=new_trip_name,
+                        user_id=user_id
                     )
                 )
 
-                # check if user already have a trip that have the same name with new_name
                 if not exist_trip_name:
-                    # update to database
                     update_trip_name = self.TripDatabaseService.update_trip_name(
-                        trip_id=trip_id, new_trip_name=new_trip_name
+                        trip_id=trip_id,
+                        new_trip_name=new_trip_name
                     )
 
-                    # if failed
                     if not update_trip_name:
                         raise Exception("Fail to update trip name")
 
@@ -447,35 +465,38 @@ class TripService:
                             "message": "Trip Name aldready exist!",
                         },
                     )
-            elif new_trip_name == old_trip_data["trip_name"]:
-                pass
 
         # -----------------------modify trip image------------------------
         if image:
-            # image for s3
             image_path = self._generate_trip_cover_aws_s3_path(trip_id=trip_id)
-            # presign url for s3
+
             presign_url = self.s3_service.generate_upload_url(
-                key=image_path, content_type="image/jpeg", expiration=300
+                key=image_path,
+                content_type="image/jpeg",
+                expiration=300
             )
-            # pending token after upload to s3 and verify
+
             pending_token = self._generate_trip_cover_upload_verification_token(
                 trip_id=trip_id
             )
-            # --------------------------Cache token----------------------
-            self.cache_service.set(
-                key=pending_token, data=json.dumps({"trip_id": trip_id}), time=300
-            )
-        # -----------------------------Update modify time---------------------
 
+            self.cache_service.set(
+                key=pending_token,
+                data=json.dumps({"trip_id": trip_id}),
+                time=300
+            )
+
+        # -----------------------------Update modify time---------------------
         if not self._update_trip_modified_time(
-            modified_time=format_time, trip_id=trip_id
+            modified_time=format_time,
+            trip_id=trip_id
         ):
             raise Exception("failed to update modified time")
+
         # -----------------------------invalidate cache----------------------
         self._invalidate_user_trip_list_cache(user_id=user_id)
         self._invalidate_trip_cache(trip_id=trip_id)
-        # ------------------------------------------------------------
+
         return {
             "code": "successfully",
             "message": "successfully generate trip",
@@ -504,13 +525,7 @@ class TripService:
                 "message": "trip aldready removed",
             }, 400
         # --------------------------owner validation-------------------
-        owner_validation = self.trip_owner_validation(
-            user_id=user_id, trip_data=trip_data
-        )
-
-        assert owner_validation, "no permission"
-        if not owner_validation:
-            raise TripPermissionError
+        self.TripPolicy.trip_permission_policy(request_id=user_id,trip_id=trip_id)
         # --------------------------remove trip from postgres------------
         update_postgres = self.TripDatabaseService.remove_trip(trip_id=trip_id)
         if not update_postgres:
@@ -538,8 +553,8 @@ class TripService:
         # -------------------------------------------------------
         return {"code": "successfully"}, 200
 
-    def trip_owner_validation(self, user_id: str, trip_data: dict) -> bool:
-        return trip_data["user_id"] == user_id
+    # def trip_owner_validation(self, user_id: str, trip_data: dict) -> bool:
+    #     return trip_data["user_id"] == user_id
 
     def _update_trip_modified_time(self, modified_time: datetime, trip_id: str) -> bool:
         return self.TripDatabaseService.update_trip_modified_time(
