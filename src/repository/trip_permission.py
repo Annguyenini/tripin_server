@@ -27,7 +27,6 @@ class TripPolicy:
         if trip_data is None:
             raise TripNotFound
         privacy = trip_data.get('privacy')
-        print(privacy)
 
         match privacy:
             case 'public':
@@ -48,3 +47,14 @@ class TripPolicy:
                 return
             case _:
                 raise TripPermissionError
+
+
+    def modify_trip_permission_policy(self,request_id: int, trip_id: int):
+        ## only allow owner to modify trip data for now
+        trip_data = self.TripRepository.get_trip_data(trip_id=trip_id)
+        if trip_data is None:
+            raise TripNotFound
+
+        if int(trip_data.get("user_id")) != int(request_id):
+            raise TripPermissionError
+        return

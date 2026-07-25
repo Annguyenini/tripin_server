@@ -173,7 +173,8 @@ class UsersTripService:
                 'image':row_dict.get('image'),
                 'user_id':row_dict.get('trip_id'),
                 'trip_name':row_dict.get('trip_name'),
-                'author': target_user_data.get('user_name')}
+                'author': target_user_data.get('user_name'),
+                'privacy':row_dict.get('privacy')}
             trip_data_list.append(allowed_data)
         return (
             {"all_trip_data": trip_data_list},

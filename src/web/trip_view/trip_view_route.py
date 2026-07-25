@@ -13,6 +13,7 @@ from src.database.s3.s3_service import S3Sevice
 from src.database.trip_db_service import TripDatabaseService
 from src.database.view_trip_db_service import ViewTripDatabaseService
 from src.error_handler.error_handler import ErrorHandler
+from src.repository.trip_permission import TripPolicy
 from src.server_config.config import Config
 from src.server_config.service.Etag.etag_services import TripShareLinksEtag
 from src.server_config.service.smart_cast import smart_cast
@@ -47,6 +48,7 @@ class TripViewRoute(RouteBase):
         self.TripShareLinksEtag = TripShareLinksEtag()
         self.CacheService = Cache()
         self.TripContentsService = TripContentsService()
+        self.TripPolicies=TripPolicy()
         self._init = True
 
     def _register_routes(self):
@@ -84,16 +86,8 @@ class TripViewRoute(RouteBase):
                     "code": "invalid_type_input",
                     "message": "invalid type of input make sure it is number",
                 }
-            ), 401
-        if not self.TripDataBaseService.trip_owner_validation(
-            user_id=user_id, trip_id=trip_id
-        ):
-            return jsonify(
-                {
-                    "code": "permistion_denied",
-                    "message": "Your account doesnt own or have permission to do this acction!",
-                }
-            ), 401
+            ), 400
+        self.TripPolicies.modify_trip_permission_policy(request_id=user_id,trip_id=trip_id)
         token = self._handle_generate_trips_view_link(
             user_id=user_id, trip_id=trip_id, expired_days={"days": expired_days}
         )

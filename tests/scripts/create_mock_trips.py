@@ -33,26 +33,26 @@ def insert_trip(trip_name, privacy, active, ended):
     if ended:
         cur.execute(
             """
-            INSERT INTO tripin_trips.trip_table
+            INSERT INTO tripin_trips.trips_table
                 (user_id, created_time, active, ended_time, trip_name,
                  image, modified_time, content_modified_time, event, privacy)
             VALUES
                 (%s, NOW(), %s, NOW(), %s, %s, NOW(), NOW(), %s, %s)
             RETURNING id
             """,
-            (TEST_USER_ID, active, trip_name, None, None, privacy),
+            (TEST_USER_ID, active, trip_name, None, 'add', privacy),
         )
     else:
         cur.execute(
             """
-            INSERT INTO tripin_trips.trip_table
+            INSERT INTO tripin_trips.trips_table
                 (user_id, created_time, active, ended_time, trip_name,
                  image, modified_time, content_modified_time, event, privacy)
             VALUES
                 (%s, NOW(), %s, NULL, %s, %s, NOW(), NOW(), %s, %s)
             RETURNING id
             """,
-            (TEST_USER_ID, active, trip_name, None, None, privacy),
+            (TEST_USER_ID, active, trip_name, None, 'add', privacy),
         )
     return cur.fetchone()[0]
 
