@@ -6,6 +6,16 @@ import redis
 import os
 import json
 import requests
+from exponent_server_sdk import (
+    DeviceNotRegisteredError,
+    PushClient,
+    PushMessage,
+    PushServerError,
+    PushTicketError,
+)
+
+from requests.exceptions import ConnectionError, HTTPError
+
 def GENERATE_SINGLE_ROOM(user_id:int):
     return f'user:{user_id}'
 
@@ -29,6 +39,15 @@ class NotififcationService:
             decode_responses=True,
         )
         self.ErrorService = ErrorHandler().logger('notification')
+        self.session = requests.Session()
+        self.session.headers.update(
+            {
+                "Authorization": f"Bearer {os.getenv('EXPO_TOKEN')}",
+                "accept": "application/json",
+                "accept-encoding": "gzip, deflate",
+                "content-type": "application/json",
+            }
+        )
         self._init = True
 
     def notify(self,room_id:str,event_type:str,data:any):
@@ -43,12 +62,19 @@ class NotififcationService:
 
     def push_notify(self,payload:PushNotificationPayload | list[PushNotificationPayload]):
 
-        print(payload)
-        response = requests.post(
-            "https://exp.host/--/api/v2/push/send",
-            json=payload,
-            headers={"Content-Type": "application/json"}
-        )
+        try:
+            response = requests.post(
+                "https://exp.host/--/api/v2/push/send",
+                json=payload,
+                headers={"Content-Type": "application/json"},
+                timeout=10,
+            )
+            response.raise_for_status()
+            data = response.json()
+        except requests.RequestException as e:
+            # log the error
+            print(f"Failed to send notification: {e}")
+            self.ErrorService.error(f'failed to send push notification',str(e))
 
         print(response.json())
         return response

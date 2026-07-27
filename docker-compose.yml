@@ -39,7 +39,7 @@ services:
       - LOGDIR=/app/logs
       - ERRORLOGDIR=/app/logs/errorlogs
     env_file:
-      - .env
+      - .env.docker
     depends_on:
       - db
       - redis
