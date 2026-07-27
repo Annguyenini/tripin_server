@@ -31,6 +31,12 @@ class DevicesDatabaseService(Database):
     def insert_new_device(self,device:DatabaseDevice):
         con,cur = self.connect_db()
         try:
+            cur.execute(f"""
+                DELETE FROM {DATABASEKEYS.TABLES.DEVICES}
+                WHERE {DATABASEKEYS.DEVICES.PUSH_TOKEN} = %s
+                AND {DATABASEKEYS.DEVICES.DEVICE_ID} != %s
+            """, (device.push_token, device.device_id))
+
             cur.execute(
                 ## insert in to database, if conflict on user id and device id,
                 # update all columns with the lastest value
@@ -61,9 +67,9 @@ class DevicesDatabaseService(Database):
             if cur.rowcount >= 1:
                 return True
             return False
-        except UniqueViolation:
+        except UniqueViolation as e:
             con.rollback()
-            print("Device already exists")
+            print("Device already exists",e)
             raise Conflict(description={'code':'duplicate','message':'Device duplicate'})
         except Exception as e:
             print(e)
