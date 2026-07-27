@@ -40,14 +40,14 @@ class NotififcationService:
         )
         self.ErrorService = ErrorHandler().logger('notification')
         self.session = requests.Session()
-        self.session.headers.update(
-            {
-                "Authorization": f"Bearer {os.getenv('EXPO_TOKEN')}",
-                "accept": "application/json",
-                "accept-encoding": "gzip, deflate",
-                "content-type": "application/json",
-            }
-        )
+        # self.session.headers.update(
+        #     {
+        #         "Authorization": f"Bearer {os.getenv('EXPO_TOKEN')}",
+        #         "accept": "application/json",
+        #         "accept-encoding": "gzip, deflate",
+        #         "content-type": "application/json",
+        #     }
+        # )
         self._init = True
 
     def notify(self,room_id:str,event_type:str,data:any):
